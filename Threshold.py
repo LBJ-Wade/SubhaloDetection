@@ -9,12 +9,13 @@ import numpy as np
 import copy
 from scipy import integrate
 from scipy.interpolate import UnivariateSpline,interp1d
+from subhalo import *
 
 def Determine_Gamma(mx, annih_prod):
     """ Annih_prod can only be BB as of now"""
     num_collisions = 10**5.
-    spec_file = "/Users/SamWitte/Desktop/SubhaloProject/Spectrum/"+str(int(mx))+"GeVDMspectrum.dat"
-    integrate_file = "/Users/SamWitte/Desktop/SubhaloProject/Spectrum/IntegratedDMSpectrum"+annih_prod+".dat"
+    spec_file = MAIN_PATH + "/Spectrum/"+str(int(mx))+"GeVDMspectrum.dat"
+    integrate_file = MAIN_PATH + "/Spectrum/IntegratedDMSpectrum"+annih_prod+".dat"
     
     spectrum = np.loadtxt(spec_file)
     spectrum[:,1] = spectrum[:,1] / num_collisions
@@ -42,8 +43,8 @@ def Determine_Gamma(mx, annih_prod):
     
 def Threshold(gamma, extension):
     
-    file = "/Users/SamWitte/Desktop/SubhaloProject/ExtendedThresholds/DetectionThresholdGamma" +\
-            str(int(gamma*10)) + ".dat"
+    file = MAIN_PATH + "/ExtendedThresholds/DetectionThresholdGamma" +\
+           str(int(gamma*10)) + ".dat"
             
     thresh_list = np.loadtxt(file)
     thresh_interp = UnivariateSpline(thresh_list[:,0],thresh_list[:,1])

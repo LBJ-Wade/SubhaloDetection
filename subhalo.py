@@ -12,6 +12,7 @@ import scipy.integrate as integrate
 import scipy.special as special
 from scipy.optimize import minimize,minimize_scalar
 
+MAIN_PATH = os.environ['SUBHALO_MAIN_PATH']
 
 class Model(object):
     
@@ -124,7 +125,7 @@ def Table_Spatial_Extension(d_low=-3., d_high=1., d_num=80, m_low=np.log10(6.48 
     """
     Profile_names=['Einasto','NFW']
     
-    folder = "/Users/SamWitte/Desktop/SubhaloProject/SubhaloDetection/Data/"
+    folder = MAIN_PATH + "/SubhaloDetection/Data/"
     file_name = str(Profile_names[profile]) + '_Truncate_' + str(truncate) +\
                 '_Cparam_' + str(arxiv_num) + '_alpha_' + str(alpha) + '.dat'
                     
