@@ -6,7 +6,7 @@ Created on Thu Jul 14 09:52:48 2016
 """
 
 import os,sys
-sys.path.insert(0, '/Users/SamWitte/Desktop/SubhaloProject/SubhaloDetection')
+sys.path.insert(0, os.environ['SUBHALO_MAIN_PATH']+'SubhaloDetection')
 from subhalo import *
 
 

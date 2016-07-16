@@ -50,13 +50,14 @@ def Concentration_parameter(Mass, z=0, arxiv_num=13131729):
     
     return c
     
-def Virial_radius(Mass, M200=None):
+def Virial_radius(Mass, M200=False):
     """If M200 is None, virial radius scaled version of Milky Way. Otherwise,
        taken to be M200"""
         
-    if M200 is None:
-        return 220. * (Mass / (2. * 10**(12.)))**(1./3.)
+    if not M200:
+        return 200. * (Mass / (2. * 10**(12.)))**(1./3.)
     else:
-        return ((3. * Mass) / (4. * np.pi * delta_200 * rho_critical))**(1./3.)
+        return ((3. * Mass) / (4. * np.pi * delta_200 * 
+                rho_critical / 10**9))**(1./3.)
 
 

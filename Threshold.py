@@ -10,6 +10,10 @@ import copy
 from scipy import integrate
 from scipy.interpolate import UnivariateSpline,interp1d
 from subhalo import *
+import os
+
+MAIN_PATH = os.environ['SUBHALO_MAIN_PATH']
+
 
 def Determine_Gamma(mx, annih_prod):
     """ Annih_prod can only be BB as of now"""
@@ -48,7 +52,14 @@ def Threshold(gamma, extension):
             
     thresh_list = np.loadtxt(file)
     thresh_interp = UnivariateSpline(thresh_list[:,0],thresh_list[:,1])
-    return thresh_interp(extension)
+    if extension < 0.1:
+        retval = thresh_interp(0.1)
+    elif extension > 2.0:
+        retval = thresh_interp(2.0)
+    else:
+        retval = thresh_interp(extension)
+        
+    return retval
         
     
         
