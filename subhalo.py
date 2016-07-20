@@ -65,10 +65,14 @@ class Model(object):
         dist_tab = np.logspace(-2., 1., 80)
         
         f_difftab = np.zeros((dist_tab.size,2))
-        f_difftab[:,0] = dist_tab
+
         for i,dist in enumerate(dist_tab):
-            f_difftab[i,1] = flux_diff(dist)
-            print f_difftab[i]
+            try:
+                f_difftab[i,1] = flux_diff(dist)
+                f_difftab[i,0] = dist_tab[i]
+                print f_difftab[i]
+            except:
+                pass
         f_difftab = f_difftab[~np.isnan(f_difftab).any(axis=1)]
         f_diff_interp = interp1d(f_difftab[:,0],f_difftab[:,1])
         bnds = [(10**f_difftab[0,0], 10**f_difftab[-1,0])]
