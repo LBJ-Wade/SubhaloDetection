@@ -74,7 +74,7 @@ class Model(object):
             except:
                 pass
         f_difftab = f_difftab[~np.isnan(f_difftab).any(axis=1)]
-        f_diff_interp = interp1d(f_difftab[:,0],f_difftab[:,1])
+        f_diff_interp = UnivariateSpline(f_difftab[:,0],f_difftab[:,1])
         bnds = [(10**f_difftab[0,0], 10**f_difftab[-1,0])]
         dmax = minimize(f_diff_interp, 1., bounds=bnds)
         return dmax.x
