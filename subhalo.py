@@ -202,6 +202,7 @@ def Table_Spatial_Extension(d_low=-3., d_high=1., d_num=80, m_low=np.log10(6.48 
         print 'Subhalo mass: ', m
         for c in c_list:
             print 'Concentration parameter: ', c
+            
             extension_tab = np.zeros(len(dist_list))
             if profile == 0:
                 subhalo = Einasto(m, alpha, c, truncate=truncate, arxiv_num=arxiv_num)
@@ -209,8 +210,18 @@ def Table_Spatial_Extension(d_low=-3., d_high=1., d_num=80, m_low=np.log10(6.48 
                 'Profile not implimented yet'
             
             for ind,d in enumerate(dist_list):
-                if subhalo.Full_Extension(d) > .05:                
-                    extension_tab[ind] = subhalo.Spatial_Extension(d)
+                try:
+                    look_array = np.loadtxt(folder + file_name)
+                    if any(([m,c,d] == x).all() for x in look_array[:,0:3]):
+                        exists = True
+                    else:
+                        exists = False
+                except:
+                    exists = False
+                
+                if not exists:
+                    if subhalo.Full_Extension(d) > .05:                
+                        extension_tab[ind] = subhalo.Spatial_Extension(d)
 
             extension_tab = extension_tab[np.nonzero(extension_tab)]
             entries_added = len(extension_tab)
@@ -250,18 +261,27 @@ def Table_Dmax_Extended(mx, cross_sec, annih_prod, m_low=np.log10(6.48 * 10**6.)
         print 'Subhalo mass: ', m
         for c in c_list:
             print 'Concentration parameter: ', c
-            
-            dm_model = Model(mx, cross_sec, annih_prod, m, alpha, 
-                             concentration_param=c, truncate=truncate, 
-                             arxiv_num=arxiv_num)
-            
-            dmax = dm_model.D_max_extend()           
-            tab = np.array([m, c, dmax[0]]).transpose()
+            try:
+                look_array = np.loadtxt(folder + file_name)
+                if any(([m,c] == x).all() for x in look_array[:,0:2]):
+                    exists = True
+                else:
+                    exists = False
+            except:
+                exists = False
                 
-            if os.path.isfile(folder+file_name):
-                load_info = np.loadtxt(folder + file_name)
-                add_to_table = np.vstack((load_info,tab))
-                np.savetxt(folder + file_name, add_to_table)
-            else:
-                np.savetxt(folder + file_name, tab)        
+            if not exists:  
+                dm_model = Model(mx, cross_sec, annih_prod, m, alpha, 
+                                 concentration_param=c, truncate=truncate, 
+                                 arxiv_num=arxiv_num)
+                
+                dmax = dm_model.D_max_extend()           
+                tab = np.array([m, c, dmax[0]]).transpose()
+                    
+                if os.path.isfile(folder+file_name):
+                    load_info = np.loadtxt(folder + file_name)
+                    add_to_table = np.vstack((load_info,tab))
+                    np.savetxt(folder + file_name, add_to_table)
+                else:
+                    np.savetxt(folder + file_name, tab)        
     return
