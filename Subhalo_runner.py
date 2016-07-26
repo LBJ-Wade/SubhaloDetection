@@ -40,9 +40,9 @@ Build_obs_class = Observable(args.mass, args.cross_sec, args.annih_prod, m_low=a
                              c_high=args.c_high, alpha=args.alpha, profile=args.profile, truncate=args.truncate, 
                              arxiv_num=args.arxiv_num)
 
-if dmax:                           
+if args.dmax:                           
     Build_obs_class.Table_Dmax_Extended(m_num=args.m_num, c_num=args.c_num)
     
-if nobs:
+if args.nobs:
     Build_obs_class.N_Extended(args.b_min, m_num=args.m_num, c_num=args.c_num)
 
