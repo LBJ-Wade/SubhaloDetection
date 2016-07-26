@@ -65,7 +65,7 @@ class Model(object):
         def flux_diff(x):
             return np.abs(np.log10(self.Total_Flux(x)) - np.log10(self.min_Flux(x)))
 
-        dist_tab = np.logspace(-.5, 1.5, 40)
+        dist_tab = np.logspace(-1., 1.5, 40)
         
         f_difftab = np.zeros((dist_tab.size,2))
 
