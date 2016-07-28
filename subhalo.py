@@ -13,6 +13,8 @@ import scipy.special as special
 from scipy.interpolate import RectBivariateSpline,interp1d
 from scipy.optimize import minimize,minimize_scalar,brute
 import os
+import pickle
+import glob
 
 MAIN_PATH = os.environ['SUBHALO_MAIN_PATH']
 
@@ -27,15 +29,19 @@ class Model(object):
         self.arxiv_num = arxiv_num
         self.truncate = truncate
         self.alpha = alpha
+        self.profile = profile        
+        
         if profile == 0:
             self.subhalo = Einasto(halo_mass, alpha, 
                                    concentration_param=concentration_param, 
                                    truncate=truncate, arxiv_num=arxiv_num)
-        else:
+        elif profile ==1:
             self.subhalo = NFW(halo_mass, alpha, 
                                concentration_param=concentration_param, 
                                truncate=truncate, arxiv_num=arxiv_num)
-                               
+        else:
+            "Profile does not exist..."  
+            exit()                   
 
     def min_Flux(self, dist):
         gamma_index = Determine_Gamma(self.mx, self.annih_prod)       
@@ -70,9 +76,10 @@ class Model(object):
         
         def flux_diff(x):
             return np.abs(np.log10(self.Total_Flux(x)) - np.log10(self.min_Flux(x)))
-
-#        dist_tab = np.logspace(-1., 1.2, 40)
-        dist_tab = np.linspace(.04, 14., 50)
+        if self.profile == 0:
+            dist_tab = np.logspace(-1., 1.4, 40)
+        elif self.profile == 1:
+            dist_tab = np.logspace(-4., 1.7, 40)
         
         f_difftab = np.zeros((dist_tab.size,2))
 
@@ -84,8 +91,9 @@ class Model(object):
             except:
                 pass
         f_difftab = f_difftab[~np.isnan(f_difftab).any(axis=1)]
-        f_diff_interp = interp1d(f_difftab[:,0],f_difftab[:,1], bounds_error=False, fill_value=np.inf)
-        bnds = [(10**f_difftab[0,0], 10**f_difftab[-1,0])]
+        f_diff_interp = interp1d(f_difftab[:,0],f_difftab[:,1], bounds_error=False, 
+                                 fill_value=100000.)
+        bnds = [(f_difftab[0,0], f_difftab[-1,0])]
         dmax = minimize(f_diff_interp, 1., bounds=bnds)        
         return dmax.x
         
@@ -162,7 +170,7 @@ class Einasto(Subhalo):
     def __init__(self, halo_mass, alpha, concentration_param=None, 
                  z=0., truncate=False, arxiv_num=10070438):
         
-        self.profile_name = 'Einasto_alpha_'+str(alpha)+'_C_params_'+str(arxiv_num) +\
+        self.pname = 'Einasto_alpha_'+str(alpha)+'_C_params_'+str(arxiv_num) +\
                             '_Truncate_'+str(truncate)
         self.halo_mass = halo_mass
         self.alpha = alpha
@@ -194,7 +202,7 @@ class NFW(Subhalo):
     def __init__(self, halo_mass, alpha, concentration_param=None, 
                  z=0., truncate=False, arxiv_num=10070438):
         
-        self.profile_name = 'NFW_alpha_'+str(alpha)+'_C_params_'+str(arxiv_num) +\
+        self.pname = 'NFW_alpha_'+'_C_params_'+str(arxiv_num) +\
                             '_Truncate_'+str(truncate)
         self.halo_mass = halo_mass
         self.alpha = alpha
@@ -216,7 +224,7 @@ class NFW(Subhalo):
 
 
     def density(self, r):        
-        return self.scale_density * np.exp(-2. / self.alpha * (((r / self.scale_radius)**self.alpha) - 1.)) 
+        return self.scale_density / ((r / self.scale_radius) * (1. + r / self.scale_radius)**2.)
         
 
 class Observable(object):
@@ -225,7 +233,8 @@ class Observable(object):
                  m_high=np.log10(2.0 * 10 **9), c_low=np.log10(20.),
                  c_high=2.4, alpha=0.16, profile=0, truncate=False, 
                  arxiv_num=10070438):
-                     
+                  
+        Profile_list = ["Einasto", "NFW"]
         self.mx = mx
         self.cross_sec = cross_sec
         self.annih_prod = annih_prod
@@ -235,10 +244,26 @@ class Observable(object):
         self.c_high = c_high
         self.alpha = alpha
         self.profile = profile
+        self.profile_name = Profile_list[self.profile]
         self.truncate = truncate
         self.arxiv_num = arxiv_num
         
         self.folder = MAIN_PATH + "/SubhaloDetection/Data/"
+        info_str = "Observable_Profile_" + self.profile_name + "_Truncate_" +\
+                    str(self.truncate) + "_mx_" + str(mx) + "_annih_prod_" +\
+                    annih_prod + "_arxiv_num_" + str(arxiv_num) + "/"
+        
+        self.folder += info_str
+        ensure_dir(self.folder)
+                   
+        default_dict = {'profile': 'Einasto', 'truncate': False, 'mx': 100., 
+                        'annih_prod': 'BB', 'arxiv_num': 10070438}
+        self.param_list = default_dict
+        self.param_list['profile'] = self.profile_name
+        self.param_list['truncate'] = self.truncate
+        self.param_list['mx'] = self.mx
+        self.param_list['annih_prod'] = self.annih_prod
+        self.param_list['arxiv_num'] = self.arxiv_num
     
     def Table_Spatial_Extension(self, d_low=-3., d_high=1., d_num=80, m_num=60, 
                                 c_num = 50):
@@ -307,8 +332,18 @@ class Observable(object):
             
             ONLY NFW as of now
         """
-        Profile_names=['Einasto','NFW']
+        if os.path.isfile(self.folder+"param_list.pkl"):
+            openfile = open(self.folder+"param_list.pkl", 'rb')
+            old_dict = pickle.load(openfile)
+            openfile.close()
+            check_diff = DictDiffer(self.param_list, old_dict)
+            if bool(check_diff.changed()):
+                [os.remove(f) for f in os.listdir(self.folder)]
+                pickle.dump(self.param_list, open(self.folder+"param_list.pkl", "wb")) 
+        else:
+            pickle.dump(self.param_list, open(self.folder+"param_list.pkl", "wb"))        
         
+        Profile_names=['Einasto','NFW']
         
         file_name = 'Dmax_' + str(Profile_names[self.profile]) + '_Truncate_' +\
                     str(self.truncate) + '_Cparam_' + str(self.arxiv_num) + '_alpha_' +\
