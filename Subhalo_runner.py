@@ -38,7 +38,7 @@ profile_list = ['Einasto', 'NFW']
 pf = profile_list[args.profile]
 simga_n_file = pf + '_Truncate_' + args.truncate + '_Cparam_' + args.arxiv_num +\
                '_alpha_' + args.alpha + '_mx_' + args.mass + '_annih_prod_' +\
-               annih_prod + '_bmin_' + str(args.b_min) + '.dat'
+               args.annih_prod + '_bmin_' + str(args.b_min) + '.dat'
 
 Build_obs_class = Observable(args.mass, args.cross_sec, args.annih_prod, m_low=args.m_low, 
                              m_high=args.m_high, c_low=args.c_low,
