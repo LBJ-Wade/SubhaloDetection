@@ -36,8 +36,8 @@ args = parser.parse_args()
 
 profile_list = ['Einasto', 'NFW']
 pf = profile_list[args.profile]
-simga_n_file = pf + '_Truncate_' + args.truncate + '_Cparam_' + args.arxiv_num +\
-               '_alpha_' + args.alpha + '_mx_' + args.mass + '_annih_prod_' +\
+simga_n_file = pf + '_Truncate_' + str(args.truncate) + '_Cparam_' + str(args.arxiv_num) +\
+               '_alpha_' + str(args.alpha) + '_mx_' + str(args.mass) + '_annih_prod_' +\
                args.annih_prod + '_bmin_' + str(args.b_min) + '.dat'
 
 Build_obs_class = Observable(args.mass, args.cross_sec, args.annih_prod, m_low=args.m_low, 
