@@ -10,7 +10,7 @@ from helper import *
 from Threshold import *
 import scipy.integrate as integrate
 import scipy.special as special
-from scipy.interpolate import RectBivariateSpline
+from scipy.interpolate import RectBivariateSpline,interp1d
 from scipy.optimize import minimize,minimize_scalar,brute
 import os
 
@@ -20,16 +20,22 @@ class Model(object):
     """NOT READY"""
     def __init__(self, mx, cross_sec, annih_prod, halo_mass, alpha, 
                  concentration_param=None, z=0., truncate=False, 
-                 arxiv_num=10070438):
+                 arxiv_num=10070438, profile=0):
         self.mx = mx
         self.c_sec = cross_sec
         self.annih_prod = annih_prod
         self.arxiv_num = arxiv_num
         self.truncate = truncate
         self.alpha = alpha
-        self.subhalo = Einasto(halo_mass, alpha, 
+        if profile == 0:
+            self.subhalo = Einasto(halo_mass, alpha, 
+                                   concentration_param=concentration_param, 
+                                   truncate=truncate, arxiv_num=arxiv_num)
+        else:
+            self.subhalo = NFW(halo_mass, alpha, 
                                concentration_param=concentration_param, 
                                truncate=truncate, arxiv_num=arxiv_num)
+                               
 
     def min_Flux(self, dist):
         gamma_index = Determine_Gamma(self.mx, self.annih_prod)       
@@ -65,7 +71,8 @@ class Model(object):
         def flux_diff(x):
             return np.abs(np.log10(self.Total_Flux(x)) - np.log10(self.min_Flux(x)))
 
-        dist_tab = np.logspace(-1., 1.5, 40)
+#        dist_tab = np.logspace(-1., 1.2, 40)
+        dist_tab = np.linspace(.04, 14., 50)
         
         f_difftab = np.zeros((dist_tab.size,2))
 
@@ -77,9 +84,9 @@ class Model(object):
             except:
                 pass
         f_difftab = f_difftab[~np.isnan(f_difftab).any(axis=1)]
-        f_diff_interp = UnivariateSpline(f_difftab[:,0],f_difftab[:,1])
+        f_diff_interp = interp1d(f_difftab[:,0],f_difftab[:,1], bounds_error=False, fill_value=np.inf)
         bnds = [(10**f_difftab[0,0], 10**f_difftab[-1,0])]
-        dmax = minimize(f_diff_interp, 1., bounds=bnds)
+        dmax = minimize(f_diff_interp, 1., bounds=bnds)        
         return dmax.x
         
 
@@ -173,7 +180,37 @@ class Einasto(Subhalo):
                                self.alpha))) * SolarMtoGeV * (cmtokpc)**3. )
                                
         if not truncate:
-            self.max_radius = Virial_radius(self.halo_mass, M200=False)
+            self.max_radius = self.scale_radius
+        else:
+            self.max_radius = self.Truncated_radius()
+
+
+    def density(self, r):        
+        return self.scale_density * np.exp(-2. / self.alpha * (((r / self.scale_radius)**self.alpha) - 1.)) 
+        
+
+class NFW(Subhalo):
+
+    def __init__(self, halo_mass, alpha, concentration_param=None, 
+                 z=0., truncate=False, arxiv_num=10070438):
+        
+        self.profile_name = 'NFW_alpha_'+str(alpha)+'_C_params_'+str(arxiv_num) +\
+                            '_Truncate_'+str(truncate)
+        self.halo_mass = halo_mass
+        self.alpha = alpha
+            
+        if concentration_param is None:
+            concentration_param = Concentration_parameter(halo_mass, z, arxiv_num)
+        
+        self.c = concentration_param
+            
+        self.scale_radius = Virial_radius(self.halo_mass, M200=False) / self.c
+        self.scale_density = ((self.halo_mass * SolarMtoGeV * (cmtokpc)**3.) /
+                              4. * np.pi * self.scale_radius ** 3. * (np.log(1. +
+                              self.c) - self.c / (1. + self.c)))
+                               
+        if not truncate:
+            self.max_radius = self.scale_radius
         else:
             self.max_radius = self.Truncated_radius()
 
@@ -229,6 +266,9 @@ class Observable(object):
                 if self.profile == 0:
                     subhalo = Einasto(m, self.alpha, c, truncate=self.truncate, 
                                       arxiv_num=self.arxiv_num)
+                elif self.profile == 1:
+                    subhalo = NFW(m, self.alpha, c, truncate=self.truncate, 
+                                  arxiv_num=self.arxiv_num)
                 else:
                     'Profile not implimented yet'
                 
@@ -295,7 +335,8 @@ class Observable(object):
                     dm_model = Model(self.mx, self.cross_sec, self.annih_prod, 
                                      m, self.alpha, concentration_param=c, 
                                      truncate=self.truncate,
-                                     arxiv_num=self.arxiv_num)
+                                     arxiv_num=self.arxiv_num,
+                                     profile=self.profile)
                     
                     dmax = dm_model.D_max_extend()           
                     tab = np.array([m, c, dmax[0]]).transpose()
