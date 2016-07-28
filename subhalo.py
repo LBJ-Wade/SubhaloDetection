@@ -77,9 +77,9 @@ class Model(object):
         def flux_diff(x):
             return np.abs(np.log10(self.Total_Flux(x)) - np.log10(self.min_Flux(x)))
         if self.profile == 0:
-            dist_tab = np.logspace(-1., 1.4, 40)
+            dist_tab = np.logspace(-1.5, 1.4, 40)
         elif self.profile == 1:
-            dist_tab = np.logspace(-4., 1.7, 40)
+            dist_tab = np.logspace(-1.5, 1.4, 40)
         
         f_difftab = np.zeros((dist_tab.size,2))
 
@@ -91,10 +91,12 @@ class Model(object):
             except:
                 pass
         f_difftab = f_difftab[~np.isnan(f_difftab).any(axis=1)]
-        f_diff_interp = interp1d(f_difftab[:,0],f_difftab[:,1], bounds_error=False, 
-                                 fill_value=100000.)
+#        f_diff_interp = UnivariateSpline(f_difftab[:,0],f_difftab[:,1])
+        f_diff_interp = interp1d(f_difftab[:,0],f_difftab[:,1], kind = 'cubic',
+                                 bounds_error=False, fill_value=100000.)
         bnds = [(f_difftab[0,0], f_difftab[-1,0])]
-        dmax = minimize(f_diff_interp, 1., bounds=bnds)        
+        dmax = minimize(f_diff_interp, 1., bounds=bnds)  
+        
         return dmax.x
         
 
@@ -201,9 +203,12 @@ class NFW(Subhalo):
 
     def __init__(self, halo_mass, alpha, concentration_param=None, 
                  z=0., truncate=False, arxiv_num=10070438):
+        """Note: alpha doesn't do anything, I'm keeping it here to be 
+           consistent with Einasto profile
+        """
         
         self.pname = 'NFW_alpha_'+'_C_params_'+str(arxiv_num) +\
-                            '_Truncate_'+str(truncate)
+                     '_Truncate_'+str(truncate)
         self.halo_mass = halo_mass
         self.alpha = alpha
             
@@ -213,9 +218,12 @@ class NFW(Subhalo):
         self.c = concentration_param
             
         self.scale_radius = Virial_radius(self.halo_mass, M200=False) / self.c
+        self.vir_rad = Virial_radius(self.halo_mass, M200=False)
         self.scale_density = ((self.halo_mass * SolarMtoGeV * (cmtokpc)**3.) /
-                              4. * np.pi * self.scale_radius ** 3. * (np.log(1. +
-                              self.c) - self.c / (1. + self.c)))
+                              (4. * np.pi * self.scale_radius ** 3. * 
+                              (np.log(self.scale_radius + self.vir_rad) -
+                              np.log(self.scale_radius) - self.vir_rad / 
+                              (self.scale_radius + self.vir_rad))))
                                
         if not truncate:
             self.max_radius = self.scale_radius
@@ -231,7 +239,7 @@ class Observable(object):
     
     def __init__(self, mx, cross_sec, annih_prod, m_low=np.log10(6.48 * 10**6.), 
                  m_high=np.log10(2.0 * 10 **9), c_low=np.log10(20.),
-                 c_high=2.4, alpha=0.16, profile=0, truncate=False, 
+                 c_high=2.1, alpha=0.16, profile=0, truncate=False, 
                  arxiv_num=10070438):
                   
         Profile_list = ["Einasto", "NFW"]
@@ -256,14 +264,21 @@ class Observable(object):
         self.folder += info_str
         ensure_dir(self.folder)
                    
-        default_dict = {'profile': 'Einasto', 'truncate': False, 'mx': 100., 
-                        'annih_prod': 'BB', 'arxiv_num': 10070438}
+        default_dict = {'profile': 'Einasto', 'truncate': False, 'mx': 100., 'alpha': 0.16,
+                        'annih_prod': 'BB', 'arxiv_num': 10070438, 'c_low': np.log10(20.),
+                        'c_high': 2.1, 'c_num': 15, 'm_low': np.log10(6.48 * 10**6.), 
+                        'm_high': np.log10(2.0 * 10 **9), 'm_num': 30}
         self.param_list = default_dict
         self.param_list['profile'] = self.profile_name
         self.param_list['truncate'] = self.truncate
         self.param_list['mx'] = self.mx
         self.param_list['annih_prod'] = self.annih_prod
         self.param_list['arxiv_num'] = self.arxiv_num
+        self.param_list['c_low'] = self.c_low
+        self.param_list['c_high'] = self.c_high 
+        self.param_list['m_low'] = self.m_low 
+        self.param_list['m_hgih'] = self.m_high 
+    
     
     def Table_Spatial_Extension(self, d_low=-3., d_high=1., d_num=80, m_num=60, 
                                 c_num = 50):
@@ -327,11 +342,14 @@ class Observable(object):
         return
     
     
-    def Table_Dmax_Extended(self, m_num=60, c_num = 50):
+    def Table_Dmax_Extended(self, m_num=20, c_num = 15):
         """ Tables d_max extended for future use. 
             
             ONLY NFW as of now
         """
+        self.param_list['m_num'] = m_num
+        self.param_list['c_num'] = c_num
+        
         if os.path.isfile(self.folder+"param_list.pkl"):
             openfile = open(self.folder+"param_list.pkl", 'rb')
             old_dict = pickle.load(openfile)
@@ -388,6 +406,10 @@ class Observable(object):
             
         Profile_names=['Einasto','NFW']
         
+#        openfile = open(self.folder+"param_list.pkl", 'rb')
+#        dict = pickle.load(openfile)
+#        openfile.close()       
+            
         def prob_c(c, M):
             cm = Concentration_parameter(M, arxiv_num=self.arxiv_num)
             sigma_c = 0.24
