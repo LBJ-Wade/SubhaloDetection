@@ -179,7 +179,7 @@ class Einasto(Subhalo):
                  z=0., truncate=False, arxiv_num=10070438):
         
         self.pname = 'Einasto_alpha_'+str(alpha)+'_C_params_'+str(arxiv_num) +\
-                            '_Truncate_'+str(truncate)
+                     '_Truncate_'+str(truncate)
         self.halo_mass = halo_mass
         self.alpha = alpha
             
@@ -190,10 +190,10 @@ class Einasto(Subhalo):
             
         self.scale_radius = Virial_radius(self.halo_mass, M200=False) / self.c
         self.scale_density = ((self.halo_mass * self.alpha * np.exp(-2. / self.alpha) * 
-                                (2. / self.alpha)**(3. / self.alpha)) / (4. * np.pi * 
-                                self.scale_radius**3. * special.gamma(3. / self.alpha) *
-                               (1. - special.gammaincc(3. / self.alpha, 2. * self.c**self.alpha / 
-                               self.alpha))) * SolarMtoGeV * (cmtokpc)**3. )
+                              (2. / self.alpha)**(3. / self.alpha)) / (4. * np.pi * 
+                              self.scale_radius**3. * special.gamma(3. / self.alpha) *
+                              (1. - special.gammaincc(3. / self.alpha, 2. * self.c**self.alpha / 
+                              self.alpha))) * SolarMtoGeV * (cmtokpc)**3. )
                                
         if not truncate:
             self.max_radius = self.scale_radius
@@ -419,8 +419,8 @@ class Observable(object):
         def prob_c(c, M):
             cm = Concentration_parameter(M, arxiv_num=self.arxiv_num)
             sigma_c = 0.24
-            return (np.exp(-(np.log(c / cm) / (np.sqrt(2.0) * sigma_c)) ** 2.0) /
-                    np.sqrt(2. * np.pi) * sigma_c * c)
+            return (np.exp(- (np.log(c / cm) / (np.sqrt(2.0) * sigma_c)) ** 2.0) /
+                   (np.sqrt(2. * np.pi) * sigma_c * c))
            
         file_name = 'Dmax_' + str(Profile_names[self.profile]) + '_Truncate_' +\
                     str(self.truncate) + '_Cparam_' + str(self.arxiv_num) + '_alpha_' +\
@@ -432,6 +432,8 @@ class Observable(object):
         integrand_table[:,2] = (260. * (0.005 * integrand_table[:,0]) ** (-1.9) * 
                                 prob_c(integrand_table[:,1],integrand_table[:,0]) * 
                                 integrand_table[:,2]**3. / 3.0)
+
+                                
         mass_list = np.array([round(integrand_table[0,0],5)])
         c_list = np.array([round(integrand_table[0,1],5)])                      
         for i in range(integrand_table[:,0].size):
@@ -446,8 +448,8 @@ class Observable(object):
         int_prep_spline = np.reshape(integrand_table[:,2], (m_num, c_num))
        
         integrand = RectBivariateSpline(mass_list, c_list, int_prep_spline)
-        integr = integrand.integral(3.24 * 10**4. / 0.005, 2.0 * 10**9., 10., 250.)
+        integr = integrand.integral(3.24 * 10**4. / 0.005, 1.0 * 10**7. / 0.005, 10., 250.)
                                     
         # TODO: consider alternative ways of performing this integral
     
-        return 4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr
+        return 2. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr
