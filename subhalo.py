@@ -87,7 +87,7 @@ class Model(object):
             try:
                 f_difftab[i,1] = flux_diff(dist)
                 f_difftab[i,0] = dist_tab[i]
-                print f_difftab[i]
+#                print f_difftab[i]
             except:
                 pass
         f_difftab = f_difftab[~np.isnan(f_difftab).any(axis=1)]

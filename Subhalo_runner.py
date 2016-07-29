@@ -49,7 +49,7 @@ if args.dmax:
     Build_obs_class.Table_Dmax_Extended(m_num=args.m_num, c_num=args.c_num)
     
 if args.nobs:
-    n_ext_obs = Build_obs_class.N_Extended(args.b_min, m_num=args.m_num, c_num=args.c_num)
+    n_ext_obs = Build_obs_class.N_Extended(args.b_min)
     if os.path.isfile(args.path + '/Data/' + simga_n_file):
         cross_sec_nobs = np.loadtxt(args.path + '/Data/' + simga_n_file)
         add_to_table = np.vstack((cross_sec_nobs,[args.cross_sec, n_ext_obs]))
