@@ -450,4 +450,4 @@ class Observable(object):
                                     
         # TODO: consider alternative ways of performing this integral
     
-        return 4. * np.pi * (1. - np.sin(bmin * 180. / np.pi)) * integr
+        return 4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr
