@@ -12,17 +12,17 @@ parser.add_argument('--dmax',default=True)
 parser.add_argument('--nobs',default=True)
 parser.add_argument('--tag',default='')
 parser.add_argument('--mass',default=100,type=float)
-parser.add_argument('--cross_sec_low',default=-27.,type=float)
-parser.add_argument('--cross_sec_high',default=-23.,type=float)
-parser.add_argument('--annih_prod',default='BB')
-parser.add_argument('--m_low',default=np.log10(6.48 * 10**6.),type=float)
-parser.add_argument('--m_high',default=np.log10(2.0 * 10 **9),type=float)
-parser.add_argument('--c_low',default=np.log10(20.),type=float)
-parser.add_argument('--c_high',default=2.1,type=float)
-parser.add_argument('--alpha',default=0.16,type=float)
-parser.add_argument('--profile',default=0,type=int)
+parser.add_argument('--cross_sec_low',default=-27.,type=float) # in log10
+parser.add_argument('--cross_sec_high',default=-23.,type=float) # in log10
+parser.add_argument('--annih_prod',default='BB') # TODO: add more than bbbar
+parser.add_argument('--m_low',default=np.log10(6.48 * 10**6.),type=float) # in log10
+parser.add_argument('--m_high',default=np.log10(2.0 * 10 **9),type=float) # in log10
+parser.add_argument('--c_low',default=np.log10(20.),type=float) # in log10
+parser.add_argument('--c_high',default=2.1,type=float) # in log10
+parser.add_argument('--alpha',default=0.16,type=float) # for Einasto
+parser.add_argument('--profile',default=1,type=int) # [Einasto, NFW] 0--1
 parser.add_argument('--truncate',default=True)
-parser.add_argument('--arxiv_num',default=10070438,type=int)
+parser.add_argument('--arxiv_num',default=10070438,type=int) # [10070438, 13131729]
 parser.add_argument('--b_min',default=30.,type=float)
 parser.add_argument('--m_num',default=20,type=int)
 parser.add_argument('--c_num',default=15,type=int)
