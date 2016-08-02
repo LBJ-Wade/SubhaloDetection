@@ -8,32 +8,33 @@ import numpy as np
 import subhalo
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--dmax',default=True)
-parser.add_argument('--nobs',default=True)
-parser.add_argument('--tag',default='')
-parser.add_argument('--mass',default=100,type=float)
-parser.add_argument('--cross_sec_low',default=-27.,type=float) # in log10
-parser.add_argument('--cross_sec_high',default=-23.,type=float) # in log10
-parser.add_argument('--annih_prod',default='BB') # TODO: add more than bbbar
-parser.add_argument('--m_low',default=np.log10(6.48 * 10**6.),type=float) # in log10
-parser.add_argument('--m_high',default=np.log10(2.0 * 10 **9),type=float) # in log10
-parser.add_argument('--c_low',default=np.log10(20.),type=float) # in log10
-parser.add_argument('--c_high',default=2.1,type=float) # in log10
-parser.add_argument('--alpha',default=0.16,type=float) # for Einasto
-parser.add_argument('--profile',default=1,type=int) # [Einasto, NFW] 0--1
-parser.add_argument('--truncate',default=True)
-parser.add_argument('--arxiv_num',default=10070438,type=int) # [10070438, 13131729]
-parser.add_argument('--b_min',default=30.,type=float)
-parser.add_argument('--m_num',default=20,type=int)
-parser.add_argument('--c_num',default=15,type=int)
+parser.add_argument('--dmax', default=True)
+parser.add_argument('--nobs', default=True)
+parser.add_argument('--tag', default='')
+parser.add_argument('--mass', default=1000, type=float)
+parser.add_argument('--pointlike', default=True)
+parser.add_argument('--cross_sec_low', default=-27., type=float)  # In log10
+parser.add_argument('--cross_sec_high', default=-23., type=float)  # In log10
+parser.add_argument('--annih_prod', default='BB')  # TODO: add more than b-bbar
+parser.add_argument('--m_low', default=np.log10(6.48 * 10**6.), type=float)  # In log10
+parser.add_argument('--m_high', default=np.log10(2.0 * 10 **9), type=float)  # In log10
+parser.add_argument('--c_low', default=np.log10(2.5), type=float)  # In log10
+parser.add_argument('--c_high', default=2.4, type=float)  # In log10
+parser.add_argument('--alpha', default=0.16, type=float)  # For Einasto
+parser.add_argument('--profile', default=0, type=int)  # [Einasto, NFW] 0 -- 1
+parser.add_argument('--truncate', default=True)
+parser.add_argument('--arxiv_num', default=13131729, type=int) # [10070438, 13131729]
+parser.add_argument('--b_min', default=20., type=float)
+parser.add_argument('--m_num', default=20, type=int)
+parser.add_argument('--c_num', default=20, type=int)
 parser.add_argument('--n_runs', type=int, default=30)
-parser.add_argument('--path',default=os.environ['SUBHALO_MAIN_PATH']+'/SubhaloDetection')
-
+parser.add_argument('--path', default=os.environ['SUBHALO_MAIN_PATH'] + '/SubhaloDetection/')
 
 args = parser.parse_args()
 
 tag = args.tag
 mass = args.mass
+plike = args.pointlike
 cross_sec_low = args.cross_sec_low
 cross_sec_high = args.cross_sec_high
 annih_prod = args.annih_prod
@@ -60,7 +61,7 @@ count = 0
 
 for i,sv in enumerate(cross_sec_list):
     simname='sim%d' % i
-    cmd = 'cd '+ path + '\n' + 'python Subhalo_runner.py --simname {} '.format(simname) +\
+    cmd = 'cd '+ path + '\n' + 'python Subhalo_runner.py --simname {} --pointlike {} '.format(simname, plike) +\
                                '--mass {} --cross_sec {:.8e} --annih_prod {} '.format(mass, sv, annih_prod) +\
                                '--m_low {:.16f} --m_high {:.16f} --c_low {} '.format(m_low, m_high, c_low) +\
                                '--c_high {} --alpha {} --profile {} '.format(c_high, alpha, profile) +\
@@ -89,7 +90,7 @@ count = 0
 
 for i,sv in enumerate(cross_sec_list):
     simname='sim%d' % i
-    cmd = 'cd '+ path + '\n' + 'python Subhalo_runner.py --simname {} '.format(simname) +\
+    cmd = 'cd '+ path + '\n' + 'python Subhalo_runner.py --simname {} --pointlike {} '.format(simname, plike) +\
                                '--mass {} --cross_sec {:.8e} --annih_prod {} '.format(mass, sv, annih_prod) +\
                                '--m_low {:.16f} --m_high {:.16f} --c_low {} '.format(m_low, m_high, c_low) +\
                                '--c_high {} --alpha {} --profile {} '.format(c_high, alpha, profile) +\

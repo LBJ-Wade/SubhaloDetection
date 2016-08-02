@@ -10,16 +10,19 @@ from helper import *
 from Threshold import *
 import scipy.integrate as integrate
 import scipy.special as special
-from scipy.interpolate import RectBivariateSpline,interp1d
-from scipy.optimize import minimize,minimize_scalar,brute
+from scipy.interpolate import RectBivariateSpline,interp1d,interp2d
+from scipy.optimize import minimize,brute
 import os
 import pickle
 import glob
 
+
 MAIN_PATH = os.environ['SUBHALO_MAIN_PATH']
+
 
 class Model(object):
     """NOT READY"""
+
     def __init__(self, mx, cross_sec, annih_prod, halo_mass, alpha, 
                  concentration_param=None, z=0., truncate=False, 
                  arxiv_num=10070438, profile=0):
@@ -45,7 +48,7 @@ class Model(object):
 
     def min_Flux(self, dist):
         gamma_index = Determine_Gamma(self.mx, self.annih_prod)       
-        extension = 2.0*self.subhalo.Spatial_Extension(dist)       
+        extension = 2.0 * self.subhalo.Spatial_Extension(dist)
         
         return Threshold(gamma_index, extension)
         
@@ -72,15 +75,29 @@ class Model(object):
         flux = prefactor * n_gamma * 10**self.subhalo.J(dist, theta)
         return flux
 
+    def d_max_point(self, threshold=(7.0 * 10 ** (-10))):
+        prefactor = self.c_sec / (8. * np.pi * self.mx ** 2.)
+
+        integrate_file = MAIN_PATH + "/Spectrum/IntegratedDMSpectrum" + \
+                         self.annih_prod + ".dat"
+        integrated_list = np.loadtxt(integrate_file)
+        integrated_rate = interp1d(integrated_list[:, 0], integrated_list[:, 1])
+
+        n_gamma = integrated_rate(self.mx)
+
+        jf = integrate.quad(lambda x: 4. * np.pi * kpctocm * self.subhalo.density(x) ** 2. * x ** 2.,
+                            0., float(self.subhalo.max_radius), epsabs=10**(-5.), epsrel=10**(-5.))
+
+        dmax = np.sqrt(prefactor * n_gamma * jf[0] / threshold)
+
+        return dmax
+
     def D_max_extend(self):
-        
+
         def flux_diff(x):
             return np.abs(np.log10(self.Total_Flux(x)) - np.log10(self.min_Flux(x)))
-        if self.profile == 0:
-            dist_tab = np.logspace(-1.5, 1.4, 40)
-        elif self.profile == 1:
-            dist_tab = np.logspace(-1.5, 1.4, 40)
-        
+
+        dist_tab = np.logspace(-1.5, 1.4, 40)
         f_difftab = np.zeros((dist_tab.size,2))
 
         for i,dist in enumerate(dist_tab):
@@ -101,7 +118,7 @@ class Model(object):
                                      bounds_error=False, fill_value=10000.)
                             
         bnds = [(f_difftab[0,0], f_difftab[-1,0])]
-        dmax = minimize(f_diff_interp, 1., bounds=bnds)  
+        dmax = minimize(f_diff_interp, np.array([1.]), bounds=bnds)
         
         return dmax.x
         
@@ -164,7 +181,8 @@ class Subhalo(object):
         
     def Spatial_Extension(self, dist):        
         bnds = [(10**-4., radtodeg * np.arctan(self.max_radius / dist))]
-        extension = minimize(self.AngRad68, [0.9 * radtodeg * np.arctan(self.max_radius / dist)], args=(dist), method='SLSQP', bounds=bnds, tol=10**-2) 
+        extension = minimize(self.AngRad68, np.array([0.9 * radtodeg * np.arctan(self.max_radius / dist)]),
+                             args=(dist), method='SLSQP', bounds=bnds, tol=10**-2)
         return extension.x
         
     def Full_Extension(self, dist):
@@ -187,8 +205,11 @@ class Einasto(Subhalo):
             concentration_param = Concentration_parameter(halo_mass, z, arxiv_num)
         
         self.c = concentration_param
-            
-        self.scale_radius = Virial_radius(self.halo_mass, M200=False) / self.c
+        if arxiv_num == 10070438:
+            M200 = False
+        elif arxiv_num == 13131729:
+            M200 = True
+        self.scale_radius = Virial_radius(self.halo_mass, M200=M200) / self.c
         self.scale_density = ((self.halo_mass * self.alpha * np.exp(-2. / self.alpha) * 
                               (2. / self.alpha)**(3. / self.alpha)) / (4. * np.pi * 
                               self.scale_radius**3. * special.gamma(3. / self.alpha) *
@@ -222,9 +243,12 @@ class NFW(Subhalo):
             concentration_param = Concentration_parameter(halo_mass, z, arxiv_num)
         
         self.c = concentration_param
-            
-        self.scale_radius = Virial_radius(self.halo_mass, M200=False) / self.c
-        self.vir_rad = Virial_radius(self.halo_mass, M200=False)
+        if arxiv_num == 10070438:
+            M200 = False
+        elif arxiv_num == 13131729:
+            M200 = True
+        self.scale_radius = Virial_radius(self.halo_mass, M200=M200) / self.c
+        self.vir_rad = Virial_radius(self.halo_mass, M200=M200)
         self.scale_density = ((self.halo_mass * SolarMtoGeV * (cmtokpc)**3.) /
                               (4. * np.pi * self.scale_radius ** 3. * 
                               (np.log(self.scale_radius + self.vir_rad) -
@@ -328,11 +352,11 @@ class Observable(object):
                     except:
                         exists = False
                     
-                    if not exists:
-                        if subhalo.Full_Extension(d) > .05:                
-                            extension_tab[ind] = subhalo.Spatial_Extension(d)
+                    if not exists and subhalo.Full_Extension(d) > .05:
+                        extension_tab[ind] = subhalo.Spatial_Extension(d)
     
                 extension_tab = extension_tab[np.nonzero(extension_tab)]
+                assert isinstance(extension_tab, object)
                 entries_added = len(extension_tab)
                 full_tab = np.vstack((np.ones(entries_added) * m,
                                       np.ones(entries_added) * c, 
@@ -348,10 +372,9 @@ class Observable(object):
         return
     
     
-    def Table_Dmax_Extended(self, m_num=20, c_num = 15):
+    def Table_Dmax_Pointlike(self, m_num=20, c_num = 15):
         """ Tables d_max extended for future use. 
-            
-            ONLY NFW as of now
+
         """
         self.param_list['m_num'] = m_num
         self.param_list['c_num'] = c_num
@@ -362,14 +385,16 @@ class Observable(object):
             openfile.close()
             check_diff = DictDiffer(self.param_list, old_dict)
             if bool(check_diff.changed()):
-                [os.remove(f) for f in os.listdir(self.folder)]
+                files = glob.glob(self.folder + '/*')
+                for f in files:
+                    os.remove(f)
                 pickle.dump(self.param_list, open(self.folder+"param_list.pkl", "wb")) 
         else:
             pickle.dump(self.param_list, open(self.folder+"param_list.pkl", "wb"))        
         
         Profile_names=['Einasto','NFW']
         
-        file_name = 'Dmax_' + str(Profile_names[self.profile]) + '_Truncate_' +\
+        file_name = 'Dmax_POINTLIKE_' + str(Profile_names[self.profile]) + '_Truncate_' +\
                     str(self.truncate) + '_Cparam_' + str(self.arxiv_num) + '_alpha_' +\
                     str(self.alpha) + '_mx_' + str(self.mx) + '_cross_sec_' +\
                     str(np.log10(self.cross_sec)) + '_annih_prod_' + self.annih_prod + '.dat'
@@ -380,10 +405,10 @@ class Observable(object):
         for m in mass_list:
             print 'Subhalo mass: ', m
             for c in c_list:
-                print 'Concentration parameter: ', c
+                print '    Concentration parameter: ', c
                 try:
                     look_array = np.loadtxt(self.folder + file_name)
-                    if any((np.round([m,c],4) == x).all() for x in np.round(look_array[:,0:2],4)):
+                    if any((np.round([0.005 * m,c],4) == x).all() for x in np.round(look_array[:,0:2],4)):
                         exists = True
                     else:
                         exists = False
@@ -397,8 +422,8 @@ class Observable(object):
                                      arxiv_num=self.arxiv_num,
                                      profile=self.profile)
                     
-                    dmax = dm_model.D_max_extend()           
-                    tab = np.array([m, c, dmax[0]]).transpose()
+                    dmax = dm_model.d_max_point(threshold=10.**-9.)
+                    tab = np.array([0.005 * m, c, dmax]).transpose()
                         
                     if os.path.isfile(self.folder+file_name):
                         load_info = np.loadtxt(self.folder + file_name)
@@ -406,6 +431,65 @@ class Observable(object):
                         np.savetxt(self.folder + file_name, add_to_table)
                     else:
                         np.savetxt(self.folder + file_name, tab)        
+        return
+
+    def Table_Dmax_Extended(self, m_num=20, c_num=15):
+        """ Tables d_max extended for future use.
+
+        """
+        self.param_list['m_num'] = m_num
+        self.param_list['c_num'] = c_num
+
+        if os.path.isfile(self.folder + "param_list.pkl"):
+            openfile = open(self.folder + "param_list.pkl", 'rb')
+            old_dict = pickle.load(openfile)
+            openfile.close()
+            check_diff = DictDiffer(self.param_list, old_dict)
+            if bool(check_diff.changed()):
+                [os.remove(f) for f in os.listdir(self.folder)]
+                pickle.dump(self.param_list, open(self.folder + "param_list.pkl", "wb"))
+        else:
+            pickle.dump(self.param_list, open(self.folder + "param_list.pkl", "wb"))
+
+        Profile_names = ['Einasto', 'NFW']
+
+        file_name = 'Dmax_' + str(Profile_names[self.profile]) + '_Truncate_' + \
+                    str(self.truncate) + '_Cparam_' + str(self.arxiv_num) + '_alpha_' + \
+                    str(self.alpha) + '_mx_' + str(self.mx) + '_cross_sec_' + \
+                    str(np.log10(self.cross_sec)) + '_annih_prod_' + self.annih_prod + '.dat'
+
+        mass_list = np.logspace(self.m_low, self.m_high, m_num)
+        c_list = np.logspace(self.c_low, self.c_high, c_num)
+
+        for m in mass_list:
+            print 'Subhalo mass: ', m
+            for c in c_list:
+                print '    Concentration parameter: ', c
+                try:
+                    look_array = np.loadtxt(self.folder + file_name)
+                    if any((np.round([m, c], 4) == x).all() for x in np.round(look_array[:, 0:2], 4)):
+                        exists = True
+                    else:
+                        exists = False
+                except:
+                    exists = False
+
+                if not exists:
+                    dm_model = Model(self.mx, self.cross_sec, self.annih_prod,
+                                     m, self.alpha, concentration_param=c,
+                                     truncate=self.truncate,
+                                     arxiv_num=self.arxiv_num,
+                                     profile=self.profile)
+
+                    dmax = dm_model.D_max_extend()
+                    tab = np.array([m, c, dmax[0]]).transpose()
+
+                    if os.path.isfile(self.folder + file_name):
+                        load_info = np.loadtxt(self.folder + file_name)
+                        add_to_table = np.vstack((load_info, tab))
+                        np.savetxt(self.folder + file_name, add_to_table)
+                    else:
+                        np.savetxt(self.folder + file_name, tab)
         return
     
     def N_Extended(self, bmin):
@@ -453,3 +537,44 @@ class Observable(object):
         # TODO: consider alternative ways of performing this integral
     
         return 2. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr
+
+    def N_Pointlike(self, bmin):
+
+        Profile_names = ['Einasto', 'NFW']
+
+        openfile = open(self.folder+"param_list.pkl", 'rb')
+        dict = pickle.load(openfile)
+        openfile.close()
+        mass_list = np.logspace(dict['m_low'], dict['m_high'], dict['m_num'])
+        c_list = np.logspace(dict['c_low'], dict['c_high'], dict['c_num'])
+
+        def prob_c(c, M):
+            cm = Concentration_parameter(M, arxiv_num=self.arxiv_num)
+            sigma_c = 0.24
+            return (np.exp(- (np.log(c / cm) / (np.sqrt(2.0) * sigma_c)) ** 2.0) /
+                    (np.sqrt(2. * np.pi) * sigma_c * c))
+
+        file_name = 'Dmax_POINTLIKE_' + str(Profile_names[self.profile]) + '_Truncate_' + \
+                    str(self.truncate) + '_Cparam_' + str(self.arxiv_num) + '_alpha_' + \
+                    str(self.alpha) + '_mx_' + str(self.mx) + '_cross_sec_' + \
+                    str(np.log10(self.cross_sec)) + '_annih_prod_' + self.annih_prod + '.dat'
+
+        integrand_table = np.loadtxt(self.folder + file_name)
+
+#        integrand_table[:, 2] = (260. * (0.005 * integrand_table[:, 0]) ** (-1.9) *
+#                                 prob_c(integrand_table[:, 1], integrand_table[:, 0]) *
+#                                 integrand_table[:, 2] ** 3. / 3.0)
+        integrand_table[:, 2] = (260. * (integrand_table[:, 0])**(-1.9) *
+                                 prob_c(integrand_table[:, 1], integrand_table[:, 0]) *
+                                 integrand_table[:, 2]**3. / 3.0)
+
+        m_num = mass_list.size
+        c_num = c_list.size
+
+        int_prep_spline = np.reshape(integrand_table[:, 2], (m_num, c_num))
+
+        integrand = RectBivariateSpline(mass_list, c_list, int_prep_spline)
+        integr = integrand.integral(3.24 * 10. ** 4., 10. ** 7., 0., np.inf)
+
+        print self.cross_sec, (4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr)
+        return 4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr
