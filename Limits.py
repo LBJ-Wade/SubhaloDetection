@@ -17,7 +17,7 @@ class Poisson(object):
         self.CL = CL
 
     def pdf(self, mu, b, n):
-        pdf = (mu + b) ** n * np.exp(-(mu + b)) / factorial(n)
+        pdf = (mu + b)**n * np.exp(-(mu + b)) / factorial(n)
         return pdf
 
     def poisson_integ_up(self):
@@ -26,9 +26,7 @@ class Poisson(object):
         diff_tab = np.zeros(mutab.size)
         for i,muv in enumerate(mutab):
             intag = quad(self.pdf, muv, np.inf, args=(self.nbkg, self.nobs))
-            diff_tab[i] = np.abs(intag[0] / norm - self.CL)
-            print i,diff_tab[i]
-        print np.argmin(diff_tab)
+            diff_tab[i] = np.abs(intag[0] / norm - (1. - self.CL))
         return mutab[np.argmin(diff_tab)]
 
     def FeldmanCousins(self, nmax=60, mu_max=20., n_mu=1000):

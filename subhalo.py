@@ -11,7 +11,7 @@ from Threshold import *
 from Limits import *
 import scipy.integrate as integrate
 import scipy.special as special
-from scipy.interpolate import RectBivariateSpline,interp1d,interp2d
+from scipy.interpolate import RectBivariateSpline,interp1d
 from scipy.optimize import minimize,brute
 import os
 import pickle
@@ -192,8 +192,6 @@ class Subhalo(object):
     def Full_Extension(self, dist):
         return radtodeg * np.arctan(self.max_radius / dist)
 
-                
-        
 
 class Einasto(Subhalo):
 
@@ -215,7 +213,7 @@ class Einasto(Subhalo):
 #            M200 = True
             M200 = False
         self.scale_radius = Virial_radius(self.halo_mass, M200=M200) / self.c
-        self.scale_density = ((self.halo_mass * self.alpha * np.exp(-2. / self.alpha) * 
+        self.scale_density = ((self.halo_mass * self.alpha * np.exp(-2. / self.alpha) *
                               (2. / self.alpha)**(3. / self.alpha)) / (4. * np.pi * 
                               self.scale_radius**3. * special.gamma(3. / self.alpha) *
                               (1. - special.gammaincc(3. / self.alpha, 2. * self.c**self.alpha / 
@@ -512,7 +510,7 @@ class Observable(object):
             return (np.exp(- (np.log(c / cm) / (np.sqrt(2.0) * sigma_c)) ** 2.0) /
                    (np.sqrt(2. * np.pi) * sigma_c * c))
            
-        file_name = 'Dmax_' + str(Profile_names[self.profile]) + '_Truncate_' +\
+        file_name = 'Dmax_Extended' + str(Profile_names[self.profile]) + '_Truncate_' +\
                     str(self.truncate) + '_Cparam_' + str(self.arxiv_num) + '_alpha_' +\
                     str(self.alpha) + '_mx_' + str(self.mx) + '_cross_sec_' +\
                     str(np.log10(self.cross_sec)) + '_annih_prod_' + self.annih_prod + '.dat'
@@ -567,11 +565,8 @@ class Observable(object):
 
         integrand_table = np.loadtxt(self.folder + file_name)
 
-#        integrand_table[:, 2] = (260. * (0.005 * integrand_table[:, 0]) ** (-1.9) *
-#                                 prob_c(integrand_table[:, 1], integrand_table[:, 0]) *
-#                                 integrand_table[:, 2] ** 3. / 3.0)
         integrand_table[:, 2] = (260. * (integrand_table[:, 0])**(-1.9) *
-                                 prob_c(integrand_table[:, 1], integrand_table[:, 0]) *
+                                 prob_c(integrand_table[:, 1], integrand_table[:, 0] / 0.005) *
                                  integrand_table[:, 2]**3. / 3.0)
 
         m_num = mass_list.size
@@ -584,4 +579,84 @@ class Observable(object):
 
         print self.cross_sec, (4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr)
         return 4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr
+
+
+class DM_Limits(object):
+
+    def __init__(self, nobs=0., nbkg=0., CL=0.9, annih_prod='BB', pointlike=True,
+                 alpha=0.16, profile=0, truncate=False, arxiv_num=10070438, b_min=30.):
+
+        Profile_list = ["Einasto", "NFW"]
+        self.nobs = nobs
+        self.nbkg = nbkg
+        self.CL = CL
+        self.annih_prod = annih_prod
+        self.alpha = alpha
+        self.profile = profile
+        self.profile_name = Profile_list[self.profile]
+        self.truncate = truncate
+        self.arxiv_num = arxiv_num
+        self.b_min = b_min
+        self.pointlike = pointlike
+        self.folder = MAIN_PATH + "/SubhaloDetection/Data/"
+
+        limarr = np.array([])
+
+        if pointlike:
+            plike_tag = 'Pointlike_'
+        else:
+            plike_tag = 'Extended_'
+
+        file_name = 'Limits' + plike_tag + self.profile_name + '_Truncate_' + \
+                    str(self.truncate) + '_alpha_' + str(self.alpha) +\
+                    '_annih_prod_' + self.annih_prod + '_arxiv_num_' +\
+                    str(self.arxiv_num) + '.dat'
+
+        f_names = self.profile_name + '_Truncate_' + str(self.truncate) + '*' + str(self.arxiv_num) + \
+                  '_alpha_' + str(self.alpha) + '*' + '_annih_prod_' + \
+                  self.annih_prod + '_bmin_' + str(self.b_min) + plike_tag + '.dat'
+
+        foi = glob.glob(self.folder + f_names)
+        lim_vals = Poisson(self.nobs, self.nbkg, self.CL).FeldmanCousins()
+        if lim_vals[0] == 0.:
+            lim_val = lim_vals[1]
+        else:
+            print 'Feldman-Cousins returns two sided band... Exiting...'
+            lim_val = 0.
+            exit()
+
+        for f in foi:
+            print f
+            cross_vs_n = np.loadtxt(f)
+            cs_list = np.logspace(np.log10(cross_vs_n[0,0]), np.log10(cross_vs_n[-1,0]), 200)
+            cross_n_interp = interp1d(cross_vs_n[:,0], cross_vs_n[:,1])
+            fd_min = np.abs(cross_n_interp(cs_list) - lim_val)
+            print 'Cross Section Limit: ', cs_list[np.argmin(fd_min)]
+            if self.profile_name == 'Einasto':
+                mstart = 49
+            elif self.profile_name == 'NFW':
+                mstart = 45
+            if f[mstart:mstart+2] == 'mx':
+                j = 0
+                found_mass = False
+                while not found_mass:
+                    try:
+                        mx = float(f[52:52+j+1])
+                        j += 1
+                    except ValueError:
+                        if j == 0:
+                            print 'Someone Messed Up The Delicate String Formatting!'
+                            exit()
+                        else:
+                            mx = float(f[52:52+j])
+                            found_mass = True
+            else:
+                print 'Someone Messed Up The Delicate String Formatting!'
+
+            limarr = np.append(limarr, [mx, cs_list[np.argmin(fd_min)]])
+
+        print 'Limit: '
+        print limarr
+
+        np.savetxt(self.folder + file_name)
 

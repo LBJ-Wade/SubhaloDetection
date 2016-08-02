@@ -55,10 +55,10 @@ def Virial_radius(Mass, M200=False):
        taken to be M200"""
         
     if not M200:
-        return 215. * (Mass / (2. * 10 ** 12.)) ** (1. / 3.)
+        return 200. * (Mass / (2. * 10 ** 12.)) ** (1. / 3.)
     else:
         return (3. * Mass / (4. * np.pi * delta_200 *
-                rho_critical / 10. ** 9.)) ** (1. / 3.)
+                rho_critical / (10. ** 9.))) ** (1. / 3.)
 
 def ensure_dir(f):
     d = os.path.dirname(f)
