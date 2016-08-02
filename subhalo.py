@@ -8,6 +8,7 @@ Created on Wed Jul 13 09:46:43 2016
 import numpy as np
 from helper import *
 from Threshold import *
+from Limits import *
 import scipy.integrate as integrate
 import scipy.special as special
 from scipy.interpolate import RectBivariateSpline,interp1d,interp2d
@@ -17,7 +18,10 @@ import pickle
 import glob
 
 
-MAIN_PATH = os.environ['SUBHALO_MAIN_PATH']
+try:
+    MAIN_PATH = os.environ['SUBHALO_MAIN_PATH']
+except KeyError:
+    MAIN_PATH = os.getcwd() + '/../'
 
 
 class Model(object):
@@ -208,7 +212,8 @@ class Einasto(Subhalo):
         if arxiv_num == 10070438:
             M200 = False
         elif arxiv_num == 13131729:
-            M200 = True
+#            M200 = True
+            M200 = False
         self.scale_radius = Virial_radius(self.halo_mass, M200=M200) / self.c
         self.scale_density = ((self.halo_mass * self.alpha * np.exp(-2. / self.alpha) * 
                               (2. / self.alpha)**(3. / self.alpha)) / (4. * np.pi * 
@@ -246,7 +251,8 @@ class NFW(Subhalo):
         if arxiv_num == 10070438:
             M200 = False
         elif arxiv_num == 13131729:
-            M200 = True
+#            M200 = True
+            M200 = False
         self.scale_radius = Virial_radius(self.halo_mass, M200=M200) / self.c
         self.vir_rad = Virial_radius(self.halo_mass, M200=M200)
         self.scale_density = ((self.halo_mass * SolarMtoGeV * (cmtokpc)**3.) /
@@ -578,3 +584,4 @@ class Observable(object):
 
         print self.cross_sec, (4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr)
         return 4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr
+
