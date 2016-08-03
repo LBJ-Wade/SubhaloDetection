@@ -11,7 +11,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--dmax', default=True)
 parser.add_argument('--nobs', default=True)
 parser.add_argument('--tag', default='')
-parser.add_argument('--mass', default=1000, type=float)
+parser.add_argument('--mass', default=200, type=float)
 parser.add_argument('--pointlike', default=True)
 parser.add_argument('--cross_sec_low', default=-27., type=float)  # In log10
 parser.add_argument('--cross_sec_high', default=-23., type=float)  # In log10
@@ -78,11 +78,22 @@ for i in range(count):
 
 fout = open('runs_dmax/Calc_Dmax_commandrunner_{}.sh'.format(tag), 'w')
 fout.write('#! /bin/bash\n')
-fout.write('#$ -l h_rt=24:00:00,h_data=2G\n')
+if plike:
+    fout.write('#$ -l h_rt=1:00:00,h_data=1G\n')
+else:
+    fout.write('#$ -l h_rt=24:00:00,h_data=2G\n')
 fout.write('#$ -cwd\n')
-fout.write('#$ -t 1-{}\n'.format(count))
+if plike:
+    fout.write('#$ -t 1-{}:{}\n'.format(count,count))
+else:
+    fout.write('#$ -t 1-{}\n'.format(count))
 fout.write('#$ -V\n')
-fout.write('bash calc_Dmax_{}_$SGE_TASK_ID.sh\n'.format(tag))
+if plike:
+    fout.write('for i in `seq 0 {}`; do\n'.format(count))
+    fout.write('    my_task_id =$((SGE_TASK_ID + i))\n')
+    fout.write('    bash calc_Dmax_{}_$my_task_id.sh\n'.format(tag))
+else:
+    fout.write('bash calc_Dmax_{}_$SGE_TASK_ID.sh\n'.format(tag))
 fout.close()
 
 cmds = []
