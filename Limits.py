@@ -52,21 +52,20 @@ class Poisson(object):
 
         r_found = False
         m_regions = False
-        cl_tab = None
 
         for i in range(mu_band[:,0].size):
             if mu_band[i,1] <= self.nobs <= mu_band[i,2]:
-                if cl_tab == None:
-                    cl_tab = np.array([mu_band[i, 0]])
-                else:
+                try:
                     cl_tab = np.append(cl_tab, mu_band[i, 0])
+                except NameError:
+                    cl_tab = np.array([mu_band[i, 0]])
                 if not r_found:
                     r_found = True
                 elif r_found and not (mu_band[i-1,0] in cl_tab):
                     print 'Potentially have multiple disconnected regions'
                     m_regions = True
         if m_regions:
-            'Full Tab. Look for multiple regions.'
+            print 'Full Tab. Look for multiple regions.'
             print cl_tab
 
         print 'Minimum value of mu: ',np.min(cl_tab)

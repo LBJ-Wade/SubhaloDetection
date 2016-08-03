@@ -14,7 +14,6 @@ import scipy.special as special
 from scipy.optimize import minimize,brute
 
 
-
 class Subhalo(object):
     def J(self, dist, theta):
         """Theta in degrees and distance in kpc"""

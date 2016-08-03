@@ -13,7 +13,7 @@ from profiles import *
 import scipy.integrate as integrate
 import scipy.special as special
 from scipy.interpolate import RectBivariateSpline,interp1d
-from scipy.optimize import minimize,brute
+from scipy.optimize import minimize
 import os
 import pickle
 import glob
@@ -459,21 +459,22 @@ class DM_Limits(object):
         self.pointlike = pointlike
         self.folder = MAIN_PATH + "/SubhaloDetection/Data/"
 
-        limarr = np.array([])
+    def poisson_limit(self):
 
-        if pointlike:
-            plike_tag = 'Pointlike_'
+        if self.pointlike:
+            plike_tag = '_Pointlike'
         else:
-            plike_tag = 'Extended_'
+            plike_tag = '_Extended'
 
         file_name = 'Limits' + plike_tag + self.profile_name + '_Truncate_' + \
                     str(self.truncate) + '_alpha_' + str(self.alpha) +\
                     '_annih_prod_' + self.annih_prod + '_arxiv_num_' +\
                     str(self.arxiv_num) + '.dat'
 
-        f_names = self.profile_name + '_Truncate_' + str(self.truncate) + '*' + str(self.arxiv_num) + \
-                  '_alpha_' + str(self.alpha) + '*' + '_annih_prod_' + \
-                  self.annih_prod + '_bmin_' + str(self.b_min) + plike_tag + '.dat'
+        f_names = self.profile_name + '_Truncate_' + str(self.truncate) + '_Cparam_' +\
+                  str(self.arxiv_num) +'_alpha_' + str(self.alpha) + '_mx_' + '*' +\
+                  '_annih_prod_' + self.annih_prod + '_bmin_' + str(self.b_min) +\
+                  plike_tag + '.dat'
 
         foi = glob.glob(self.folder + f_names)
         lim_vals = Poisson(self.nobs, self.nbkg, self.CL).FeldmanCousins()
@@ -484,38 +485,32 @@ class DM_Limits(object):
             lim_val = 0.
             exit()
 
-        for f in foi:
+        limarr = np.zeros(2 * len(foi)).reshape((len(foi),2))
+
+        for i,f in enumerate(foi):
             print f
             cross_vs_n = np.loadtxt(f)
             cs_list = np.logspace(np.log10(cross_vs_n[0,0]), np.log10(cross_vs_n[-1,0]), 200)
             cross_n_interp = interp1d(cross_vs_n[:,0], cross_vs_n[:,1])
             fd_min = np.abs(cross_n_interp(cs_list) - lim_val)
             print 'Cross Section Limit: ', cs_list[np.argmin(fd_min)]
-            if self.profile_name == 'Einasto':
-                mstart = 49
-            elif self.profile_name == 'NFW':
-                mstart = 45
-            if f[mstart:mstart+2] == 'mx':
-                j = 0
-                found_mass = False
-                while not found_mass:
-                    try:
-                        mx = float(f[52:52+j+1])
-                        j += 1
-                    except ValueError:
-                        if j == 0:
-                            print 'Someone Messed Up The Delicate String Formatting!'
-                            exit()
-                        else:
-                            mx = float(f[52:52+j])
-                            found_mass = True
-            else:
-                print 'Someone Messed Up The Delicate String Formatting!'
+            mstart = f.find('_mx_')
+            mstart = mstart + 4
+            j = 0
+            found_mass = False
+            while not found_mass:
+                try:
+                    mx = float(f[mstart:mstart+j+1])
+                    j += 1
+                except ValueError:
+                    mx = float(f[mstart:mstart+j])
+                    found_mass = True
 
-            limarr = np.append(limarr, [mx, cs_list[np.argmin(fd_min)]])
+            limarr[i] = [mx, cs_list[np.argmin(fd_min)]]
 
+        limarr = limarr[np.argsort(limarr[:,0])]
         print 'Limit: '
         print limarr
 
-        np.savetxt(self.folder + file_name)
+        np.savetxt(self.folder + file_name, limarr)
 
