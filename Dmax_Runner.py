@@ -11,7 +11,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--dmax', default=True)
 parser.add_argument('--nobs', default=True)
 parser.add_argument('--tag', default='')
-parser.add_argument('--mass', default=200, type=float)
+parser.add_argument('--mass', default=40, type=float)
 parser.add_argument('--pointlike', default=True)
 parser.add_argument('--cross_sec_low', default=-27., type=float)  # In log10
 parser.add_argument('--cross_sec_high', default=-23., type=float)  # In log10
@@ -90,8 +90,10 @@ else:
 fout.write('#$ -V\n')
 if plike:
     fout.write('for i in `seq 0 {}`; do\n'.format(count))
-    fout.write('    my_task_id =$((SGE_TASK_ID + i))\n')
+    fout.write('    my_task_id=$((SGE_TASK_ID + i))\n')
+    fout.write('    echo $my_task_id\n')
     fout.write('    bash calc_Dmax_{}_$my_task_id.sh\n'.format(tag))
+    fout.write('done')
 else:
     fout.write('bash calc_Dmax_{}_$SGE_TASK_ID.sh\n'.format(tag))
 fout.close()
