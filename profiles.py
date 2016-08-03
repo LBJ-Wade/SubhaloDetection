@@ -11,7 +11,7 @@ from helper import *
 from Limits import *
 import scipy.integrate as integrate
 import scipy.special as special
-from scipy.optimize import minimize,brute
+from scipy.optimize import fminbound
 
 
 class Subhalo(object):
@@ -55,31 +55,30 @@ class Subhalo(object):
         return mass_enc[0]
 
     def Mass_diff_005(self, rmax):
+        rmax = 10**rmax
         mass_enc = integrate.quad(lambda x: x ** 2. * self.density(x), 0., rmax)
         return np.abs(4. * np.pi * GeVtoSolarM * (kpctocm) ** 3. * mass_enc[0] - 0.005 * self.halo_mass)
 
     def Truncated_radius(self):
-        bnds = [(10 ** -5, self.scale_radius)]
-        #       rtrunc = minimize(self.Mass_diff_005, [0.5 * self.scale_radius], bounds=bnds)
-        rtrunc = brute(self.Mass_diff_005, bnds)
-        return rtrunc
+        rtrunc = fminbound(self.Mass_diff_005, -5., np.log10(self.scale_radius))
+        return 10**rtrunc
 
     def AngRad68(self, theta, dist):
-        return np.abs(self.J(dist, theta) - self.J_pointlike(dist) - np.log10(0.68))
+        return np.abs(self.J(dist,theta) - self.J_pointlike(dist) - np.log10(0.68))
 
     def Spatial_Extension(self, dist):
-        bnds = [(10 ** -4., radtodeg * np.arctan(self.max_radius / dist))]
-        extension = minimize(self.AngRad68, np.array([0.9 * radtodeg * np.arctan(self.max_radius / dist)]),
-                             args=(dist), method='SLSQP', bounds=bnds, tol=10 ** -2)
-        return extension.x
+        extension = fminbound(self.AngRad68, 10**-1.5, 2., args=[dist], xtol = 10**-1.5)
+        return extension
+
 
     def Full_Extension(self, dist):
         return radtodeg * np.arctan(self.max_radius / dist)
 
+
 class Einasto(Subhalo):
 
     def __init__(self, halo_mass, alpha, concentration_param=None,
-                 z=0., truncate=False, arxiv_num=10070438):
+                 z=0., truncate=False, arxiv_num=10070438, M200=False):
 
         self.pname = 'Einasto_alpha_'+ str(alpha) + '_C_params_' + str(arxiv_num) + \
                      '_Truncate_' + str(truncate)
@@ -90,20 +89,16 @@ class Einasto(Subhalo):
             concentration_param = Concentration_parameter(halo_mass, z, arxiv_num)
 
         self.c = concentration_param
-        if arxiv_num == 10070438:
-            M200 = False
-        elif arxiv_num == 13131729:
-            M200 = True
-        # M200 = False
-        self.scale_radius = Virial_radius(self.halo_mass, M200=M200) / self.c
+        if M200:
+            virial_radius = (3. * self.halo_mass / (4. * np.pi * rho_critical * delta_200) * 10. ** 9.)**(1. / 3.)
+        else:
+            virial_radius = Virial_radius(self.halo_mass)
+        self.scale_radius = virial_radius / self.c
         self.scale_density = ((self.halo_mass * self.alpha * np.exp(-2. / self.alpha) *
                                (2. / self.alpha) ** (3. / self.alpha)) / (4. * np.pi *
-                                                                          self.scale_radius ** 3. * special.gamma(
-            3. / self.alpha) *
-                                                                          (1. - special.gammaincc(3. / self.alpha,
-                                                                                                  2. * self.c ** self.alpha /
-                                                                                                  self.alpha))) * SolarMtoGeV * (
-                              cmtokpc) ** 3.)
+                                self.scale_radius ** 3. * special.gamma(3. / self.alpha) *
+                                (1. - special.gammaincc(3. / self.alpha, 2. *
+                                self.c ** self.alpha / self.alpha))) * SolarMtoGeV * (cmtokpc) ** 3.)
 
         if not truncate:
             self.max_radius = self.scale_radius
@@ -114,9 +109,10 @@ class Einasto(Subhalo):
         return self.scale_density * np.exp(-2. / self.alpha * (((r / self.scale_radius) ** self.alpha) - 1.))
 
 
+
 class NFW(Subhalo):
     def __init__(self, halo_mass, alpha, concentration_param=None,
-                 z=0., truncate=False, arxiv_num=10070438):
+                 z=0., truncate=False, arxiv_num=10070438, M200=False):
         """Note: alpha doesn't do anything, I'm keeping it here to be
            consistent with Einasto profile
         """
@@ -130,15 +126,12 @@ class NFW(Subhalo):
             concentration_param = Concentration_parameter(halo_mass, z, arxiv_num)
 
         self.c = concentration_param
-
-        if arxiv_num == 13131729:
-            M200 = False
-        # M200 = True
+        if M200:
+            virial_radius = (3. * self.halo_mass / (4. * np.pi * rho_critical * delta_200) * 10. ** 9.)**(1. / 3.)
         else:
-            M200 = False
-
-        self.scale_radius = Virial_radius(self.halo_mass, M200=M200) / self.c
-        self.vir_rad = Virial_radius(self.halo_mass, M200=M200)
+            virial_radius = Virial_radius(self.halo_mass)
+        self.scale_radius = virial_radius / self.c
+        self.vir_rad = Virial_radius(self.halo_mass)
         self.scale_density = ((self.halo_mass * SolarMtoGeV * (cmtokpc) ** 3.) /
                               (4. * np.pi * self.scale_radius ** 3. *
                                (np.log(self.scale_radius + self.vir_rad) -

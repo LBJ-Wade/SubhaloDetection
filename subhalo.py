@@ -13,10 +13,11 @@ from profiles import *
 import scipy.integrate as integrate
 import scipy.special as special
 from scipy.interpolate import RectBivariateSpline,interp1d
-from scipy.optimize import minimize
+from scipy.optimize import minimize,fminbound
 import os
 import pickle
 import glob
+import time
 
 
 try:
@@ -99,33 +100,32 @@ class Model(object):
 
     def D_max_extend(self):
 
-        def flux_diff(x):
-            return np.abs(np.log10(self.Total_Flux(x)) - np.log10(self.min_Flux(x)))
+        def flux_diff_lten(x):
+            return np.abs(np.log10(self.Total_Flux(10**x)) - np.log10(self.min_Flux(10**x)))
 
-        dist_tab = np.logspace(-1.5, 1.4, 40)
-        f_difftab = np.zeros((dist_tab.size,2))
-
-        for i,dist in enumerate(dist_tab):
-            try:
-                f_difftab[i,1] = flux_diff(dist)
-                f_difftab[i,0] = dist_tab[i]
-#                print f_difftab[i]
-            except:
-                pass
-        f_difftab = f_difftab[~np.isnan(f_difftab).any(axis=1)]
-        print f_difftab
-#        f_diff_interp = UnivariateSpline(f_difftab[:,0],f_difftab[:,1])
-        try:
-            f_diff_interp = interp1d(f_difftab[:,0], f_difftab[:,1], kind = 'cubic',
-                                     bounds_error=False, fill_value=10000.)
-        except:
-            f_diff_interp = interp1d(f_difftab[:,0], f_difftab[:,1], kind = 'linear',
-                                     bounds_error=False, fill_value=10000.)
-                            
-        bnds = [(f_difftab[0,0], f_difftab[-1,0])]
-        dmax = minimize(f_diff_interp, np.array([1.]), bounds=bnds)
+        dmaxlten = fminbound(flux_diff_lten, -3, 2)
+        dmax = 10. ** dmaxlten
+        # HARD MINIMIZE
+        # dist_tab = np.logspace(-1.5, 1.4, 40)
+        # f_difftab = np.zeros((dist_tab.size,2))
+        # for i,dist in enumerate(dist_tab):
+        #     try:
+        #         f_difftab[i,1] = flux_diff(dist)
+        #         f_difftab[i,0] = dist_tab[i]
+        #     except:
+        #         pass
+        # f_difftab = f_difftab[~np.isnan(f_difftab).any(axis=1)]
+        # try:
+        #     f_diff_interp = interp1d(f_difftab[:,0], f_difftab[:,1], kind = 'cubic',
+        #                              bounds_error=False, fill_value=10000.)
+        # except:
+        #     f_diff_interp = interp1d(f_difftab[:,0], f_difftab[:,1], kind = 'linear',
+        #                              bounds_error=False, fill_value=10000.)
+        #
+        # bnds = [(f_difftab[0,0], f_difftab[-1,0])]
+        # dmax = minimize(f_diff_interp, np.array([1.]), bounds=bnds)
         
-        return dmax.x
+        return dmax
         
 
 class Observable(object):
