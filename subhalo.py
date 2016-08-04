@@ -365,7 +365,7 @@ class Observable(object):
                         mm = 0.005 * m
                     else:
                         mm = m
-                    tab = np.array([mm, c, dmax[0]]).transpose()
+                    tab = np.array([mm, c, dmax]).transpose()
 
                     if os.path.isfile(self.folder + file_name):
                         load_info = np.loadtxt(self.folder + file_name)
