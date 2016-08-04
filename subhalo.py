@@ -104,7 +104,7 @@ class Model(object):
             return np.abs(np.log10(self.Total_Flux(10**x)) - np.log10(self.min_Flux(10**x)))
 
         dmaxlten = fminbound(flux_diff_lten, -3, 2)
-        dmax = 10. ** dmaxlten[0]
+        dmax = 10. ** dmaxlten
         # HARD MINIMIZE
         # dist_tab = np.logspace(-1.5, 1.4, 40)
         # f_difftab = np.zeros((dist_tab.size,2))
