@@ -12,7 +12,7 @@ from Limits import *
 from profiles import *
 import scipy.integrate as integrate
 import scipy.special as special
-from scipy.interpolate import RectBivariateSpline,interp1d
+from scipy.interpolate import RectBivariateSpline,interp1d,interp2d
 from scipy.optimize import minimize,fminbound
 import os
 import pickle
@@ -140,8 +140,6 @@ class Observable(object):
         self.mx = mx
         self.cross_sec = cross_sec
         self.annih_prod = annih_prod
-
-        self.m_high = m_high
         self.c_low = c_low
         self.c_high = c_high
         self.alpha = alpha
@@ -288,9 +286,9 @@ class Observable(object):
                 except:
                     exists = False
                     
-                if not exists:  
+                if not exists:
                     dm_model = Model(self.mx, self.cross_sec, self.annih_prod, 
-                                     m, self.alpha, concentration_param=c, 
+                                     m, self.alpha, concentration_param=c,
                                      truncate=self.truncate,
                                      arxiv_num=self.arxiv_num,
                                      profile=self.profile)
@@ -344,7 +342,11 @@ class Observable(object):
                 print '    Concentration parameter: ', c
                 try:
                     look_array = np.loadtxt(self.folder + file_name)
-                    if any((np.round([m, c], 4) == x).all() for x in np.round(look_array[:, 0:2], 4)):
+                    if self.truncate:
+                        mm = 0.005 * m
+                    else:
+                        mm = m
+                    if any((np.round([mm, c], 4) == x).all() for x in np.round(look_array[:, 0:2], 4)):
                         exists = True
                     else:
                         exists = False
@@ -359,7 +361,11 @@ class Observable(object):
                                      profile=self.profile)
 
                     dmax = dm_model.D_max_extend()
-                    tab = np.array([m, c, dmax[0]]).transpose()
+                    if self.truncate:
+                        mm = 0.005 * m
+                    else:
+                        mm = m
+                    tab = np.array([mm, c, dmax[0]]).transpose()
 
                     if os.path.isfile(self.folder + file_name):
                         load_info = np.loadtxt(self.folder + file_name)
@@ -454,9 +460,10 @@ class Observable(object):
         c_num = c_list.size
 
         int_prep_spline = np.reshape(integrand_table[:, 2], (m_num, c_num))
-
-        integrand = RectBivariateSpline(mass_list, c_list, int_prep_spline)
-        integr = integrand.integral(3.24 * 10. ** 4., 10. ** 7., 0., np.inf)
+        integrand = interp2d(integrand_table[:,0], integrand_table[:,1], integrand_table[:,2], fill_value="extrapolate")
+#        integrand = RectBivariateSpline(mass_list, c_list, int_prep_spline)
+#        integr = integrand.integral(3.24 * 10. ** 4., 10. ** 7., 0., np.inf)
+        integr = integrate.dblquad(integrand, )
 
         print self.cross_sec, (4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr)
         return 4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr
