@@ -8,10 +8,102 @@ import numpy as np
 import os
 from math import factorial
 from scipy.integrate import quad
+from scipy.optimize import fminbound
+from scipy.interpolate import interp1d
+import glob
+from subhalo import *
+
+
+class DM_Limits(object):
+
+    def __init__(self, nobs=0., nbkg=0., CL=0.9, annih_prod='BB', pointlike=True,
+                 alpha=0.16, profile=0, truncate=False, arxiv_num=10070438, b_min=30.,
+                 method=0):
+
+        Profile_list = ["Einasto", "NFW"]
+        Method_list = ["Poisson", "FeldmanCousins"]
+        self.method = Method_list[method]
+        self.nobs = nobs
+        self.nbkg = nbkg
+        self.CL = CL
+        self.annih_prod = annih_prod
+        self.alpha = alpha
+        self.profile = profile
+        self.profile_name = Profile_list[self.profile]
+        self.truncate = truncate
+        self.arxiv_num = arxiv_num
+        self.b_min = b_min
+        self.pointlike = pointlike
+        self.folder = MAIN_PATH + "/SubhaloDetection/Data/"
+
+    def poisson_limit(self):
+
+        if self.pointlike:
+            plike_tag = '_Pointlike'
+        else:
+            plike_tag = '_Extended'
+
+        file_name = 'Limits' + plike_tag + self.profile_name + '_Truncate_' + \
+                    str(self.truncate) + '_alpha_' + str(self.alpha) +\
+                    '_annih_prod_' + self.annih_prod + '_arxiv_num_' +\
+                    str(self.arxiv_num) + '_bmin_' + str(self.b_min) + '.dat'
+
+        f_names = self.profile_name + '_Truncate_' + str(self.truncate) + '_Cparam_' +\
+                  str(self.arxiv_num) +'_alpha_' + str(self.alpha) + '_mx_' + '*' +\
+                  '_annih_prod_' + self.annih_prod + '_bmin_' + str(self.b_min) +\
+                  plike_tag + '.dat'
+
+        foi = glob.glob(self.folder + f_names)
+        if self.method == "Poisson":
+            lim_vals = Poisson(self.nobs, self.nbkg, self.CL).poisson_integ_up()
+            lim_val = lim_vals
+        elif self.method == "FeldmanCousins":
+            lim_vals = Poisson(self.nobs, self.nbkg, self.CL).FeldmanCousins()
+            if lim_vals[0] == 0.:
+                lim_val = lim_vals[1]
+            else:
+                print 'Feldman-Cousins returns two sided band... Exiting...'
+                lim_val = 0.
+                exit()
+        else:
+            print 'Invalid method call.'
+            raise ValueError
+
+
+
+        limarr = np.zeros(2 * len(foi)).reshape((len(foi),2))
+
+        for i,f in enumerate(foi):
+            print f
+            cross_vs_n = np.loadtxt(f)
+            cs_list = np.logspace(np.log10(cross_vs_n[0,0]), np.log10(cross_vs_n[-1,0]), 200)
+            cross_n_interp = interp1d(cross_vs_n[:,0], cross_vs_n[:,1], kind='cubic', bounds_error=False)
+            fd_min = np.abs(cross_n_interp(cs_list) - lim_val)
+            print 'Cross Section Limit: ', cs_list[np.argmin(fd_min)]
+            mstart = f.find('_mx_')
+            mstart = mstart + 4
+            j = 0
+            found_mass = False
+            while not found_mass:
+                try:
+                    mx = float(f[mstart:mstart+j+1])
+                    j += 1
+                except ValueError:
+                    mx = float(f[mstart:mstart+j])
+                    found_mass = True
+
+            limarr[i] = [mx, cs_list[np.argmin(fd_min)]]
+
+        limarr = limarr[np.argsort(limarr[:,0])]
+        print 'Limit: '
+        print limarr
+
+        np.savetxt(self.folder + file_name, limarr)
+
 
 class Poisson(object):
 
-    def __init__(self, nobs, nbkg, CL):
+    def __init__(self, nobs, nbkg=0., CL=0.9):
         self.nobs = nobs
         self.nbkg = nbkg
         self.CL = CL
@@ -22,12 +114,11 @@ class Poisson(object):
 
     def poisson_integ_up(self):
         norm = quad(self.pdf, 0., np.inf, args=(self.nbkg, self.nobs))[0]
-        mutab = np.linspace(0., 20., 1000)
-        diff_tab = np.zeros(mutab.size)
-        for i,muv in enumerate(mutab):
-            intag = quad(self.pdf, muv, np.inf, args=(self.nbkg, self.nobs))
-            diff_tab[i] = np.abs(intag[0] / norm - (1. - self.CL))
-        return mutab[np.argmin(diff_tab)]
+        def min_quant(x):
+            intag = quad(self.pdf, x, np.inf, args=(self.nbkg, self.nobs))
+            return np.abs(intag[0] / norm - (1. - self.CL))
+        x = fminbound(min_quant, 0., 100.)
+        return x
 
     def FeldmanCousins(self, nmax=60, mu_max=20., n_mu=1000):
         mu_tab = np.linspace(0., mu_max, n_mu)

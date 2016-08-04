@@ -16,8 +16,8 @@ parser.add_argument('--pointlike', default=True)
 parser.add_argument('--cross_sec_low', default=-27., type=float)  # In log10
 parser.add_argument('--cross_sec_high', default=-23., type=float)  # In log10
 parser.add_argument('--annih_prod', default='BB')  # TODO: add more than b-bbar
-parser.add_argument('--m_low', default=np.log10(6.48 * 10**6.), type=float)  # In log10
-parser.add_argument('--m_high', default=np.log10(2.0 * 10 **9), type=float)  # In log10
+parser.add_argument('--m_low', default=np.log10(3.24 * 10.**4.), type=float)  # In log10
+parser.add_argument('--m_high', default=np.log10(1.0 * 10.**7.), type=float)  # In log10
 parser.add_argument('--c_low', default=np.log10(2.5), type=float)  # In log10
 parser.add_argument('--c_high', default=2.4, type=float)  # In log10
 parser.add_argument('--alpha', default=0.16, type=float)  # For Einasto
@@ -28,6 +28,7 @@ parser.add_argument('--b_min', default=20., type=float)
 parser.add_argument('--m_num', default=20, type=int)
 parser.add_argument('--c_num', default=20, type=int)
 parser.add_argument('--n_runs', type=int, default=30)
+parser.add_argument('--thresh', default=7 * 10.**-10., type=float)
 parser.add_argument('--path', default=os.environ['SUBHALO_MAIN_PATH'] + '/SubhaloDetection/')
 
 args = parser.parse_args()
@@ -53,6 +54,7 @@ truncate = args.truncate
 b_min = args.b_min
 dmax = args.dmax
 nobs = args.nobs
+thresh = args.thresh
 
 cross_sec_list = np.logspace(cross_sec_low, cross_sec_high, n_runs)
 
@@ -67,6 +69,8 @@ for i,sv in enumerate(cross_sec_list):
                                '--c_high {} --alpha {} --profile {} '.format(c_high, alpha, profile) +\
                                '--arxiv_num {} --m_num {} --c_num {} '.format(arxiv_num, m_num, c_num) +\
                                '--truncate {} --dmax {}'.format(truncate, dmax)
+    if plike:
+        cmd += ' --thresh {}'.format(thresh)
     cmds.append(cmd)
     count += 1
     

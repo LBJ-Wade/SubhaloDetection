@@ -64,7 +64,7 @@ class Model(object):
         integrate_file = MAIN_PATH + "/Spectrum/IntegratedDMSpectrum" + \
                          self.annih_prod + ".dat"
         integrated_list = np.loadtxt(integrate_file)
-        integrated_rate = interp1d(integrated_list[:,0],integrated_list[:,1])        
+        integrated_rate = interp1d(integrated_list[:,0],integrated_list[:,1],kind='cubic')
         n_gamma = integrated_rate(self.mx)
         flux = prefactor * n_gamma * 10**self.subhalo.J_pointlike(dist)
         return flux
@@ -74,7 +74,7 @@ class Model(object):
         integrate_file = MAIN_PATH + "/Spectrum/IntegratedDMSpectrum" + \
                          self.annih_prod + ".dat"
         integrated_list = np.loadtxt(integrate_file)
-        integrated_rate = interp1d(integrated_list[:,0],integrated_list[:,1])
+        integrated_rate = interp1d(integrated_list[:,0],integrated_list[:,1],kind='cubic')
         
         n_gamma = integrated_rate(self.mx)
         
@@ -87,7 +87,7 @@ class Model(object):
         integrate_file = MAIN_PATH + "/Spectrum/IntegratedDMSpectrum" + \
                          self.annih_prod + ".dat"
         integrated_list = np.loadtxt(integrate_file)
-        integrated_rate = interp1d(integrated_list[:, 0], integrated_list[:, 1])
+        integrated_rate = interp1d(integrated_list[:, 0], integrated_list[:, 1],kind='cubic')
 
         n_gamma = integrated_rate(self.mx)
 
@@ -104,7 +104,7 @@ class Model(object):
             return np.abs(np.log10(self.Total_Flux(10**x)) - np.log10(self.min_Flux(10**x)))
 
         dmaxlten = fminbound(flux_diff_lten, -3, 2)
-        dmax = 10. ** dmaxlten
+        dmax = 10. ** dmaxlten[0]
         # HARD MINIMIZE
         # dist_tab = np.logspace(-1.5, 1.4, 40)
         # f_difftab = np.zeros((dist_tab.size,2))
@@ -130,23 +130,30 @@ class Model(object):
 
 class Observable(object):
     
-    def __init__(self, mx, cross_sec, annih_prod, m_low=np.log10(6.48 * 10**6.), 
-                 m_high=np.log10(2.0 * 10 **9), c_low=np.log10(20.),
+    def __init__(self, mx, cross_sec, annih_prod, m_low=np.log10(3.24 * 10**4.),
+                 m_high=np.log10(1.0 * 10 **7), c_low=np.log10(20.),
                  c_high=2.1, alpha=0.16, profile=0, truncate=False, 
                  arxiv_num=10070438):
                   
         Profile_list = ["Einasto", "NFW"]
+        self.truncate = truncate
         self.mx = mx
         self.cross_sec = cross_sec
         self.annih_prod = annih_prod
-        self.m_low = m_low
+
         self.m_high = m_high
         self.c_low = c_low
         self.c_high = c_high
         self.alpha = alpha
         self.profile = profile
         self.profile_name = Profile_list[self.profile]
-        self.truncate = truncate
+        if self.truncate:
+            self.m_low = np.log10(10.**m_low / 0.005)
+            self.m_high = np.log10(10.**m_high / 0.005)
+        else:
+            self.m_low = m_low
+            self.m_high = m_high
+
         self.arxiv_num = arxiv_num
         
         self.folder = MAIN_PATH + "/SubhaloDetection/Data/"
@@ -159,8 +166,8 @@ class Observable(object):
                    
         default_dict = {'profile': 'Einasto', 'truncate': False, 'mx': 100., 'alpha': 0.16,
                         'annih_prod': 'BB', 'arxiv_num': 10070438, 'c_low': np.log10(20.),
-                        'c_high': 2.1, 'c_num': 15, 'm_low': np.log10(6.48 * 10**6.), 
-                        'm_high': np.log10(2.0 * 10 **9), 'm_num': 30}
+                        'c_high': 2.1, 'c_num': 15, 'm_low': np.log10(3.24 * 10**4.),
+                        'm_high': np.log10(1.0 * 10 **7), 'm_num': 30}
         self.param_list = default_dict
         self.param_list['profile'] = self.profile_name
         self.param_list['truncate'] = self.truncate
@@ -168,7 +175,7 @@ class Observable(object):
         self.param_list['annih_prod'] = self.annih_prod
         self.param_list['arxiv_num'] = self.arxiv_num
         self.param_list['c_low'] = self.c_low
-        self.param_list['c_high'] = self.c_high 
+        self.param_list['c_high'] = self.c_high
         self.param_list['m_low'] = self.m_low 
         self.param_list['m_hgih'] = self.m_high 
     
@@ -220,7 +227,7 @@ class Observable(object):
     
                 extension_tab = extension_tab[np.nonzero(extension_tab)]
                 assert isinstance(extension_tab, object)
-                entries_added = len(extension_tab)
+                entries_added = extension_tab.size
                 full_tab = np.vstack((np.ones(entries_added) * m,
                                       np.ones(entries_added) * c, 
                                       dist_list[:entries_added],
@@ -234,8 +241,7 @@ class Observable(object):
                     np.savetxt(self.folder + file_name, full_tab)
         return
     
-    
-    def Table_Dmax_Pointlike(self, m_num=20, c_num = 15):
+    def Table_Dmax_Pointlike(self, m_num=20, c_num = 15, threshold=1.*10.**-9.):
         """ Tables d_max extended for future use. 
 
         """
@@ -271,7 +277,11 @@ class Observable(object):
                 print '    Concentration parameter: ', c
                 try:
                     look_array = np.loadtxt(self.folder + file_name)
-                    if any((np.round([0.005 * m,c],4) == x).all() for x in np.round(look_array[:,0:2],4)):
+                    if self.truncate:
+                        mm = 0.005 * m
+                    else:
+                        mm = m
+                    if any((np.round([mm,c],4) == x).all() for x in np.round(look_array[:,0:2],4)):
                         exists = True
                     else:
                         exists = False
@@ -285,8 +295,12 @@ class Observable(object):
                                      arxiv_num=self.arxiv_num,
                                      profile=self.profile)
                     
-                    dmax = dm_model.d_max_point(threshold=10.**-9.)
-                    tab = np.array([0.005 * m, c, dmax]).transpose()
+                    dmax = dm_model.d_max_point(threshold=threshold)
+                    if self.truncate:
+                        mm = 0.005 * m
+                    else:
+                        mm = m
+                    tab = np.array([mm, c, dmax]).transpose()
                         
                     if os.path.isfile(self.folder+file_name):
                         load_info = np.loadtxt(self.folder + file_name)
@@ -376,10 +390,14 @@ class Observable(object):
         
         
         integrand_table = np.loadtxt(self.folder+file_name)
-        integrand_table[:, 2] = (260. * (integrand_table[:, 0]) ** (-1.9) *
-                                 prob_c(integrand_table[:, 1], integrand_table[:, 0] / 0.005) *
-                                 integrand_table[:, 2] ** 3. / 3.0)
-
+        if self.truncate:
+            integrand_table[:, 2] = (260. * (integrand_table[:, 0]) ** (-1.9) *
+                                     prob_c(integrand_table[:, 1], integrand_table[:, 0] / 0.005) *
+                                     integrand_table[:, 2] ** 3. / 3.0)
+        else:
+            integrand_table[:, 2] = (260. * (integrand_table[:, 0]) ** (-1.9) *
+                                     prob_c(integrand_table[:, 1], integrand_table[:, 0]) *
+                                     integrand_table[:, 2] ** 3. / 3.0)
                                 
         mass_list = np.array([round(integrand_table[0,0],5)])
         c_list = np.array([round(integrand_table[0,1],5)])                      
@@ -423,10 +441,14 @@ class Observable(object):
                     str(np.log10(self.cross_sec)) + '_annih_prod_' + self.annih_prod + '.dat'
 
         integrand_table = np.loadtxt(self.folder + file_name)
-
-        integrand_table[:, 2] = (260. * (integrand_table[:, 0])**(-1.9) *
-                                 prob_c(integrand_table[:, 1], integrand_table[:, 0] / 0.005) *
-                                 integrand_table[:, 2]**3. / 3.0)
+        if self.truncate:
+            integrand_table[:, 2] = (260. * (integrand_table[:, 0])**(-1.9) *
+                                     prob_c(integrand_table[:, 1], integrand_table[:, 0] / 0.005) *
+                                     integrand_table[:, 2]**3. / 3.0)
+        else:
+            integrand_table[:, 2] = (260. * (integrand_table[:, 0]) ** (-1.9) *
+                                     prob_c(integrand_table[:, 1], integrand_table[:, 0]) *
+                                     integrand_table[:, 2] ** 3. / 3.0)
 
         m_num = mass_list.size
         c_num = c_list.size
@@ -439,78 +461,4 @@ class Observable(object):
         print self.cross_sec, (4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr)
         return 4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr
 
-
-class DM_Limits(object):
-
-    def __init__(self, nobs=0., nbkg=0., CL=0.9, annih_prod='BB', pointlike=True,
-                 alpha=0.16, profile=0, truncate=False, arxiv_num=10070438, b_min=30.):
-
-        Profile_list = ["Einasto", "NFW"]
-        self.nobs = nobs
-        self.nbkg = nbkg
-        self.CL = CL
-        self.annih_prod = annih_prod
-        self.alpha = alpha
-        self.profile = profile
-        self.profile_name = Profile_list[self.profile]
-        self.truncate = truncate
-        self.arxiv_num = arxiv_num
-        self.b_min = b_min
-        self.pointlike = pointlike
-        self.folder = MAIN_PATH + "/SubhaloDetection/Data/"
-
-    def poisson_limit(self):
-
-        if self.pointlike:
-            plike_tag = '_Pointlike'
-        else:
-            plike_tag = '_Extended'
-
-        file_name = 'Limits' + plike_tag + self.profile_name + '_Truncate_' + \
-                    str(self.truncate) + '_alpha_' + str(self.alpha) +\
-                    '_annih_prod_' + self.annih_prod + '_arxiv_num_' +\
-                    str(self.arxiv_num) + '.dat'
-
-        f_names = self.profile_name + '_Truncate_' + str(self.truncate) + '_Cparam_' +\
-                  str(self.arxiv_num) +'_alpha_' + str(self.alpha) + '_mx_' + '*' +\
-                  '_annih_prod_' + self.annih_prod + '_bmin_' + str(self.b_min) +\
-                  plike_tag + '.dat'
-
-        foi = glob.glob(self.folder + f_names)
-        lim_vals = Poisson(self.nobs, self.nbkg, self.CL).FeldmanCousins()
-        if lim_vals[0] == 0.:
-            lim_val = lim_vals[1]
-        else:
-            print 'Feldman-Cousins returns two sided band... Exiting...'
-            lim_val = 0.
-            exit()
-
-        limarr = np.zeros(2 * len(foi)).reshape((len(foi),2))
-
-        for i,f in enumerate(foi):
-            print f
-            cross_vs_n = np.loadtxt(f)
-            cs_list = np.logspace(np.log10(cross_vs_n[0,0]), np.log10(cross_vs_n[-1,0]), 200)
-            cross_n_interp = interp1d(cross_vs_n[:,0], cross_vs_n[:,1])
-            fd_min = np.abs(cross_n_interp(cs_list) - lim_val)
-            print 'Cross Section Limit: ', cs_list[np.argmin(fd_min)]
-            mstart = f.find('_mx_')
-            mstart = mstart + 4
-            j = 0
-            found_mass = False
-            while not found_mass:
-                try:
-                    mx = float(f[mstart:mstart+j+1])
-                    j += 1
-                except ValueError:
-                    mx = float(f[mstart:mstart+j])
-                    found_mass = True
-
-            limarr[i] = [mx, cs_list[np.argmin(fd_min)]]
-
-        limarr = limarr[np.argsort(limarr[:,0])]
-        print 'Limit: '
-        print limarr
-
-        np.savetxt(self.folder + file_name, limarr)
 

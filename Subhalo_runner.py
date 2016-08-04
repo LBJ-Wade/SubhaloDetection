@@ -17,20 +17,21 @@ parser.add_argument('--dmax', default=False)
 parser.add_argument('--nobs', default=False)
 parser.add_argument('--simname', default='sim1')
 parser.add_argument('--pointlike', default=False)
-parser.add_argument('--mass', default=100, type=float)
+parser.add_argument('--mass', default=40, type=float)
 parser.add_argument('--cross_sec', default=np.log10(3.*10**-26.), type=float)
 parser.add_argument('--annih_prod', default='BB', type=str)
-parser.add_argument('--m_low', default=np.log10(6.48 * 10**6.), type=float)
-parser.add_argument('--m_high', default=np.log10(2.0 * 10 **9), type=float)
+parser.add_argument('--m_low', default=np.log10(3.24 * 10.**4.), type=float)
+parser.add_argument('--m_high', default=np.log10(1.0 * 10.**7.), type=float)
 parser.add_argument('--c_low', default=np.log10(5.), type=float)
 parser.add_argument('--c_high', default=2., type=float)
 parser.add_argument('--alpha', default=0.16, type=float)
 parser.add_argument('--profile', default=1, type=int)
-parser.add_argument('--truncate', default=True)
+parser.add_argument('--truncate', default=False)
 parser.add_argument('--arxiv_num', default=10070438, type=int)
-parser.add_argument('--b_min', default=30., type=float)
+parser.add_argument('--b_min', default=20., type=float)
 parser.add_argument('--m_num', default=25, type=int)
 parser.add_argument('--c_num', default=15, type=int)
+parser.add_argument('--thresh', default=7 * 10.**-10., type=float)
 parser.add_argument('--path', default=os.environ['SUBHALO_MAIN_PATH'] + '/SubhaloDetection/')
 
 args = parser.parse_args()
@@ -64,7 +65,8 @@ Build_obs_class = Observable(args.mass, args.cross_sec, args.annih_prod, m_low=a
 
 if dmax:
     if pointlike:
-        Build_obs_class.Table_Dmax_Pointlike(m_num=args.m_num, c_num=args.c_num)
+        Build_obs_class.Table_Dmax_Pointlike(m_num=args.m_num, c_num=args.c_num,
+                                             threshold=args.thresh)
     else:
         Build_obs_class.Table_Dmax_Extended(m_num=args.m_num, c_num=args.c_num)
     
