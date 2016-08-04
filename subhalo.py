@@ -7,16 +7,16 @@ Created on Wed Jul 13 09:46:43 2016
 
 import numpy as np
 from helper import *
-from Threshold import *
 from Limits import *
 from profiles import *
 import scipy.integrate as integrate
 import scipy.special as special
 from scipy.interpolate import RectBivariateSpline,interp1d,interp2d
-from scipy.optimize import minimize,fminbound
+from scipy.optimize import minimize,fminbound,brentq
 import os
 import pickle
 import glob
+from Plotting_Functions import *
 import time
 
 
@@ -30,21 +30,26 @@ class Model(object):
     """NOT READY"""
 
     def __init__(self, mx, cross_sec, annih_prod, halo_mass, alpha, 
-                 concentration_param=None, z=0., truncate=False, 
+                 concentration_param=None, z=0., truncate=False,
+                 pointlike=True,
                  arxiv_num=10070438, profile=0):
+
         self.mx = mx
         self.c_sec = cross_sec
         self.annih_prod = annih_prod
         self.arxiv_num = arxiv_num
         self.truncate = truncate
         self.alpha = alpha
-        self.profile = profile        
+        self.profile = profile
+        self.plike = str2bool(pointlike)
+        if not self.plike:
+            self.gamma = self.Determine_Gamma()
         
         if profile == 0:
             self.subhalo = Einasto(halo_mass, alpha, 
                                    concentration_param=concentration_param, 
                                    truncate=truncate, arxiv_num=arxiv_num)
-        elif profile ==1:
+        elif profile == 1:
             self.subhalo = NFW(halo_mass, alpha, 
                                concentration_param=concentration_param, 
                                truncate=truncate, arxiv_num=arxiv_num)
@@ -53,88 +58,101 @@ class Model(object):
             exit()                   
 
     def min_Flux(self, dist):
-        gamma_index = Determine_Gamma(self.mx, self.annih_prod)       
-        extension = 2.0 * self.subhalo.Spatial_Extension(dist)
-        
-        return Threshold(gamma_index, extension)
-        
-        
+        extension = self.subhalo.Spatial_Extension(dist)
+        return self.Threshold(self.gamma, extension)
+
     def Total_Flux(self, dist):
-        prefactor = self.c_sec / (8. * np.pi * self.mx**2.)
+        pre_factor = self.c_sec / (8. * np.pi * self.mx**2.)
         integrate_file = MAIN_PATH + "/Spectrum/IntegratedDMSpectrum" + \
-                         self.annih_prod + ".dat"
+            self.annih_prod + ".dat"
         integrated_list = np.loadtxt(integrate_file)
-        integrated_rate = interp1d(integrated_list[:,0],integrated_list[:,1],kind='cubic')
+        integrated_rate = interp1d(integrated_list[:, 0], integrated_list[:, 1], kind='cubic')
         n_gamma = integrated_rate(self.mx)
-        flux = prefactor * n_gamma * 10**self.subhalo.J_pointlike(dist)
+        flux = pre_factor * n_gamma * 10**self.subhalo.J(dist, 90.)
         return flux
         
     def Partial_Flux(self, dist, theta):
-        prefactor = self.c_sec / (8. * np.pi * self.mx**2.)
+        pre_factor = self.c_sec / (8. * np.pi * self.mx**2.)
         integrate_file = MAIN_PATH + "/Spectrum/IntegratedDMSpectrum" + \
-                         self.annih_prod + ".dat"
+            self.annih_prod + ".dat"
         integrated_list = np.loadtxt(integrate_file)
         integrated_rate = interp1d(integrated_list[:,0],integrated_list[:,1],kind='cubic')
         
         n_gamma = integrated_rate(self.mx)
         
-        flux = prefactor * n_gamma * 10**self.subhalo.J(dist, theta)
+        flux = pre_factor * n_gamma * 10**self.subhalo.J(dist, theta)
         return flux
 
     def d_max_point(self, threshold=(7.0 * 10 ** (-10))):
-        prefactor = self.c_sec / (8. * np.pi * self.mx ** 2.)
-
+        pre_factor = self.c_sec / (8. * np.pi * self.mx ** 2.)
         integrate_file = MAIN_PATH + "/Spectrum/IntegratedDMSpectrum" + \
-                         self.annih_prod + ".dat"
+            self.annih_prod + ".dat"
         integrated_list = np.loadtxt(integrate_file)
-        integrated_rate = interp1d(integrated_list[:, 0], integrated_list[:, 1],kind='cubic')
-
+        integrated_rate = interp1d(integrated_list[:, 0], integrated_list[:, 1], kind='cubic')
         n_gamma = integrated_rate(self.mx)
 
         jf = integrate.quad(lambda x: 4. * np.pi * kpctocm * self.subhalo.density(x) ** 2. * x ** 2.,
-                            0., float(self.subhalo.max_radius), epsabs=10**(-5.), epsrel=10**(-5.))
-
-        dmax = np.sqrt(prefactor * n_gamma * jf[0] / threshold)
-
-        return dmax
+                            0., float(self.subhalo.max_radius), epsabs=10**-5., epsrel=10**-5.)
+        return np.sqrt(pre_factor * n_gamma * jf[0] / threshold)
 
     def D_max_extend(self):
 
         def flux_diff_lten(x):
-            return np.abs(np.log10(self.Total_Flux(10**x)) - np.log10(self.min_Flux(10**x)))
+            return np.abs(self.Total_Flux(10**x) - self.min_Flux(10**x))
+        d_max = fminbound(flux_diff_lten, -4., 1.4, xtol= 10**-3.)
+        print 10.**float(d_max)
+        return 10.**float(d_max)
 
-        dmaxlten = fminbound(flux_diff_lten, -3, 2)
-        dmax = 10. ** dmaxlten
-        # HARD MINIMIZE
-        # dist_tab = np.logspace(-1.5, 1.4, 40)
-        # f_difftab = np.zeros((dist_tab.size,2))
-        # for i,dist in enumerate(dist_tab):
-        #     try:
-        #         f_difftab[i,1] = flux_diff(dist)
-        #         f_difftab[i,0] = dist_tab[i]
-        #     except:
-        #         pass
-        # f_difftab = f_difftab[~np.isnan(f_difftab).any(axis=1)]
-        # try:
-        #     f_diff_interp = interp1d(f_difftab[:,0], f_difftab[:,1], kind = 'cubic',
-        #                              bounds_error=False, fill_value=10000.)
-        # except:
-        #     f_diff_interp = interp1d(f_difftab[:,0], f_difftab[:,1], kind = 'linear',
-        #                              bounds_error=False, fill_value=10000.)
-        #
-        # bnds = [(f_difftab[0,0], f_difftab[-1,0])]
-        # dmax = minimize(f_diff_interp, np.array([1.]), bounds=bnds)
-        
-        return dmax
-        
+    def Determine_Gamma(self):
+        #  TODO: Generalize beyond b\bar{b}
+        #  Also carefully check the accuracy
+        num_collisions = 10 ** 5.
+        spec_file = MAIN_PATH + "/Spectrum/" + str(int(self.mx)) + "GeVDMspectrum.dat"
+        integrate_file = MAIN_PATH + "/Spectrum/IntegratedDMSpectrum" + self.annih_prod + ".dat"
+
+        spectrum = np.loadtxt(spec_file)
+        spectrum[:, 1] = spectrum[:, 1] / num_collisions
+
+        integrated_list = np.loadtxt(integrate_file)
+        integrated_rate = interp1d(integrated_list[:, 0], integrated_list[:, 1])
+
+        gamma_list = [1.5, 2.0, 2.5, 3.0]
+        normalize = np.zeros(len(gamma_list))
+        for g in range(len(gamma_list)):
+            normalize[g] = integrated_rate(self.mx) / integrate.quad(lambda x: x ** (-gamma_list[g]), 1., self.mx)[0]
+
+        int_meanes = lambda x: interpola(x, spectrum[:, 0], spectrum[:, 0] * spectrum[:, 1])
+        meanE = integrate.quad(int_meanes, 1., self.mx, epsabs=10.**-4, epsrel=10.**-4)[0]
+
+        meanE_gam = np.zeros(len(gamma_list))
+        for g in range(len(gamma_list)):
+            meanE_gam[g] = integrate.quad(lambda x: normalize[g] * x ** (-gamma_list[g] + 1.), 1., self.mx,
+                                          epsabs=10.**-4, epsrel=10.**-4)[0]
+
+        diff_meanE = np.abs(meanE_gam - meanE)
+
+        return gamma_list[diff_meanE.argmin()]
+
+    def Threshold(self, gamma, extension):
+
+        file = MAIN_PATH + "/ExtendedThresholds/DetectionThresholdGamma" + \
+               str(int(gamma * 10)) + ".dat"
+
+        thresh_list = np.loadtxt(file)
+        if extension > 2.0:
+            return interpola(2.0, thresh_list[:, 0], thresh_list[:, 1])
+        else:
+            return interpola(extension, thresh_list[:, 0], thresh_list[:, 1])
+
 
 class Observable(object):
     
     def __init__(self, mx, cross_sec, annih_prod, m_low=np.log10(3.24 * 10**4.),
-                 m_high=np.log10(1.0 * 10 **7), c_low=np.log10(20.),
+                 m_high=np.log10(1.0 * 10 ** 7.), c_low=np.log10(20.),
                  c_high=2.1, alpha=0.16, profile=0, truncate=False, 
-                 arxiv_num=10070438):
-                  
+                 arxiv_num=10070438, point_like=True):
+
+        point_like = str2bool(point_like)
         Profile_list = ["Einasto", "NFW"]
         self.truncate = truncate
         self.mx = mx
@@ -151,13 +169,18 @@ class Observable(object):
         else:
             self.m_low = m_low
             self.m_high = m_high
+        self.point_like = point_like
+        if self.point_like:
+            ptag = '_Pointlike'
+        else:
+            ptag = '_Extended'
 
         self.arxiv_num = arxiv_num
         
         self.folder = MAIN_PATH + "/SubhaloDetection/Data/"
         info_str = "Observable_Profile_" + self.profile_name + "_Truncate_" +\
-                    str(self.truncate) + "_mx_" + str(mx) + "_annih_prod_" +\
-                    annih_prod + "_arxiv_num_" + str(arxiv_num) + "/"
+            str(self.truncate) + ptag + "_mx_" + str(mx) + "_annih_prod_" +\
+            annih_prod + "_arxiv_num_" + str(arxiv_num) + "/"
         
         self.folder += info_str
         ensure_dir(self.folder)
@@ -176,17 +199,15 @@ class Observable(object):
         self.param_list['c_high'] = self.c_high
         self.param_list['m_low'] = self.m_low 
         self.param_list['m_hgih'] = self.m_high 
-    
-    
+
     def Table_Spatial_Extension(self, d_low=-3., d_high=1., d_num=80, m_num=60, 
-                                c_num = 50):
+                                c_num=50):
         """ Tables spatial extension for future use. 
             
             Profile Numbers correspond to [Einasto, NFW] # 0 - 1 (TODO: add NFW)
         """
         Profile_names=['Einasto','NFW']
-        
-        
+
         file_name = 'SpatialExtension_' + str(Profile_names[self.profile]) + '_Truncate_' +\
                     str(self.truncate) + '_Cparam_' + str(self.arxiv_num) + '_alpha_' +\
                     str(self.alpha) + '.dat'
@@ -291,7 +312,7 @@ class Observable(object):
                                      m, self.alpha, concentration_param=c,
                                      truncate=self.truncate,
                                      arxiv_num=self.arxiv_num,
-                                     profile=self.profile)
+                                     profile=self.profile, point_like=self.point_like)
                     
                     dmax = dm_model.d_max_point(threshold=threshold)
                     if self.truncate:
@@ -358,7 +379,7 @@ class Observable(object):
                                      m, self.alpha, concentration_param=c,
                                      truncate=self.truncate,
                                      arxiv_num=self.arxiv_num,
-                                     profile=self.profile)
+                                     profile=self.profile, pointlike=self.point_like)
 
                     dmax = dm_model.D_max_extend()
                     if self.truncate:
@@ -460,10 +481,9 @@ class Observable(object):
         c_num = c_list.size
 
         int_prep_spline = np.reshape(integrand_table[:, 2], (m_num, c_num))
-        integrand = interp2d(integrand_table[:,0], integrand_table[:,1], integrand_table[:,2], fill_value="extrapolate")
-#        integrand = RectBivariateSpline(mass_list, c_list, int_prep_spline)
-#        integr = integrand.integral(3.24 * 10. ** 4., 10. ** 7., 0., np.inf)
-        integr = integrate.dblquad(integrand, )
+
+        integrand = RectBivariateSpline(mass_list, c_list, int_prep_spline)
+        integr = integrand.integral(3.24 * 10. ** 4., 10. ** 7., 0., np.inf)
 
         print self.cross_sec, (4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr)
         return 4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr

@@ -6,6 +6,7 @@ Created on Wed Jul 13 09:54:38 2016
 """
 import numpy as np
 import os
+from scipy.interpolate import interp1d
 
 #Conversions
 SolarMtoGeV = 1.11547 * 10**(57.)
@@ -49,15 +50,37 @@ def Concentration_parameter(Mass, z=0, arxiv_num=13131729):
         print 'Wrong arXiv Number for Concentration Parameter'
     
     return c
-    
+
+
 def Virial_radius(Mass):
     return 200. * (Mass / (2. * 10 ** 12.)) ** (1. / 3.)
+
+
+def interpola(val, x, y):
+    try:
+        f = np.zeros(len(val))
+        for i, v in enumerate(val):
+            if v <= x[0]:
+                f[i] = y[0] + (y[1] - y[0]) / (x[1] - x[0]) * (v - x[0])
+            elif v >= x[-1]:
+                f[i] = y[-2] + (y[-1] - y[-2]) / (x[-1] - x[-2]) * (v - x[-2])
+            else:
+                f[i] = interp1d(x, y, kind='cubic').__call__(v)
+    except TypeError:
+        if val <= x[0]:
+            f = y[0] + (y[1] - y[0]) / (x[1] - x[0]) * (val - x[0])
+        elif val >= x[-1]:
+            f = y[-2] + (y[-1] - y[-2]) / (x[-1] - x[-2]) * (val - x[-2])
+        else:
+            f = interp1d(x, y, kind='cubic').__call__(val)
+    return f
 
 
 def ensure_dir(f):
     d = os.path.dirname(f)
     if not os.path.exists(d):
         os.makedirs(d)
+
 
 class DictDiffer(object):
     """
@@ -79,3 +102,28 @@ class DictDiffer(object):
         return set(o for o in self.intersect if self.past_dict[o] != self.current_dict[o])
     def unchanged(self):
         return set(o for o in self.intersect if self.past_dict[o] == self.current_dict[o])
+
+
+def adjustFigAspect(fig,aspect=1):
+    '''
+    Adjust the subplot parameters so that the figure has the correct
+    aspect ratio.
+    '''
+    xsize,ysize = fig.get_size_inches()
+    minsize = min(xsize,ysize)
+    xlim = .4*minsize/xsize
+    ylim = .4*minsize/ysize
+    if aspect < 1:
+        xlim *= aspect
+    else:
+        ylim /= aspect
+    fig.subplots_adjust(left=.5-xlim,
+                        right=.5+xlim,
+                        bottom=.5-ylim,
+                        top=.5+ylim)
+
+def str2bool(v):
+    if type(v) == bool:
+        return v
+    elif type(v) == str:
+        return v.lower() in ("yes", "true", "t", "1")

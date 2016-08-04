@@ -61,7 +61,7 @@ simga_n_file = pf + '_Truncate_' + str(args.truncate) + '_Cparam_' + str(args.ar
 Build_obs_class = Observable(args.mass, args.cross_sec, args.annih_prod, m_low=args.m_low, 
                              m_high=args.m_high, c_low=args.c_low,
                              c_high=args.c_high, alpha=args.alpha, profile=args.profile, truncate=truncate,
-                             arxiv_num=args.arxiv_num)
+                             arxiv_num=args.arxiv_num, point_like=args.pointlike)
 
 if dmax:
     if pointlike:
