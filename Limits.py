@@ -99,6 +99,7 @@ class DM_Limits(object):
         print limarr
 
         np.savetxt(self.folder + file_name, limarr)
+        return
 
 
 class Poisson(object):

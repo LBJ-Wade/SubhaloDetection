@@ -9,24 +9,24 @@ import numpy as np
 from helper import *
 from subhalo import *
 import os
-from scipy.interpolate import interp1d
+from scipy.interpolate import interp1d, interp2d
 import matplotlib as mpl
+
 mpl.use('pdf')
 import pylab as pl
 import matplotlib.pyplot as plt
 from matplotlib import rc
 
-rc('font',**{'family':'serif','serif':['Times','Palatino']})
+rc('font', **{'family': 'serif', 'serif': ['Times', 'Palatino']})
 rc('text', usetex=True)
 
-mpl.rcParams['xtick.major.size']=8
-mpl.rcParams['ytick.major.size']=8
-mpl.rcParams['xtick.labelsize']=18
-mpl.rcParams['ytick.labelsize']=18
+mpl.rcParams['xtick.major.size'] = 8
+mpl.rcParams['ytick.major.size'] = 8
+mpl.rcParams['xtick.labelsize'] = 18
+mpl.rcParams['ytick.labelsize'] = 18
 
 
 class LimitPlotter(object):
-
     def __init__(self, annih_prod='BB', n_obs=0., CL=0.95, pointlike=True,
                  alpha=0.16, profile=0, truncate=True, arxiv_num=13131729, b_min=20.,
                  mass_low=1., mass_high=3., fs=20):
@@ -47,18 +47,17 @@ class LimitPlotter(object):
         self.fs = fs
         self.folder = MAIN_PATH + "/SubhaloDetection/Data/"
 
-    def check_if_lim_file_exists(self):
-
         if self.pointlike:
             plike_tag = '_Pointlike'
         else:
             plike_tag = '_Extended'
 
-        self. file_name = 'Limits' + plike_tag + self.profile_name + '_Truncate_' + \
-                           str(self.truncate) + '_alpha_' + str(self.alpha) +\
-                          '_annih_prod_' + self.annih_prod + '_arxiv_num_' +\
-                          str(self.arxiv_num) + '_bmin_' + str(self.b_min) + '.dat'
+        self.file_name = 'Limits' + plike_tag + self.profile_name + '_Truncate_' + \
+                         str(self.truncate) + '_alpha_' + str(self.alpha) + \
+                         '_annih_prod_' + self.annih_prod + '_arxiv_num_' + \
+                         str(self.arxiv_num) + '_bmin_' + str(self.b_min) + '.dat'
 
+    def check_if_lim_file_exists(self):
         if os.path.exists(self.folder + self.file_name):
             return True
         else:
@@ -76,11 +75,11 @@ class LimitPlotter(object):
         color_list = ['Black', 'Red', 'Blue', 'Purple']
         lim_file = np.loadtxt(self.folder + self.file_name)
 
-        lim_interp = interp1d(lim_file[:,0], lim_file[:,1], kind='cubic', bounds_error=False)
+        lim_interp = interp1d(lim_file[:, 0], lim_file[:, 1], kind='cubic', bounds_error=False)
 
         mass_tab = np.logspace(self.mass_low, self.mass_high, 300)
         # limpt = lim_interp(mass_tab)
-        limpt = interpola(mass_tab, lim_file[:,0], lim_file[:,1])
+        limpt = interpola(mass_tab, lim_file[:, 0], lim_file[:, 1])
 
         fig = plt.figure()
         ax = plt.gca()
@@ -104,25 +103,25 @@ class LimitPlotter(object):
 
         plt.title('{}'.format(self.profile_name), fontsize=20)
 
-        plt.text(15., 4. * 10**-24., '{}\n{}'.format(plabel, trunclabel), fontsize=15, ha='left', va='center')
-        plt.text(900., 2. * 10 ** -24.,label, fontsize=15, ha='right')
+        plt.text(15., 4. * 10 ** -24., '{}\n{}'.format(plabel, trunclabel), fontsize=15, ha='left', va='center')
+        plt.text(900., 2. * 10 ** -24., label, fontsize=15, ha='right')
 
         pl.xlim([10., 1000.])
-        pl.ylim([10**-27., 10**-23.])
+        pl.ylim([10 ** -27., 10 ** -23.])
         pl.ylabel(r'$\left< \sigma v \right>$   [$cm^3/s$] ', fontsize=self.fs)
         pl.xlabel(r'$m_{\chi}$  [$GeV$]', fontsize=self.fs)
-        figname = self.folder + '../Plots/' + 'Subhalo_Limits_{}_{}_'.format(self.profile_name, self.truncate) +\
-                  '{}_AnnihProd_{}_Cparams_{}_'.format(self.pointlike, self.annih_prod, self.arxiv_num) +\
-                  'bmin_{}_CL_{}_Nobs_{}.pdf'.format(self.b_min,self.CL,self.nobs)
+        figname = self.folder + '../Plots/' + 'Subhalo_Limits_{}_{}_'.format(self.profile_name, self.truncate) + \
+                  '{}_AnnihProd_{}_Cparams_{}_'.format(self.pointlike, self.annih_prod, self.arxiv_num) + \
+                  'bmin_{}_CL_{}_Nobs_{}.pdf'.format(self.b_min, self.CL, self.nobs)
 
         fig.set_tight_layout(True)
 
         pl.savefig(figname)
+        return
 
 
 class dmax_plots(object):
-
-    def __init__(self, cross_sec=3.*10**-26., mx=100., annih_prod='BB', pointlike=True, alpha=0.16, profile=0,
+    def __init__(self, cross_sec=3. * 10 ** -26., mx=100., annih_prod='BB', pointlike=True, alpha=0.16, profile=0,
                  truncate=True, arxiv_num=10070438, mass_low=-5., mass_high=7., fs=20):
         self.cross_sec = cross_sec
         self.mx = mx
@@ -137,14 +136,14 @@ class dmax_plots(object):
         self.fs = fs
         self.folder = MAIN_PATH + "/SubhaloDetection/Data/"
 
-    def constant_flux_contours(self, threshold=10**-9., flux_low=-18., flux_high=6.):
+    def constant_flux_contours(self, threshold=10 ** -9., flux_low=-18., flux_high=6.):
 
-        fluxtab = np.power(10.,np.linspace(flux_low, flux_high, int(flux_high - flux_low)+1))
-        mass_tab = np.logspace(self.mass_low, self.mass_high, 100)
+        fluxtab = np.power(10., np.linspace(flux_low, flux_high, int(flux_high - flux_low) + 1))
+        mass_tab = np.logspace(self.mass_low, self.mass_high, 50)
         mass_dist_tab = np.zeros(mass_tab.size * fluxtab.size).reshape((mass_tab.size, fluxtab.size))
         real_dmax = np.zeros(mass_tab.size)
         extend_dmax = np.zeros(mass_tab.size)
-        for i,m in enumerate(mass_tab):
+        for i, m in enumerate(mass_tab):
             if self.truncate:
                 mm = m / 0.005
             else:
@@ -154,24 +153,24 @@ class dmax_plots(object):
                           profile=self.profile, pointlike=True)
             real_dmax[i] = model.d_max_point(threshold=threshold)
 
-            model2 = Model(self.mx, self.cross_sec, self.annih_prod, mm, self.alpha,
-                           truncate=self.truncate, arxiv_num=self.arxiv_num,
-                           profile=self.profile, pointlike=False)
-            extend_dmax[i] = model2.D_max_extend()
+            #  model2 = Model(self.mx, self.cross_sec, self.annih_prod, mm, self.alpha,
+            #                 truncate=self.truncate, arxiv_num=self.arxiv_num,
+            #                 profile=self.profile, pointlike=False)
+            #  extend_dmax[i] = model2.D_max_extend()
 
-            for j,f in enumerate(fluxtab):
-                mass_dist_tab[i,j] = model.d_max_point(threshold=f)
+            for j, f in enumerate(fluxtab):
+                mass_dist_tab[i, j] = model.d_max_point(threshold=f)
 
         return real_dmax, extend_dmax, mass_dist_tab
 
-    def plot_flux_contours(self, threshold=10**-9., flux_low=-18., flux_high=6.):
+    def plot_flux_contours(self, threshold=10 ** -9., flux_low=-18., flux_high=6.):
         # TODO: Find way to determine spatial extension boundary
         dmax, dmax_ext, contours = self.constant_flux_contours(threshold=threshold,
                                                                flux_low=flux_low,
                                                                flux_high=flux_high)
 
         mass_tab = np.logspace(self.mass_low, self.mass_high, 50)
-        mlen,flen = np.shape(contours)
+        mlen, flen = np.shape(contours)
 
         fig = plt.figure(figsize=(8., 6.))
         ax = plt.gca()
@@ -179,13 +178,13 @@ class dmax_plots(object):
         plt.plot(mass_tab, dmax, lw=2, color='Black')
         plt.plot(mass_tab, dmax_ext, lw=2, color='Black')
         for i in range(flen):
-            plt.plot(mass_tab, contours[:,i], lw=1, color='Black', alpha=0.5)
+            plt.plot(mass_tab, contours[:, i], lw=1, color='Black', alpha=0.5)
 
         ax.set_xscale("log")
         ax.set_yscale('log')
-        pl.xlim([10**self.mass_low, 10**self.mass_high])
-        pl.ylim([10**-4., 10.])
-        Profile_List = ["Einasto","NFW"]
+        pl.xlim([10 ** self.mass_low, 10 ** self.mass_high])
+        pl.ylim([10 ** -4., 10.])
+        Profile_List = ["Einasto", "NFW"]
         profile_name = Profile_List[self.profile]
         plt.title('{}'.format(profile_name), fontsize=20)
         if self.pointlike:
@@ -197,8 +196,8 @@ class dmax_plots(object):
         else:
             trunclabel = ''
 
-        plt.text(2. * 10**-5, 1., '{}\n{}\n $m_\chi = ${} \n $\sigma v = ${}'.format(plabel,trunclabel,
-                                                                                  self.mx, self.cross_sec),
+        plt.text(2. * 10 ** -5, 1., '{}\n{}\n $m_\chi = ${} \n $\sigma v = ${}'.format(plabel, trunclabel,
+                                                                                       self.mx, self.cross_sec),
                  fontsize=15, ha='left', va='center')
 
         pl.ylabel('Distance  [kpc]', fontsize=self.fs)
@@ -211,8 +210,9 @@ class dmax_plots(object):
         #  adjustFigAspect(fig,aspect=.5)
         fig.set_tight_layout(True)
         pl.savefig(figname)
+        return
 
-    def N_obs_splice(self, mass=None, c=None):
+    def dmax_obs_splice(self):
 
         Profile_names = ['Einasto', 'NFW']
         if self.pointlike:
@@ -250,38 +250,23 @@ class dmax_plots(object):
         c_num = c_list.size
         int_prep_spline = np.reshape(integrand_table[:, 2], (m_num, c_num))
         dmax = RectBivariateSpline(mass_list, c_list, int_prep_spline)
+        fixinterp = interp2d(integrand_table[:, 0], integrand_table[:, 1], integrand_table[:, 2])
+        f, ax = plt.subplots(5, 2, sharex='col', sharey='row')
 
-        fig = plt.figure(figsize=(8., 6.))
-        ax = plt.gca()
+        m = np.logspace(np.log10(mass_list[0]), np.log10(mass_list[-1]), 200)
+        points = np.zeros(c_num * m.size / 2).reshape((c_num / 2, m.size))
+        j = 0
 
-        if not mass and not c:
-            m = np.logspace(np.log10(mass_list[0]), np.log10(mass_list[-1]), 200)
-            c = Concentration_parameter(m)
-            points = dmax.ev(m, c)
-            plt.plot(m, points, lw=2, color='Black')
-            pl.xlabel(r'$M_{subhalo}$  [$M_\odot$]', fontsize=self.fs)
-            pl.xlim(3.24 * 10**4., 10.**7.)
-        elif not mass and c:
-            m = np.logspace(np.log10(mass_list[0]), np.log10(mass_list[-1]), 200)
-            c = np.ones_like(m) * c
-            points = dmax.ev(m, c)
-            plt.plot(m, points, lw=2, color='Black')
-            pl.xlabel(r'$M_{subhalo}$  [$M_\odot$]', fontsize=self.fs)
-            pl.xlim([m[0], m[-1]])
-        elif mass and not c:
-            c = np.logspace(0., 200., 200)
-            m = np.ones_like(c) * mass
-            points = dmax.ev(m, c)
-            plt.plot(c, points, lw=2, color='Black')
-            pl.xlabel('Concentration Parameter', fontsize=self.fs)
-            pl.xlim([c[0], c[-1]])
+        for i in range(c_num / 2):
+            if i == 5:
+                j = 1
+            ii = i % 5
+            points[i] = dmax.ev(m, c_list[2 * i])
+            ax[ii, j].plot(m, points[i], 'b--', mass_list, fixinterp(mass_list, c_list[2 * i]), 'r.', ms=3)
+            ax[ii, j].set_xscale("log")
+            ax[ii, j].set_yscale('log')
 
-        ax.set_xscale("log")
-        ax.set_yscale('log')
-
-        pl.ylabel('Max Distance  [kpc]', fontsize=self.fs)
-        fig.set_tight_layout(True)
+        pl.xlim(3.24 * 10 ** 4., 10. ** 7.)
+        f.set_tight_layout(True)
         pl.savefig('/Users/SamWitte/Desktop/example.pdf')
-
-
-
+        return

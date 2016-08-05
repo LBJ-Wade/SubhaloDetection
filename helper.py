@@ -7,6 +7,9 @@ Created on Wed Jul 13 09:54:38 2016
 import numpy as np
 import os
 from scipy.interpolate import interp1d
+from scipy.integrate import quad
+import glob
+
 
 
 try:
@@ -89,6 +92,7 @@ def ensure_dir(f):
     d = os.path.dirname(f)
     if not os.path.exists(d):
         os.makedirs(d)
+    return
 
 
 class DictDiffer(object):
@@ -103,12 +107,16 @@ class DictDiffer(object):
         self.current_dict, self.past_dict = current_dict, past_dict
         self.set_current, self.set_past = set(current_dict.keys()), set(past_dict.keys())
         self.intersect = self.set_current.intersection(self.set_past)
+
     def added(self):
         return self.set_current - self.intersect
+
     def removed(self):
         return self.set_past - self.intersect
+
     def changed(self):
         return set(o for o in self.intersect if self.past_dict[o] != self.current_dict[o])
+
     def unchanged(self):
         return set(o for o in self.intersect if self.past_dict[o] == self.current_dict[o])
 
@@ -130,6 +138,7 @@ def adjustFigAspect(fig,aspect=1):
                         right=.5+xlim,
                         bottom=.5-ylim,
                         top=.5+ylim)
+    return
 
 
 def str2bool(v):
@@ -159,15 +168,15 @@ def table_gamma_index(annih_prod='BB'):
         gamma_list = np.linspace(1.5, 3.0, 100)
         normalize = np.zeros(len(gamma_list))
         for g in range(len(gamma_list)):
-            normalize[g] = integrated_rate(mx) / integrate.quad(lambda x: x ** (-gamma_list[g]), 1., mx)[0]
+            normalize[g] = integrated_rate(mx) / quad(lambda x: x ** (-gamma_list[g]), 1., mx)[0]
 
         def int_meanes(x):
             return interpola(x, spectrum[:, 0], spectrum[:, 0] * spectrum[:, 1])
-        meanE = integrate.quad(int_meanes, 1., mx, epsabs=10.**-4., epsrel=10.**-4.)[0]
+        meanE = quad(int_meanes, 1., mx, epsabs=10.**-4., epsrel=10.**-4.)[0]
 
         meanE_gam = np.zeros(len(gamma_list))
         for g in range(len(gamma_list)):
-            meanE_gam[g] = integrate.quad(lambda x: normalize[g] * x ** (-gamma_list[g] + 1.), 1., mx,
+            meanE_gam[g] = quad(lambda x: normalize[g] * x ** (-gamma_list[g] + 1.), 1., mx,
                                           epsabs=10.**-4., epsrel=10.**-4.)[0]
 
         diff_meanE = np.abs(meanE_gam - meanE)
@@ -176,3 +185,4 @@ def table_gamma_index(annih_prod='BB'):
     sv_dir = MAIN_PATH + "/SubhaloDetection/Data/Misc_Items/"
     file_name = 'GammaIndex_given_mx_for_annih_prod_' + annih_prod + '.pdf'
     np.savetxt(sv_dir + file_name, [mass_tab, gamma_mx])
+    return

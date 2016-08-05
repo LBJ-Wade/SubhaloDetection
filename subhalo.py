@@ -341,7 +341,9 @@ class Observable(object):
             openfile.close()
             check_diff = DictDiffer(self.param_list, old_dict)
             if bool(check_diff.changed()):
-                [os.remove(f) for f in os.listdir(self.folder)]
+                files = glob.glob(self.folder + '/*')
+                for f in files:
+                    os.remove(f)
                 pickle.dump(self.param_list, open(self.folder + "param_list.pkl", "wb"))
         else:
             pickle.dump(self.param_list, open(self.folder + "param_list.pkl", "wb"))
