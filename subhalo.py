@@ -312,7 +312,7 @@ class Observable(object):
                                      m, self.alpha, concentration_param=c,
                                      truncate=self.truncate,
                                      arxiv_num=self.arxiv_num,
-                                     profile=self.profile, point_like=self.point_like)
+                                     profile=self.profile, pointlike=self.point_like)
                     
                     dmax = dm_model.d_max_point(threshold=threshold)
                     if self.truncate:
