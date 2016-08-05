@@ -16,11 +16,6 @@ from scipy.optimize import fminbound
 
 class Subhalo(object):
 
-    def __init__(self, halo_mass, max_radius, scale_radius):
-        self.halo_mass = halo_mass
-        self.max_radius = max_radius
-        self.scale_radius = scale_radius
-
     def J(self, dist, theta):
         """Theta in degrees and distance in kpc"""
 
@@ -70,7 +65,7 @@ class Subhalo(object):
     def Mass_diff_005(self, rmax):
         rmax = 10**rmax
         mass_enc = integrate.quad(lambda x: x ** 2. * self.density(x), 0., rmax)
-        return np.abs(4. * np.pi * GeVtoSolarM * (kpctocm) ** 3. *
+        return np.abs(4. * np.pi * GeVtoSolarM * kpctocm ** 3. *
                       mass_enc[0] - 0.005 * self.halo_mass)
 
     def Truncated_radius(self):
@@ -95,7 +90,7 @@ class Einasto(Subhalo):
     def __init__(self, halo_mass, alpha, concentration_param=None,
                  z=0., truncate=False, arxiv_num=10070438, M200=False):
 
-        self.pname = 'Einasto_alpha_'+ str(alpha) + '_C_params_' + str(arxiv_num) + \
+        self.pname = 'Einasto_alpha_' + str(alpha) + '_C_params_' + str(arxiv_num) + \
             '_Truncate_' + str(truncate)
         self.halo_mass = halo_mass
         self.alpha = alpha
@@ -121,7 +116,6 @@ class Einasto(Subhalo):
             self.max_radius = self.scale_radius
         else:
             self.max_radius = self.Truncated_radius()
-        super(Einasto, self).__init__(self.halo_mass, self.max_radius, self.scale_radius)
 
     def density(self, r):
         return self.scale_density * np.exp(-2. / self.alpha * (((r / self.scale_radius) **
@@ -161,7 +155,8 @@ class NFW(Subhalo):
         else:
             self.max_radius = self.Truncated_radius()
 
-        super(NFW, self).__init__(self.halo_mass, self.max_radius, self.scale_radius)
-
     def density(self, r):
-        return self.scale_density / ((r / self.scale_radius) * (1. + r / self.scale_radius) ** 2.)
+        if r > 0:
+            return self.scale_density / ((r / self.scale_radius) * (1. + r / self.scale_radius) ** 2.)
+        else:
+            return 0.

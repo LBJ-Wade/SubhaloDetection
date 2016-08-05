@@ -7,7 +7,12 @@ Created on Wed Jul 13 09:54:38 2016
 import numpy as np
 import os
 from scipy.interpolate import interp1d
-#from subhalo import *
+
+
+try:
+    MAIN_PATH = os.environ['SUBHALO_MAIN_PATH']
+except KeyError:
+    MAIN_PATH = os.getcwd() + '/../'
 
 #Conversions
 SolarMtoGeV = 1.11547 * 10**(57.)

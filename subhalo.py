@@ -13,7 +13,7 @@ from profiles import *
 import scipy.integrate as integrate
 import scipy.special as special
 from scipy.interpolate import RectBivariateSpline,interp1d,interp2d
-from scipy.optimize import minimize,fminbound,brentq
+from scipy.optimize import fminbound
 import os
 import pickle
 import glob
@@ -44,7 +44,7 @@ class Model(object):
         self.plike = str2bool(pointlike)
         if not self.plike:
             self.gamma = self.Determine_Gamma()
-        
+
         if profile == 0:
             self.subhalo = Einasto(halo_mass, alpha, 
                                    concentration_param=concentration_param, 
@@ -68,7 +68,7 @@ class Model(object):
         integrated_list = np.loadtxt(integrate_file)
         integrated_rate = interp1d(integrated_list[:, 0], integrated_list[:, 1], kind='cubic')
         n_gamma = integrated_rate(self.mx)
-        flux = pre_factor * n_gamma * 10**self.subhalo.J(dist, 90.)
+        flux = pre_factor * n_gamma * 10**self.subhalo.J_pointlike(dist)
         return flux
         
     def Partial_Flux(self, dist, theta):
@@ -76,10 +76,8 @@ class Model(object):
         integrate_file = MAIN_PATH + "/Spectrum/IntegratedDMSpectrum" + \
             self.annih_prod + ".dat"
         integrated_list = np.loadtxt(integrate_file)
-        integrated_rate = interp1d(integrated_list[:,0],integrated_list[:,1],kind='cubic')
-        
+        integrated_rate = interp1d(integrated_list[:, 0], integrated_list[:, 1], kind='cubic')
         n_gamma = integrated_rate(self.mx)
-        
         flux = pre_factor * n_gamma * 10**self.subhalo.J(dist, theta)
         return flux
 
@@ -121,7 +119,8 @@ class Model(object):
         for g in range(len(gamma_list)):
             normalize[g] = integrated_rate(self.mx) / integrate.quad(lambda x: x ** (-gamma_list[g]), 1., self.mx)[0]
 
-        int_meanes = lambda x: interpola(x, spectrum[:, 0], spectrum[:, 0] * spectrum[:, 1])
+        def int_meanes(x):
+           return interpola(x, spectrum[:, 0], spectrum[:, 0] * spectrum[:, 1])
         meanE = integrate.quad(int_meanes, 1., self.mx, epsabs=10.**-4, epsrel=10.**-4)[0]
 
         meanE_gam = np.zeros(len(gamma_list))
@@ -187,8 +186,8 @@ class Observable(object):
                    
         default_dict = {'profile': 'Einasto', 'truncate': False, 'mx': 100., 'alpha': 0.16,
                         'annih_prod': 'BB', 'arxiv_num': 10070438, 'c_low': np.log10(20.),
-                        'c_high': 2.1, 'c_num': 15, 'm_low': np.log10(3.24 * 10**4.),
-                        'm_high': np.log10(1.0 * 10 **7), 'm_num': 30}
+                        'c_high': 2.1, 'c_num': 15, 'm_low': np.log10(3.24 * 10 ** 4.),
+                        'm_high': np.log10(1.0 * 10 ** 7), 'm_num': 30}
         self.param_list = default_dict
         self.param_list['profile'] = self.profile_name
         self.param_list['truncate'] = self.truncate
@@ -198,7 +197,7 @@ class Observable(object):
         self.param_list['c_low'] = self.c_low
         self.param_list['c_high'] = self.c_high
         self.param_list['m_low'] = self.m_low 
-        self.param_list['m_hgih'] = self.m_high 
+        self.param_list['m_high'] = self.m_high
 
     def Table_Spatial_Extension(self, d_low=-3., d_high=1., d_num=80, m_num=60, 
                                 c_num=50):
@@ -443,8 +442,8 @@ class Observable(object):
         integr = integrand.integral(3.24 * 10**4., 1.0 * 10**7., 0., 1000.)
                                     
         # TODO: consider alternative ways of performing this integral
-    
-        return 2. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr
+        print self.cross_sec, (4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr)
+        return 4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr
 
     def N_Pointlike(self, bmin):
 

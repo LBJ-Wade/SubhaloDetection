@@ -212,4 +212,76 @@ class dmax_plots(object):
         fig.set_tight_layout(True)
         pl.savefig(figname)
 
+    def N_obs_splice(self, mass=None, c=None):
+
+        Profile_names = ['Einasto', 'NFW']
+        if self.pointlike:
+            ptag = '_Pointlike'
+        else:
+            ptag = '_Extended'
+        info_str = "Observable_Profile_" + str(Profile_names[self.profile]) + "_Truncate_" + \
+                   str(self.truncate) + ptag + "_mx_" + str(self.mx) + "_annih_prod_" + \
+                   self.annih_prod + "_arxiv_num_" + str(self.arxiv_num) + "/"
+
+        folder = self.folder + info_str
+        openfile = open(folder + "param_list.pkl", 'rb')
+        dict = pickle.load(openfile)
+        openfile.close()
+        if self.truncate:
+            mlow = np.log10(0.005) + dict['m_low']
+            mhigh = np.log10(0.005) + dict['m_high']
+            mass_list = np.logspace(mlow, mhigh, dict['m_num'])
+        else:
+            mass_list = np.logspace(dict['m_low'], dict['m_high'], dict['m_num'])
+        c_list = np.logspace(dict['c_low'], dict['c_high'], dict['c_num'])
+        if self.pointlike:
+            file_name = 'Dmax_POINTLIKE_' + str(Profile_names[self.profile]) + '_Truncate_' + \
+                        str(self.truncate) + '_Cparam_' + str(self.arxiv_num) + '_alpha_' + \
+                        str(self.alpha) + '_mx_' + str(self.mx) + '_cross_sec_' + \
+                        str(np.log10(self.cross_sec)) + '_annih_prod_' + self.annih_prod + '.dat'
+        else:
+            file_name = 'Dmax_Extended' + str(Profile_names[self.profile]) + '_Truncate_' + \
+                        str(self.truncate) + '_Cparam_' + str(self.arxiv_num) + '_alpha_' + \
+                        str(self.alpha) + '_mx_' + str(self.mx) + '_cross_sec_' + \
+                        str(np.log10(self.cross_sec)) + '_annih_prod_' + self.annih_prod + '.dat'
+
+        integrand_table = np.loadtxt(folder + file_name)
+        m_num = mass_list.size
+        c_num = c_list.size
+        int_prep_spline = np.reshape(integrand_table[:, 2], (m_num, c_num))
+        dmax = RectBivariateSpline(mass_list, c_list, int_prep_spline)
+
+        fig = plt.figure(figsize=(8., 6.))
+        ax = plt.gca()
+
+        if not mass and not c:
+            m = np.logspace(np.log10(mass_list[0]), np.log10(mass_list[-1]), 200)
+            c = Concentration_parameter(m)
+            points = dmax.ev(m, c)
+            plt.plot(m, points, lw=2, color='Black')
+            pl.xlabel(r'$M_{subhalo}$  [$M_\odot$]', fontsize=self.fs)
+            pl.xlim(3.24 * 10**4., 10.**7.)
+        elif not mass and c:
+            m = np.logspace(np.log10(mass_list[0]), np.log10(mass_list[-1]), 200)
+            c = np.ones_like(m) * c
+            points = dmax.ev(m, c)
+            plt.plot(m, points, lw=2, color='Black')
+            pl.xlabel(r'$M_{subhalo}$  [$M_\odot$]', fontsize=self.fs)
+            pl.xlim([m[0], m[-1]])
+        elif mass and not c:
+            c = np.logspace(0., 200., 200)
+            m = np.ones_like(c) * mass
+            points = dmax.ev(m, c)
+            plt.plot(c, points, lw=2, color='Black')
+            pl.xlabel('Concentration Parameter', fontsize=self.fs)
+            pl.xlim([c[0], c[-1]])
+
+        ax.set_xscale("log")
+        ax.set_yscale('log')
+
+        pl.ylabel('Max Distance  [kpc]', fontsize=self.fs)
+        fig.set_tight_layout(True)
+        pl.savefig('/Users/SamWitte/Desktop/example.pdf')
+
+
 
