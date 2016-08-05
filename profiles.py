@@ -11,10 +11,15 @@ from helper import *
 from Limits import *
 import scipy.integrate as integrate
 import scipy.special as special
-from scipy.optimize import fminbound, fmin
+from scipy.optimize import fminbound
 
 
 class Subhalo(object):
+
+    def __init__(self, halo_mass, max_radius, scale_radius):
+        self.halo_mass = halo_mass
+        self.max_radius = max_radius
+        self.scale_radius = scale_radius
 
     def J(self, dist, theta):
         """Theta in degrees and distance in kpc"""
@@ -44,7 +49,7 @@ class Subhalo(object):
     def J_pointlike(self, dist):
 
         jfact = integrate.quad(lambda x: 4. * np.pi * kpctocm / dist ** 2. *
-                                         self.density(x) ** 2. * x ** 2.,
+                               self.density(x) ** 2. * x ** 2.,
                                0., self.max_radius, epsabs=10 ** -5, epsrel=10 ** -5)
 
         return np.log10(jfact[0])
@@ -76,9 +81,9 @@ class Subhalo(object):
         return np.abs(self.J(dist,theta) - self.J_pointlike(dist) - np.log10(0.68))
 
     def Spatial_Extension(self, dist):
-        extension = fminbound(self.AngRad68, 10**-5., radtodeg *
+        extension = fminbound(self.AngRad68, 10**-7., radtodeg *
                               np.arctan(self.max_radius / dist), args=[dist],
-                              xtol = 10**-2.)
+                              xtol = 10**-3.)
         return extension
 
     def Full_Extension(self, dist):
@@ -97,11 +102,10 @@ class Einasto(Subhalo):
 
         if concentration_param is None:
             concentration_param = Concentration_parameter(halo_mass, z, arxiv_num)
-
         self.c = concentration_param
         if M200:
-            self.virial_radius = (3. * self.halo_mass / (4. * np.pi * rho_critical * delta_200)
-                                  * 10. ** 9.)**(1. / 3.)
+            self.virial_radius = (3. * self.halo_mass / (4. * np.pi * rho_critical
+                                                         * delta_200))**(1. / 3.)
         else:
             self.virial_radius = Virial_radius(self.halo_mass)
         self.scale_radius = self.virial_radius / self.c
@@ -117,6 +121,7 @@ class Einasto(Subhalo):
             self.max_radius = self.scale_radius
         else:
             self.max_radius = self.Truncated_radius()
+        super(Einasto, self).__init__(self.halo_mass, self.max_radius, self.scale_radius)
 
     def density(self, r):
         return self.scale_density * np.exp(-2. / self.alpha * (((r / self.scale_radius) **
@@ -141,8 +146,8 @@ class NFW(Subhalo):
 
         self.c = concentration_param
         if M200:
-            self.virial_radius = (3. * self.halo_mass / (4. * np.pi * rho_critical * delta_200)
-                                  * 10. ** 9.)**(1. / 3.)
+            self.virial_radius = (3. * self.halo_mass / (4. * np.pi * rho_critical *
+                                                         delta_200))**(1. / 3.)
         else:
             self.virial_radius = Virial_radius(self.halo_mass)
         self.scale_radius = self.virial_radius / self.c
@@ -155,6 +160,8 @@ class NFW(Subhalo):
             self.max_radius = self.scale_radius
         else:
             self.max_radius = self.Truncated_radius()
+
+        super(NFW, self).__init__(self.halo_mass, self.max_radius, self.scale_radius)
 
     def density(self, r):
         return self.scale_density / ((r / self.scale_radius) * (1. + r / self.scale_radius) ** 2.)

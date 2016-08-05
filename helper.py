@@ -17,9 +17,9 @@ kpctocm = 3.08568 * 10**(21.)
 degtorad = np.pi / 180.
 radtodeg = 180. / np.pi
 
-#Numerical Quantities
+#Numerical Quantities -- taken from PDG
 hubble = 0.673
-rho_critical = 2.775 * 10**(11.) * hubble**2.
+rho_critical = 2.775 * 10**(11.) * hubble**2. * 10.**-9. #  Units: Solar Mass / (kpc)^3
 delta_200 = 200.
 
 

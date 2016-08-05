@@ -44,8 +44,6 @@ class Model(object):
         self.plike = str2bool(pointlike)
         if not self.plike:
             self.gamma = self.Determine_Gamma()
-            print self.gamma
-            exit()
         
         if profile == 0:
             self.subhalo = Einasto(halo_mass, alpha, 
@@ -85,7 +83,7 @@ class Model(object):
         flux = pre_factor * n_gamma * 10**self.subhalo.J(dist, theta)
         return flux
 
-    def d_max_point(self, threshold=(7.0 * 10 ** (-10))):
+    def d_max_point(self, threshold=(7.0 * 10 ** (-10.))):
         pre_factor = self.c_sec / (8. * np.pi * self.mx ** 2.)
         integrate_file = MAIN_PATH + "/Spectrum/IntegratedDMSpectrum" + \
             self.annih_prod + ".dat"
