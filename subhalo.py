@@ -44,6 +44,8 @@ class Model(object):
         self.plike = str2bool(pointlike)
         if not self.plike:
             self.gamma = self.Determine_Gamma()
+            print self.gamma
+            exit()
         
         if profile == 0:
             self.subhalo = Einasto(halo_mass, alpha, 
@@ -99,7 +101,7 @@ class Model(object):
 
         def flux_diff_lten(x):
             return np.abs(self.Total_Flux(10**x) - self.min_Flux(10**x))
-        d_max = fminbound(flux_diff_lten, -4., 1.4, xtol= 10**-3.)
+        d_max = fminbound(flux_diff_lten, -4., 1.4, xtol= 10**-4.)
         print 10.**float(d_max)
         return 10.**float(d_max)
 
@@ -481,7 +483,7 @@ class Observable(object):
         c_num = c_list.size
 
         int_prep_spline = np.reshape(integrand_table[:, 2], (m_num, c_num))
-
+        #  TODO: Verify legitimacy of rectbivariatespline... I have doubts
         integrand = RectBivariateSpline(mass_list, c_list, int_prep_spline)
         integr = integrand.integral(3.24 * 10. ** 4., 10. ** 7., 0., np.inf)
 

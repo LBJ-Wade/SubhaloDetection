@@ -11,7 +11,7 @@ from helper import *
 from Limits import *
 import scipy.integrate as integrate
 import scipy.special as special
-from scipy.optimize import fminbound,fmin
+from scipy.optimize import fminbound, fmin
 
 
 class Subhalo(object):
@@ -19,10 +19,11 @@ class Subhalo(object):
     def J(self, dist, theta):
         """Theta in degrees and distance in kpc"""
 
-        if radtodeg * np.arctan(self.max_radius / dist) > 0.8:
-            max_theta = 0.8
-        else:
-            max_theta = radtodeg * np.arctan(self.max_radius / dist)
+#        if radtodeg * np.arctan(self.max_radius / dist) > 0.8:
+#            max_theta = 0.8
+#        else:
+#            max_theta = radtodeg * np.arctan(self.max_radius / dist)
+        max_theta = radtodeg * np.arctan(self.max_radius / dist)
         if theta > max_theta:
             theta = max_theta
         theta = theta * np.pi / 180.
@@ -58,7 +59,7 @@ class Subhalo(object):
 
     def Mass_in_R(self, r):
         mass_enc = integrate.quad(lambda x: 4. * np.pi * x ** 2. * self.density(x) *
-                                            GeVtoSolarM * (kpctocm) ** 3., 0., r)
+                                  GeVtoSolarM * kpctocm ** 3., 0., r)
         return mass_enc[0]
 
     def Mass_diff_005(self, rmax):
@@ -80,7 +81,6 @@ class Subhalo(object):
                               xtol = 10**-2.)
         return extension
 
-
     def Full_Extension(self, dist):
         return radtodeg * np.arctan(self.max_radius / dist)
 
@@ -101,15 +101,17 @@ class Einasto(Subhalo):
         self.c = concentration_param
         if M200:
             self.virial_radius = (3. * self.halo_mass / (4. * np.pi * rho_critical * delta_200)
-                             * 10. ** 9.)**(1. / 3.)
+                                  * 10. ** 9.)**(1. / 3.)
         else:
             self.virial_radius = Virial_radius(self.halo_mass)
         self.scale_radius = self.virial_radius / self.c
         self.scale_density = ((self.halo_mass * self.alpha * np.exp(-2. / self.alpha) *
-                               (2. / self.alpha) ** (3. / self.alpha)) / (4. * np.pi *
-                                self.scale_radius ** 3. * special.gamma(3. / self.alpha) *
-                                (1. - special.gammaincc(3. / self.alpha, 2. *
-                                self.c ** self.alpha / self.alpha))) * SolarMtoGeV * (cmtokpc) ** 3.)
+                               (2. / self.alpha) ** (3. / self.alpha)) /
+                              (4. * np.pi * self.scale_radius ** 3. *
+                               special.gamma(3. / self.alpha) *
+                               (1. - special.gammaincc(3. / self.alpha, 2. *
+                                self.c ** self.alpha / self.alpha))) *
+                              SolarMtoGeV * cmtokpc ** 3.)
 
         if not truncate:
             self.max_radius = self.scale_radius
@@ -140,11 +142,11 @@ class NFW(Subhalo):
         self.c = concentration_param
         if M200:
             self.virial_radius = (3. * self.halo_mass / (4. * np.pi * rho_critical * delta_200)
-                             * 10. ** 9.)**(1. / 3.)
+                                  * 10. ** 9.)**(1. / 3.)
         else:
             self.virial_radius = Virial_radius(self.halo_mass)
         self.scale_radius = self.virial_radius / self.c
-        self.scale_density = ((self.halo_mass * SolarMtoGeV * (cmtokpc) ** 3.) /
+        self.scale_density = ((self.halo_mass * SolarMtoGeV * cmtokpc ** 3.) /
                               (4. * np.pi * self.scale_radius ** 3. *
                                (np.log(1.0 + self.c) -
                                 1.0 / (1.0 + 1.0 / self.c))))

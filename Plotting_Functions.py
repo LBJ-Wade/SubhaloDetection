@@ -170,7 +170,7 @@ class dmax_plots(object):
                                                                flux_low=flux_low,
                                                                flux_high=flux_high)
 
-        mass_tab = np.logspace(self.mass_low, self.mass_high, 100)
+        mass_tab = np.logspace(self.mass_low, self.mass_high, 50)
         mlen,flen = np.shape(contours)
 
         fig = plt.figure(figsize=(8., 6.))
