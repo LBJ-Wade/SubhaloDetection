@@ -143,7 +143,7 @@ class dmax_plots(object):
         mass_tab = np.logspace(self.mass_low, self.mass_high, 100)
         mass_dist_tab = np.zeros(mass_tab.size * fluxtab.size).reshape((mass_tab.size, fluxtab.size))
         real_dmax = np.zeros(mass_tab.size)
-
+        extend_dmax = np.zeros(mass_tab.size)
         for i,m in enumerate(mass_tab):
             if self.truncate:
                 mm = m / 0.005
@@ -151,19 +151,22 @@ class dmax_plots(object):
                 mm = m
             model = Model(self.mx, self.cross_sec, self.annih_prod, mm, self.alpha,
                           truncate=self.truncate, arxiv_num=self.arxiv_num,
-                          profile=self.profile, point_like=self.pointlike)
-
+                          profile=self.profile, pointlike=True)
             real_dmax[i] = model.d_max_point(threshold=threshold)
-            #  extend_dmax[i] = model.D_max_extend()
+
+            model2 = Model(self.mx, self.cross_sec, self.annih_prod, mm, self.alpha,
+                           truncate=self.truncate, arxiv_num=self.arxiv_num,
+                           profile=self.profile, pointlike=False)
+            extend_dmax[i] = model2.D_max_extend()
 
             for j,f in enumerate(fluxtab):
                 mass_dist_tab[i,j] = model.d_max_point(threshold=f)
 
-        return real_dmax, mass_dist_tab
+        return real_dmax, extend_dmax, mass_dist_tab
 
     def plot_flux_contours(self, threshold=10**-9., flux_low=-18., flux_high=6.):
         # TODO: Find way to determine spatial extension boundary
-        dmax, contours = self.constant_flux_contours(threshold=threshold,
+        dmax, dmax_ext, contours = self.constant_flux_contours(threshold=threshold,
                                                                flux_low=flux_low,
                                                                flux_high=flux_high)
 
@@ -174,7 +177,7 @@ class dmax_plots(object):
         ax = plt.gca()
 
         plt.plot(mass_tab, dmax, lw=2, color='Black')
-        #  plt.plot(mass_tab, dmax_ext, lw=2, color='Black')
+        plt.plot(mass_tab, dmax_ext, lw=2, color='Black')
         for i in range(flen):
             plt.plot(mass_tab, contours[:,i], lw=1, color='Black', alpha=0.5)
 

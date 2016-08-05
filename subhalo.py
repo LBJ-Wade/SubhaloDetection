@@ -7,6 +7,7 @@ Created on Wed Jul 13 09:46:43 2016
 
 import numpy as np
 from helper import *
+import helper
 from Limits import *
 from profiles import *
 import scipy.integrate as integrate
@@ -31,8 +32,7 @@ class Model(object):
 
     def __init__(self, mx, cross_sec, annih_prod, halo_mass, alpha, 
                  concentration_param=None, z=0., truncate=False,
-                 pointlike=True,
-                 arxiv_num=10070438, profile=0):
+                 arxiv_num=10070438, profile=0, pointlike=True):
 
         self.mx = mx
         self.c_sec = cross_sec
