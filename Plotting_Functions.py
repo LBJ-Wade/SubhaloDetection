@@ -52,7 +52,7 @@ class LimitPlotter(object):
         else:
             plike_tag = '_Extended'
 
-        self.file_name = 'Limits' + plike_tag + self.profile_name + '_Truncate_' + \
+        self.file_name = 'Limits' + plike_tag + '_' + self.profile_name + '_Truncate_' + \
                          str(self.truncate) + '_alpha_' + str(self.alpha) + \
                          '_annih_prod_' + self.annih_prod + '_arxiv_num_' + \
                          str(self.arxiv_num) + '_bmin_' + str(self.b_min) + '.dat'
@@ -103,12 +103,12 @@ class LimitPlotter(object):
 
         plt.title('{}'.format(self.profile_name), fontsize=20)
 
-        plt.text(15., 4. * 10 ** -24., '{}\n{}'.format(plabel, trunclabel), fontsize=15, ha='left', va='center')
-        plt.text(900., 2. * 10 ** -24., label, fontsize=15, ha='right')
+        plt.text(15., 4. * 10 ** -24., '{}\n{}\n{}'.format(plabel, trunclabel, label),
+                 fontsize=15, ha='left', va='center')
 
-        pl.xlim([10., 1000.])
+        pl.xlim([10., 3.0 * 1000.])
         pl.ylim([10 ** -27., 10 ** -23.])
-        pl.ylabel(r'$\left< \sigma v \right>$   [$cm^3/s$] ', fontsize=self.fs)
+        pl.ylabel(r'$<$ $\sigma$ v $>$   [$cm^3/s$] ', fontsize=self.fs)
         pl.xlabel(r'$m_{\chi}$  [$GeV$]', fontsize=self.fs)
         figname = self.folder + '../Plots/' + 'Subhalo_Limits_{}_{}_'.format(self.profile_name, self.truncate) + \
                   '{}_AnnihProd_{}_Cparams_{}_'.format(self.pointlike, self.annih_prod, self.arxiv_num) + \
@@ -194,11 +194,12 @@ class dmax_plots(object):
         if self.truncate:
             trunclabel = 'Truncated'
         else:
-            trunclabel = ''
+            trunclabel = 'SchoonenbergEtal'
 
-        plt.text(2. * 10 ** -5, 1., '{}\n{}\n $m_\chi = ${} \n $\sigma v = ${}'.format(plabel, trunclabel,
-                                                                                       self.mx, self.cross_sec),
-                 fontsize=15, ha='left', va='center')
+        plt.text(2. * 10 ** -5, 1., '{}\n{}\n'.format(plabel, trunclabel) + r'$m_\chi = ${}'.format(self.mx) +\
+                                    '\n' + r'$<\sigma v> = $' + '{} \n '.format(self.cross_sec) +\
+                                    '$F_\gamma = ${}'.format(threshold),
+                                    fontsize=15, ha='left', va='center')
 
         pl.ylabel('Distance  [kpc]', fontsize=self.fs)
         pl.xlabel(r'$M_{subhalo}$  [$M_\odot$]', fontsize=self.fs)

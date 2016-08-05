@@ -18,11 +18,6 @@ class Subhalo(object):
 
     def J(self, dist, theta):
         """Theta in degrees and distance in kpc"""
-
-#        if radtodeg * np.arctan(self.max_radius / dist) > 0.8:
-#            max_theta = 0.8
-#        else:
-#            max_theta = radtodeg * np.arctan(self.max_radius / dist)
         max_theta = radtodeg * np.arctan(self.max_radius / dist)
         if theta > max_theta:
             theta = max_theta

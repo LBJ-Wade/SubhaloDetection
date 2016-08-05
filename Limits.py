@@ -43,7 +43,7 @@ class DM_Limits(object):
         else:
             plike_tag = '_Extended'
 
-        file_name = 'Limits' + plike_tag + self.profile_name + '_Truncate_' + \
+        file_name = 'Limits' + plike_tag + '_' + self.profile_name + '_Truncate_' + \
                     str(self.truncate) + '_alpha_' + str(self.alpha) +\
                     '_annih_prod_' + self.annih_prod + '_arxiv_num_' +\
                     str(self.arxiv_num) + '_bmin_' + str(self.b_min) + '.dat'
@@ -53,7 +53,8 @@ class DM_Limits(object):
                   '_annih_prod_' + self.annih_prod + '_bmin_' + str(self.b_min) +\
                   plike_tag + '.dat'
 
-        foi = glob.glob(self.folder + f_names)
+        foi = glob.glob(self.folder + '/Cross_v_Nobs/'+ f_names)
+
         if self.method == "Poisson":
             lim_vals = Poisson(self.nobs, self.nbkg, self.CL).poisson_integ_up()
             lim_val = lim_vals
@@ -68,8 +69,6 @@ class DM_Limits(object):
         else:
             print 'Invalid method call.'
             raise ValueError
-
-
 
         limarr = np.zeros(2 * len(foi)).reshape((len(foi),2))
 

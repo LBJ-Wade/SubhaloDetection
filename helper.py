@@ -9,7 +9,7 @@ import os
 from scipy.interpolate import interp1d
 from scipy.integrate import quad
 import glob
-
+import re
 
 
 try:
@@ -17,32 +17,32 @@ try:
 except KeyError:
     MAIN_PATH = os.getcwd() + '/../'
 
-#Conversions
-SolarMtoGeV = 1.11547 * 10**(57.)
-GeVtoSolarM = 8.96485 * 10**(-58.)
-cmtokpc = 3.24078 * 10**(-22.)
-kpctocm = 3.08568 * 10**(21.)
+#  Conversions
+SolarMtoGeV = 1.11547 * 10 ** 57.
+GeVtoSolarM = 8.96485 * 10 ** -58.
+cmtokpc = 3.24078 * 10 ** -22.
+kpctocm = 3.08568 * 10 ** 21.
 degtorad = np.pi / 180.
 radtodeg = 180. / np.pi
 
-#Numerical Quantities -- taken from PDG
+#  Numerical Quantities -- taken from PDG
 hubble = 0.673
-rho_critical = 2.775 * 10**(11.) * hubble**2. * 10.**-9. #  Units: Solar Mass / (kpc)^3
+rho_critical = 2.775 * 10 ** 11. * hubble**2. * 10. ** -9.  # Units: Solar Mass / (kpc)^3
 delta_200 = 200.
 
 
-def Concentration_parameter(Mass, z=0, arxiv_num=13131729):
+def Concentration_parameter(mass, z=0, arxiv_num=13131729):
     """ Mass input in Solar Masses. Two different possible relations below."""
 
-    c=0.    
+    c = 0.
     if arxiv_num == 13131729:
-        if z!= 0:
+        if z != 0:
             raise ValueError 
         coeff_array = np.array([37.5153, -1.5093, 1.636 * 10**(-2),
                                 3.66 * 10**(-4), -2.89237 * 10**(-5), 
                                 5.32 * 10**(-7)])
         for x in range(coeff_array.size):
-            c += coeff_array[x] * (np.log(Mass * hubble))**x
+            c += coeff_array[x] * (np.log(mass * hubble))**x
     elif arxiv_num == 10070438:
         w = 0.029
         m = 0.097
@@ -53,7 +53,7 @@ def Concentration_parameter(Mass, z=0, arxiv_num=13131729):
         a = w * z - m
         b = alpha / (z + gamma) + beta / (z + gamma)**2.
         
-        c = (Mass * hubble)**a * 10.**b
+        c = (mass * hubble)**a * 10.**b
     
     else:
         print 'Wrong arXiv Number for Concentration Parameter'
@@ -61,8 +61,8 @@ def Concentration_parameter(Mass, z=0, arxiv_num=13131729):
     return c
 
 
-def Virial_radius(Mass):
-    return 200. * (Mass / (2. * 10 ** 12.)) ** (1. / 3.)
+def Virial_radius(mass):
+    return 200. * (mass / (2. * 10 ** 12.)) ** (1. / 3.)
 
 
 def interpola(val, x, y):
@@ -121,15 +121,12 @@ class DictDiffer(object):
         return set(o for o in self.intersect if self.past_dict[o] == self.current_dict[o])
 
 
-def adjustFigAspect(fig,aspect=1):
-    '''
-    Adjust the subplot parameters so that the figure has the correct
-    aspect ratio.
-    '''
-    xsize,ysize = fig.get_size_inches()
-    minsize = min(xsize,ysize)
-    xlim = .4*minsize/xsize
-    ylim = .4*minsize/ysize
+def adjustFigAspect(fig, aspect=1):
+
+    xsize, ysize = fig.get_size_inches()
+    minsize = min(xsize, ysize)
+    xlim = .4 * minsize / xsize
+    ylim = .4 * minsize / ysize
     if aspect < 1:
         xlim *= aspect
     else:
@@ -149,17 +146,21 @@ def str2bool(v):
 
 
 def table_gamma_index(annih_prod='BB'):
-    #  TODO:
-    #  Use glob to determine what spectrum files exist...
-    #  Also make spectrum for huge range of mass
-    mass_tab = np.array([34., 40., 100.])#np.logspace(1., 3., 100)
-    num_collisions = 10 ** 5.
-    gamma_mx = np.zeros(mass_tab.size)
-    integrate_file = MAIN_PATH + "/Spectrum/IntegratedDMSpectrum" + annih_prod + ".dat"
+    #  TODO
+    #  Make spectrum for huge range of mass
 
-    for i,mx in enumerate(mass_tab):
-        spec_file = MAIN_PATH + "/Spectrum/" + str(int(mx)) + "GeVDMspectrum.dat"
-        spectrum = np.loadtxt(spec_file)
+    num_collisions = 10 ** 5.
+    integrate_file = MAIN_PATH + "/Spectrum/IntegratedDMSpectrum" + annih_prod + ".dat"
+    file_path = MAIN_PATH + "/Spectrum/"
+    mass_files = glob.glob(file_path + '*' + annih_prod + '_DMspectrum.dat')
+    mass_tab = np.array([])
+    for f in mass_files:
+        slash_tab = [m.start() for m in re.finditer('/', f)]
+        mm = float(f[slash_tab[-1] + 1:f.find('GeV')])
+        mass_tab = np.append(mass_tab, [mm])
+    gamma_mx = np.zeros(mass_tab.size)
+    for i, mx in enumerate(mass_tab):
+        spectrum = np.loadtxt(mass_files[i])
         spectrum[:, 1] = spectrum[:, 1] / num_collisions
 
         integrated_list = np.loadtxt(integrate_file)
@@ -170,19 +171,22 @@ def table_gamma_index(annih_prod='BB'):
         for g in range(len(gamma_list)):
             normalize[g] = integrated_rate(mx) / quad(lambda x: x ** (-gamma_list[g]), 1., mx)[0]
 
-        def int_meanes(x):
+        def int_mean_es(x):
             return interpola(x, spectrum[:, 0], spectrum[:, 0] * spectrum[:, 1])
-        meanE = quad(int_meanes, 1., mx, epsabs=10.**-4., epsrel=10.**-4.)[0]
+        mean_e = quad(int_mean_es, 1., mx, epsabs=10.**-4., epsrel=10.**-4.)[0]
 
-        meanE_gam = np.zeros(len(gamma_list))
+        mean_e_gam = np.zeros(len(gamma_list))
         for g in range(len(gamma_list)):
-            meanE_gam[g] = quad(lambda x: normalize[g] * x ** (-gamma_list[g] + 1.), 1., mx,
-                                          epsabs=10.**-4., epsrel=10.**-4.)[0]
+            mean_e_gam[g] = quad(lambda x: normalize[g] * x ** (-gamma_list[g] + 1.), 1., mx,
+                                 epsabs=10.**-4., epsrel=10.**-4.)[0]
 
-        diff_meanE = np.abs(meanE_gam - meanE)
+        diff_meanE = np.abs(mean_e_gam - mean_e)
         gamma_mx[i] = gamma_list[diff_meanE.argmin()]
 
     sv_dir = MAIN_PATH + "/SubhaloDetection/Data/Misc_Items/"
     file_name = 'GammaIndex_given_mx_for_annih_prod_' + annih_prod + '.pdf'
-    np.savetxt(sv_dir + file_name, [mass_tab, gamma_mx])
+    sv_info = np.column_stack((mass_tab, gamma_mx))
+    sv_info = sv_info[np.argsort(sv_info[:, 0])]
+    np.savetxt(sv_dir + file_name, sv_info)
+
     return

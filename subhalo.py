@@ -105,7 +105,7 @@ class Model(object):
         #  TODO: Generalize beyond b\bar{b}
         #  Also carefully check the accuracy
         num_collisions = 10 ** 5.
-        spec_file = MAIN_PATH + "/Spectrum/" + str(int(self.mx)) + "GeVDMspectrum.dat"
+        spec_file = MAIN_PATH + "/Spectrum/" + str(int(self.mx)) + "Gev_" + self.annih_prod + "_DMspectrum.dat"
         integrate_file = MAIN_PATH + "/Spectrum/IntegratedDMSpectrum" + self.annih_prod + ".dat"
 
         spectrum = np.loadtxt(spec_file)
@@ -133,7 +133,6 @@ class Model(object):
         return gamma_list[diff_meanE.argmin()]
 
     def Threshold(self, gamma, extension):
-
         file = MAIN_PATH + "/ExtendedThresholds/DetectionThresholdGamma" + \
                str(int(gamma * 10)) + ".dat"
 
@@ -428,12 +427,12 @@ class Observable(object):
                                      integrand_table[:, 2] ** 3. / 3.0)
                                 
         mass_list = np.array([round(integrand_table[0,0],5)])
-        c_list = np.array([round(integrand_table[0,1],5)])                      
+        c_list = np.array([round(integrand_table[0,1],5)])
         for i in range(integrand_table[:,0].size):
-            if not np.any(np.in1d(mass_list, round(integrand_table[i,0],5))):
-                mass_list = np.append(mass_list, round(integrand_table[i,0],5))
-            if not np.any(np.in1d(c_list, round(integrand_table[i,1],5))):
-                c_list = np.append(c_list, round(integrand_table[i,1],5))
+            if not np.any([np.in1d(mass_list, [round(integrand_table[i, 0], 5)])]):
+                mass_list = np.append(mass_list, [round(integrand_table[i,0], 5)])
+            if not np.any([np.in1d(c_list, [round(integrand_table[i, 1], 5)])]):
+                c_list = np.append(c_list, [round(integrand_table[i, 1], 5)])
             
         m_num = mass_list.size
         c_num = c_list.size
