@@ -11,8 +11,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--dmax', default=True)
 parser.add_argument('--nobs', default=True)
 parser.add_argument('--tag', default='')
-parser.add_argument('--mass', default=100., type=float)
-parser.add_argument('--pointlike', default=False)
+parser.add_argument('--mass', default=40., type=float)
+parser.add_argument('--pointlike', default=True)
 parser.add_argument('--cross_sec_low', default=-27., type=float)  # In log10
 parser.add_argument('--cross_sec_high', default=-23., type=float)  # In log10
 parser.add_argument('--annih_prod', default='BB')  # TODO: add more than b-bbar
@@ -23,12 +23,12 @@ parser.add_argument('--c_high', default=2.4, type=float)  # In log10
 parser.add_argument('--alpha', default=0.16, type=float)  # For Einasto
 parser.add_argument('--profile', default=0, type=int)  # [Einasto, NFW] 0 -- 1
 parser.add_argument('--truncate', default=True)
-parser.add_argument('--arxiv_num', default=10070438, type=int) # [10070438, 13131729]
-parser.add_argument('--b_min', default=10., type=float)
+parser.add_argument('--arxiv_num', default=13131729, type=int) # [10070438, 13131729]
+parser.add_argument('--b_min', default=20., type=float)
 parser.add_argument('--m_num', default=20, type=int)
 parser.add_argument('--c_num', default=20, type=int)
 parser.add_argument('--n_runs', type=int, default=30)
-parser.add_argument('--thresh', default=1 * 10.**-10., type=float)
+parser.add_argument('--thresh', default=7. * 10.**-10., type=float)
 parser.add_argument('--path', default=os.environ['SUBHALO_MAIN_PATH'] + '/SubhaloDetection/')
 
 args = parser.parse_args()
@@ -82,24 +82,11 @@ for i in range(count):
 
 fout = open('runs_dmax/Calc_Dmax_commandrunner_{}.sh'.format(tag), 'w')
 fout.write('#! /bin/bash\n')
-if plike:
-    fout.write('#$ -l h_rt=1:00:00,h_data=1G\n')
-else:
-    fout.write('#$ -l h_rt=24:00:00,h_data=2G\n')
+fout.write('#$ -l h_rt=24:00:00,h_data=2G\n')
 fout.write('#$ -cwd\n')
-if plike:
-    fout.write('#$ -t 1-{}:{}\n'.format(count,count))
-else:
-    fout.write('#$ -t 1-{}\n'.format(count))
+fout.write('#$ -t 1-{}\n'.format(count))
 fout.write('#$ -V\n')
-if plike:
-    fout.write('for i in `seq 0 {}`; do\n'.format(count))
-    fout.write('    my_task_id=$((SGE_TASK_ID + i))\n')
-    fout.write('    echo $my_task_id\n')
-    fout.write('    bash calc_Dmax_{}_$my_task_id.sh\n'.format(tag))
-    fout.write('done')
-else:
-    fout.write('bash calc_Dmax_{}_$SGE_TASK_ID.sh\n'.format(tag))
+fout.write('bash calc_Dmax_{}_$SGE_TASK_ID.sh\n'.format(tag))
 fout.close()
 
 cmds = []
