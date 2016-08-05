@@ -59,7 +59,7 @@ simga_n_file = pf + '_Truncate_' + str(args.truncate) + '_Cparam_' + str(args.ar
                args.annih_prod + '_bmin_' + str(args.b_min) + plike_tag + '.dat'
 
 nobs_dir = "Observable_Profile_" + pf + "_Truncate_" + str(args.truncate) + plike_tag +\
-           "_mx_" + str(args.mx) + "_annih_prod_" + args.annih_prod + "_arxiv_num_" +\
+           "_mx_" + str(args.mass) + "_annih_prod_" + args.annih_prod + "_arxiv_num_" +\
            str(args.arxiv_num) + "/"
 
 Build_obs_class = Observable(args.mass, args.cross_sec, args.annih_prod, m_low=args.m_low, 
