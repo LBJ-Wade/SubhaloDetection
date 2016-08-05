@@ -82,9 +82,9 @@ if nobs:
             cross_sec_nobs = np.loadtxt(args.path + '/Data/' + simga_n_file)
             add_to_table = np.vstack((cross_sec_nobs, [args.cross_sec, n_point_obs]))
             save_tab = add_to_table[np.lexsort(np.fliplr(add_to_table).T)]
-            np.savetxt(args.path + '/Data/' + simga_n_file, save_tab)
+            np.savetxt(args.path + '/Data/' + nobs_dir + simga_n_file, save_tab)
         else:
-            np.savetxt(args.path + '/Data/' + simga_n_file, np.array([args.cross_sec, n_point_obs]))
+            np.savetxt(args.path + '/Data/' + nobs_dir + simga_n_file, np.array([args.cross_sec, n_point_obs]))
     else:
         n_ext_obs = Build_obs_class.N_Extended(args.b_min)
         if os.path.isfile(args.path + '/Data/' + simga_n_file):
