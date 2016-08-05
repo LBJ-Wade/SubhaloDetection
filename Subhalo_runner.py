@@ -58,6 +58,10 @@ simga_n_file = pf + '_Truncate_' + str(args.truncate) + '_Cparam_' + str(args.ar
                '_alpha_' + str(args.alpha) + '_mx_' + str(args.mass) + '_annih_prod_' +\
                args.annih_prod + '_bmin_' + str(args.b_min) + plike_tag + '.dat'
 
+nobs_dir = "Observable_Profile_" + pf + "_Truncate_" + str(args.truncate) + plike_tag +\
+           "_mx_" + str(args.mx) + "_annih_prod_" + args.annih_prod + "_arxiv_num_" +\
+           str(args.arxiv_num) + "/"
+
 Build_obs_class = Observable(args.mass, args.cross_sec, args.annih_prod, m_low=args.m_low, 
                              m_high=args.m_high, c_low=args.c_low,
                              c_high=args.c_high, alpha=args.alpha, profile=args.profile, truncate=truncate,
@@ -88,5 +92,5 @@ if nobs:
             save_tab = add_to_table[np.lexsort(np.fliplr(add_to_table).T)]
             np.savetxt(args.path + '/Data/' + simga_n_file, save_tab)
         else:
-             np.savetxt(args.path + '/Data/' + simga_n_file, np.array([args.cross_sec, n_ext_obs]))
+             np.savetxt(args.path + '/Data/' + nobs_dir + simga_n_file, np.array([args.cross_sec, n_ext_obs]))
 
