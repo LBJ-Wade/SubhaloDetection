@@ -28,8 +28,11 @@ except KeyError:
 
 
 class Model(object):
-    """NOT READY"""
-
+    """
+    Given a particular DM model and halo, this can calculate various properties such as the
+    maximum distance from Earth such a candidate can be to still be detectable by FermiLat
+    (or the flux, spatially extended threshold, etc)
+    """
     def __init__(self, mx, cross_sec, annih_prod, halo_mass, alpha, 
                  concentration_param=None, z=0., truncate=False,
                  arxiv_num=10070438, profile=0, pointlike=True):
@@ -58,10 +61,19 @@ class Model(object):
             exit()                   
 
     def min_Flux(self, dist):
+        """
+        Wrapper that collects spatial extension and threshold information and returns
+        flux theshold for spatially extended sources
+        :param dist: distnace kpc
+        """
         extension = self.subhalo.Spatial_Extension(dist)
         return self.Threshold(self.gamma, extension)
 
     def Total_Flux(self, dist):
+        """
+        Returns total flux from subhalo
+        :param dist: distance of subhalo in kpc
+        """
         pre_factor = self.c_sec / (8. * np.pi * self.mx**2.)
         integrate_file = MAIN_PATH + "/Spectrum/IntegratedDMSpectrum" + \
             self.annih_prod + ".dat"
@@ -72,6 +84,12 @@ class Model(object):
         return flux
         
     def Partial_Flux(self, dist, theta):
+        """
+        Returns partial flux of threhsold based on integrating out to some theta less than theta_max
+        :param dist: distance of subhalo in kpc
+        :param theta: integration bound
+        :return: partial flux
+        """
         pre_factor = self.c_sec / (8. * np.pi * self.mx**2.)
         integrate_file = MAIN_PATH + "/Spectrum/IntegratedDMSpectrum" + \
             self.annih_prod + ".dat"
@@ -82,6 +100,12 @@ class Model(object):
         return flux
 
     def d_max_point(self, threshold=(7.0 * 10 ** (-10.))):
+        """
+        Calculates the maximum distance a point-like  subhalo can be to still be observable,
+        given a particular threshold
+        :param threshold: flux threshold in photons / cm^2 / s
+        :return: distance in kpc
+        """
         pre_factor = self.c_sec / (8. * np.pi * self.mx ** 2.)
         integrate_file = MAIN_PATH + "/Spectrum/IntegratedDMSpectrum" + \
             self.annih_prod + ".dat"
@@ -94,7 +118,10 @@ class Model(object):
         return np.sqrt(pre_factor * n_gamma * jf[0] / threshold)
 
     def D_max_extend(self):
-
+        """
+        Calculates the maximum distance a spatially extended subhalo can be to still be observable
+        :return: distance in kpc
+        """
         def flux_diff_lten(x):
             return np.abs(self.Total_Flux(10**x) - self.min_Flux(10**x))
         d_max = fminbound(flux_diff_lten, -4., 1.4, xtol= 10**-4.)
@@ -102,10 +129,16 @@ class Model(object):
         return 10.**float(d_max)
 
     def Determine_Gamma(self):
+        """
+        Caclualtes the spectral index to be used to determine the spatial extended threshold
+
+        :return: [1.5, 2.0, 2.5, 3.0] whichever spectral index most closely produces same average
+        photon energy
+        """
         #  TODO: Generalize beyond b\bar{b}
         #  Also carefully check the accuracy
         num_collisions = 10 ** 5.
-        spec_file = MAIN_PATH + "/Spectrum/" + str(int(self.mx)) + "Gev_" + self.annih_prod + "_DMspectrum.dat"
+        spec_file = MAIN_PATH + "/Spectrum/" + str(int(self.mx)) + "GeV_" + self.annih_prod + "_DMspectrum.dat"
         integrate_file = MAIN_PATH + "/Spectrum/IntegratedDMSpectrum" + self.annih_prod + ".dat"
 
         spectrum = np.loadtxt(spec_file)
@@ -133,6 +166,14 @@ class Model(object):
         return gamma_list[diff_meanE.argmin()]
 
     def Threshold(self, gamma, extension):
+        """
+        Calcualtes the flux theshold in (photons / cm^2 / s) of a DM candidate
+
+        :param gamma: Either 1.5, 2.0, 2.5, 3.0 -- found by determinig the spectral index
+        which most closely reporduces the average photon energy
+        :param extension: (Radial) Spatial extension of subhalo in degrees
+        :return: Flux threhsold
+        """
         file = MAIN_PATH + "/ExtendedThresholds/DetectionThresholdGamma" + \
                str(int(gamma * 10)) + ".dat"
 
@@ -144,7 +185,12 @@ class Model(object):
 
 
 class Observable(object):
-    
+    """
+    The main purpose of this class is to calculate the number of observable point-like or
+    spatially extended sources for a particular DM candidate (ie DM mass, cross section,
+    and annihilation products have to be specified)
+    """
+
     def __init__(self, mx, cross_sec, annih_prod, m_low=np.log10(3.24 * 10**4.),
                  m_high=np.log10(1.0 * 10 ** 7.), c_low=np.log10(20.),
                  c_high=2.1, alpha=0.16, profile=0, truncate=False, 
@@ -202,7 +248,7 @@ class Observable(object):
                                 c_num=50):
         """ Tables spatial extension for future use. 
             
-            Profile Numbers correspond to [Einasto, NFW] # 0 - 1 (TODO: add NFW)
+            Profile Numbers correspond to [Einasto, NFW] # 0 - 1
         """
         Profile_names=['Einasto','NFW']
 
@@ -259,8 +305,9 @@ class Observable(object):
         return
     
     def Table_Dmax_Pointlike(self, m_num=20, c_num = 15, threshold=1.*10.**-9.):
-        """ Tables d_max extended for future use. 
-
+        """
+        Tables the maximimum distance a point-like source can be detected for a specified
+        threshold given a particular DM candidate and subhalo specificiations
         """
         self.param_list['m_num'] = m_num
         self.param_list['c_num'] = c_num
@@ -328,8 +375,9 @@ class Observable(object):
         return
 
     def Table_Dmax_Extended(self, m_num=20, c_num=15):
-        """ Tables d_max extended for future use.
-
+        """
+        Tables the maximimum distance an extended source can be detected for a specified
+        threshold given a particular DM candidate and subhalo specificiations
         """
         self.param_list['m_num'] = m_num
         self.param_list['c_num'] = c_num
@@ -397,7 +445,14 @@ class Observable(object):
         return
     
     def N_Extended(self, bmin):
-            
+        """
+        For pre tabled d_max functions, calculates the number of observable spatially
+        extended subhalos
+
+        :param bmin: These anlayses cut out the galactic plane, b_min (in degrees) specifies location
+        of the cut
+        """
+
         Profile_names=['Einasto','NFW']
         
 #        openfile = open(self.folder+"param_list.pkl", 'rb')
@@ -447,6 +502,12 @@ class Observable(object):
         return 4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr
 
     def N_Pointlike(self, bmin):
+        """
+        For pre tabled d_max functions, calculates the number of observable point-like subhalos
+
+        :param bmin: These anlayses cut out the galactic plane, b_min (in degrees) specifies location
+        of the cut
+        """
 
         Profile_names = ['Einasto', 'NFW']
 

@@ -27,6 +27,7 @@ mpl.rcParams['ytick.labelsize'] = 18
 
 
 class LimitPlotter(object):
+    # TODO Genearlize to multiple limits in one plot
     def __init__(self, annih_prod='BB', n_obs=0., CL=0.95, pointlike=True,
                  alpha=0.16, profile=0, truncate=True, arxiv_num=13131729, b_min=20.,
                  mass_low=1., mass_high=3., fs=20):

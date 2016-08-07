@@ -15,7 +15,10 @@ from subhalo import *
 
 
 class DM_Limits(object):
-
+    """
+    Given precalculated cross section vs n_obs files, this class calculates the
+    the upper limits at a chosen CL
+    """
     def __init__(self, nobs=0., nbkg=0., CL=0.9, annih_prod='BB', pointlike=True,
                  alpha=0.16, profile=0, truncate=False, arxiv_num=10070438, b_min=30.,
                  method=0):
@@ -76,7 +79,7 @@ class DM_Limits(object):
             print f
             cross_vs_n = np.loadtxt(f)
             cs_list = np.logspace(np.log10(cross_vs_n[0,0]), np.log10(cross_vs_n[-1,0]), 200)
-            cross_n_interp = interp1d(cross_vs_n[:,0], cross_vs_n[:,1], kind='cubic', bounds_error=False)
+            cross_n_interp = interp1d(cross_vs_n[:,0], cross_vs_n[:,1], kind='linear', bounds_error=False)
             fd_min = np.abs(cross_n_interp(cs_list) - lim_val)
             print 'Cross Section Limit: ', cs_list[np.argmin(fd_min)]
             mstart = f.find('_mx_')
@@ -102,7 +105,9 @@ class DM_Limits(object):
 
 
 class Poisson(object):
-
+    """
+    Contains poisson statistics information. Can choosen from Feldman-Cousins or standard Poisson analysis
+    """
     def __init__(self, nobs, nbkg=0., CL=0.9):
         self.nobs = nobs
         self.nbkg = nbkg
