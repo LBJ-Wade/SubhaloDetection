@@ -6,7 +6,7 @@ Created on Wed Jul 13 09:54:38 2016
 """
 import numpy as np
 import os
-from scipy.interpolate import interp1d
+from scipy.interpolate import interp1d, UnivariateSpline
 from scipy.integrate import quad
 import glob
 import re
@@ -69,7 +69,7 @@ def Virial_radius(mass):
     :param mass: Subhalo mass in SM
     :return: Virial radius in kpc
     """
-    return 200. * (mass / (2. * 10 ** 12.)) ** (1. / 3.)
+    return 200. * (mass / (1.5 * 10 ** 12.)) ** (1. / 3.)
 
 
 def interpola(val, x, y):
@@ -158,7 +158,7 @@ def table_gamma_index(annih_prod='BB'):
     a simple load and interpoalte funciton.
     :param annih_prod: annihlation products [Currently only works for 'BB']
     """
-    #  TODO Make spectrum for huge range of mass
+    #  TODO Create spectrum files for more than just bb
     num_collisions = 10 ** 5.
     integrate_file = MAIN_PATH + "/Spectrum/IntegratedDMSpectrum" + annih_prod + ".dat"
     file_path = MAIN_PATH + "/Spectrum/"
@@ -170,6 +170,7 @@ def table_gamma_index(annih_prod='BB'):
         mass_tab = np.append(mass_tab, [mm])
     gamma_mx = np.zeros(mass_tab.size)
     for i, mx in enumerate(mass_tab):
+        print 'Mass: ', mx
         spectrum = np.loadtxt(mass_files[i])
         spectrum[:, 1] = spectrum[:, 1] / num_collisions
 
@@ -198,5 +199,22 @@ def table_gamma_index(annih_prod='BB'):
     sv_info = np.column_stack((mass_tab, gamma_mx))
     sv_info = sv_info[np.argsort(sv_info[:, 0])]
     np.savetxt(sv_dir + file_name, sv_info)
+
+    return
+
+def integrated_rate_test(mx=100., annih_prod='BB'):
+    file_path = MAIN_PATH + "/Spectrum/"
+    file_path += '{}'.format(int(mx)) + 'GeV_' + annih_prod + '_DMspectrum.dat'
+
+    spectrum = np.loadtxt(file_path)
+    def int_rate(x):
+        return interpola(x, spectrum[:, 0], spectrum[:, 1])
+
+    #  num_gamma = quad(int_rate, 1., mx, epsabs=10. ** -4., epsrel=10. ** -4.)[0] / 10.**5.
+    rate_interp = UnivariateSpline(spectrum[:, 0], spectrum[:, 1])
+    num_gamma = rate_interp.integral(1., 10.) / 10**5.
+    print 'DM Mass: ', mx
+    print 'Annihilation Products: ', annih_prod
+    print 'Number of Gammas > 1 GeV: ', num_gamma
 
     return

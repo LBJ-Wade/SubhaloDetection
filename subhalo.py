@@ -465,7 +465,7 @@ class Observable(object):
             return (np.exp(- (np.log(c / cm) / (np.sqrt(2.0) * sigma_c)) ** 2.0) /
                    (np.sqrt(2. * np.pi) * sigma_c * c))
            
-        file_name = 'Dmax_Extended' + str(Profile_names[self.profile]) + '_Truncate_' +\
+        file_name = 'Dmax_' + str(Profile_names[self.profile]) + '_Truncate_' +\
                     str(self.truncate) + '_Cparam_' + str(self.arxiv_num) + '_alpha_' +\
                     str(self.alpha) + '_mx_' + str(self.mx) + '_cross_sec_' +\
                     str(np.log10(self.cross_sec)) + '_annih_prod_' + self.annih_prod + '.dat'

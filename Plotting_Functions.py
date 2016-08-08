@@ -31,6 +31,7 @@ def Multi_Limit_Plots(annih_prod=['BB', 'BB'], profile=[0, 1], truncate=[True, T
                       alpha=0.16, n_obs=[0., 0.], pointlike=[True, True],
                       mass_low=1., mass_high=3., CL=0.95, fs=20, save_fig=True,
                       color_list=['Black', 'Red', 'Blue', 'Orange', 'Magenta', 'Aqua']):
+
     """
     Wrapper function that calls LimitPlotter for each list index
     """
@@ -100,7 +101,7 @@ def Multi_Limit_Plots(annih_prod=['BB', 'BB'], profile=[0, 1], truncate=[True, T
     return
 
 class LimitPlotter(object):
-    # TODO Genearlize to multiple limits in one plot
+
     def __init__(self, annih_prod='BB', n_obs=0., CL=0.95, pointlike=True,
                  alpha=0.16, profile=0, truncate=True, arxiv_num=13131729, b_min=20.,
                  mass_low=1., mass_high=3., fs=20, save_plot=True):
@@ -350,7 +351,8 @@ class model_plots(object):
         return
 
     def c_sec_v_nobs_plot(self):
-        if self.truncate:
+        # TODO Make multi plot possible
+        if self.pointlike:
             ptag = '_Pointlike'
         else:
             ptag = '_Extended'
@@ -375,8 +377,8 @@ class model_plots(object):
         ax = plt.gca()
         ax.set_xscale("log")
         ax.set_yscale('log')
-        pl.xlim([c_vs_n[0, 0],c_vs_n[-1, 0]])
-        pl.ylim([c_vs_n[0, 1], c_vs_n[-1, 1]])
+        pl.xlim([10. ** -27., 2. * 10 ** -24.])
+        pl.ylim([10 ** -1., 10. ** 2.])
         plt.plot(c_list, nobs_list, lw=2, color='Black')
 
         pl.xlabel(r'$<\sigma v> $  [$cm^3/s$]', fontsize=self.fs)
@@ -384,8 +386,36 @@ class model_plots(object):
 
         figname = self.folder + '../Plots/' + 'CrossSec_vs_Nobs_' + self.profile_name +\
             '_Truncate_' + str(self.truncate) + '_Cparam_' + str(self.arxiv_num) + '_alpha_' +\
-            str(self.alpha) + '_mx_' + '_annih_prod_' + self.annih_prod + '_bmin_' + str(self.b_min) +\
-            ptag + '.pdf' \
+            str(self.alpha) + '_mx_' + str(self.mx) + '_annih_prod_' + self.annih_prod +\
+            '_bmin_' + str(self.b_min) + ptag + '.pdf' \
 
         fig.set_tight_layout(True)
         pl.savefig(figname)
+        return c_list, nobs_list
+
+
+def plot_spectrum(mx=100., annih_prod='BB'):
+    file_path = MAIN_PATH + "/Spectrum/"
+    file_path += '{}'.format(int(mx)) + 'GeV_' + annih_prod + '_DMspectrum.dat'
+
+    spectrum = np.loadtxt(file_path)
+    e_gamma_tab = np.logspace(spectrum[0, 0], spectrum[-1, 0], 300)
+    max_lim = np.max(spectrum[:, 0] ** 2. * spectrum[:, 1] / 10 ** .5)
+    spec_plot = interpola(e_gamma_tab, spectrum[:, 0], spectrum[:, 0] ** 2. * spectrum[:, 1] / (10**.5 * max_lim))
+
+    fig = plt.figure(figsize=(8., 6.))
+    ax = plt.gca()
+    ax.set_xscale("log")
+    ax.set_yscale('log')
+    pl.xlim([10. ** -1., 10. ** 2.])
+    pl.ylim([10. ** -1.5, 1.2])
+    plt.plot(e_gamma_tab, spec_plot, lw=2, color='Black')
+
+    pl.xlabel(r'$E_\gamma$  [GeV]', fontsize=20)
+    pl.ylabel(r'$E_\gamma^2 dN / dE_\gamma$  [GeV $cm^2$ / s]', fontsize=20)
+    folder = MAIN_PATH + "/SubhaloDetection/Data/"
+    figname = folder + '../Plots/' + 'GammaSpectrum_mx_' + str(mx) + '_annih_prod_' +\
+        annih_prod + '.pdf'
+    fig.set_tight_layout(True)
+    pl.savefig(figname)
+    return
