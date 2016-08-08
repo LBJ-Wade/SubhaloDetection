@@ -3,7 +3,8 @@ Created on Wed Jul 13 09:46:43 2016
 
 @author: SamWitte
 """
-
+import os, sys
+sys.path.insert(0 , os.environ['SUBHALO_MAIN_PATH'] + '/SubhaloDetection')
 import numpy as np
 from Plotting_Functions import *
 
