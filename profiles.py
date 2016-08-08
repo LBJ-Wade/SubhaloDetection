@@ -248,7 +248,7 @@ class NFW(Subhalo):
                                 1.0 / (1.0 + 1.0 / self.c))))
 
         if not truncate:
-            self.max_radius = self.scale_radius
+            self.max_radius = self.virial_radius
         else:
             self.max_radius = self.Truncated_radius()
 
