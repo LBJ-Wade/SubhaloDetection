@@ -191,7 +191,7 @@ class Einasto(Subhalo):
                               SolarMtoGeV * cmtokpc ** 3.)
 
         if not truncate:
-            self.max_radius = self.scale_radius
+            self.max_radius = self.virial_radius
         else:
             self.max_radius = self.Truncated_radius()
 
