@@ -125,7 +125,7 @@ class Model(object):
         def flux_diff_lten(x):
             return np.abs(self.Total_Flux(10**x) - self.min_Flux(10**x))
         d_max = fminbound(flux_diff_lten, -4., 1.4, xtol= 10**-4.)
-        print 10.**float(d_max)
+        #  print 10.**float(d_max)
         return 10.**float(d_max)
 
     def Determine_Gamma(self):
@@ -169,10 +169,10 @@ class Model(object):
         """
         Calcualtes the flux theshold in (photons / cm^2 / s) of a DM candidate
 
-        :param gamma: Either 1.5, 2.0, 2.5, 3.0 -- found by determinig the spectral index
-        which most closely reporduces the average photon energy
+        :param gamma: Either 1.5, 2.0, 2.5, 3.0 -- found by determining the spectral index
+        which most closely reproduces the average photon energy
         :param extension: (Radial) Spatial extension of subhalo in degrees
-        :return: Flux threhsold
+        :return: Flux threshold
         """
         file = MAIN_PATH + "/ExtendedThresholds/DetectionThresholdGamma" + \
                str(int(gamma * 10)) + ".dat"

@@ -32,8 +32,10 @@ delta_200 = 200.
 
 
 def Concentration_parameter(mass, z=0, arxiv_num=13131729):
-    """ Mass input in Solar Masses. Two different possible relations below."""
-
+    """
+    Calculates concentration parameter given a subhalo mass and choice of
+    paramaterization
+    """
     c = 0.
     if arxiv_num == 13131729:
         if z != 0:
@@ -62,6 +64,11 @@ def Concentration_parameter(mass, z=0, arxiv_num=13131729):
 
 
 def Virial_radius(mass):
+    """
+    Calculates the virial radius of a subhalo by scaleing that of the Milky Way
+    :param mass: Subhalo mass in SM
+    :return: Virial radius in kpc
+    """
     return 200. * (mass / (2. * 10 ** 12.)) ** (1. / 3.)
 
 
@@ -146,9 +153,12 @@ def str2bool(v):
 
 
 def table_gamma_index(annih_prod='BB'):
-    #  TODO
-    #  Make spectrum for huge range of mass
-
+    """
+    Inteded to table the gamma index for large range of mass, so in future we only need
+    a simple load and interpoalte funciton.
+    :param annih_prod: annihlation products [Currently only works for 'BB']
+    """
+    #  TODO Make spectrum for huge range of mass
     num_collisions = 10 ** 5.
     integrate_file = MAIN_PATH + "/Spectrum/IntegratedDMSpectrum" + annih_prod + ".dat"
     file_path = MAIN_PATH + "/Spectrum/"

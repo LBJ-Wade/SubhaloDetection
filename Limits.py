@@ -47,16 +47,16 @@ class DM_Limits(object):
             plike_tag = '_Extended'
 
         file_name = 'Limits' + plike_tag + '_' + self.profile_name + '_Truncate_' + \
-                    str(self.truncate) + '_alpha_' + str(self.alpha) +\
-                    '_annih_prod_' + self.annih_prod + '_arxiv_num_' +\
-                    str(self.arxiv_num) + '_bmin_' + str(self.b_min) + '.dat'
+            str(self.truncate) + '_alpha_' + str(self.alpha) +\
+            '_annih_prod_' + self.annih_prod + '_arxiv_num_' +\
+            str(self.arxiv_num) + '_bmin_' + str(self.b_min) + '.dat'
 
         f_names = self.profile_name + '_Truncate_' + str(self.truncate) + '_Cparam_' +\
-                  str(self.arxiv_num) +'_alpha_' + str(self.alpha) + '_mx_' + '*' +\
-                  '_annih_prod_' + self.annih_prod + '_bmin_' + str(self.b_min) +\
-                  plike_tag + '.dat'
+            str(self.arxiv_num) + '_alpha_' + str(self.alpha) + '_mx_' + '*' +\
+            '_annih_prod_' + self.annih_prod + '_bmin_' + str(self.b_min) +\
+            plike_tag + '.dat'
 
-        foi = glob.glob(self.folder + '/Cross_v_Nobs/'+ f_names)
+        foi = glob.glob(self.folder + '/Cross_v_Nobs/' + f_names)
 
         if self.method == "Poisson":
             lim_vals = Poisson(self.nobs, self.nbkg, self.CL).poisson_integ_up()
@@ -73,17 +73,17 @@ class DM_Limits(object):
             print 'Invalid method call.'
             raise ValueError
 
-        limarr = np.zeros(2 * len(foi)).reshape((len(foi),2))
+        limarr = np.zeros(2 * len(foi)).reshape((len(foi), 2))
 
-        for i,f in enumerate(foi):
+        for i, f in enumerate(foi):
             print f
             cross_vs_n = np.loadtxt(f)
-            cs_list = np.logspace(np.log10(cross_vs_n[0,0]), np.log10(cross_vs_n[-1,0]), 200)
-            cross_n_interp = interp1d(cross_vs_n[:,0], cross_vs_n[:,1], kind='linear', bounds_error=False)
+            cs_list = np.logspace(np.log10(cross_vs_n[0, 0]), np.log10(cross_vs_n[-1, 0]), 200)
+            cross_n_interp = interp1d(cross_vs_n[:, 0], cross_vs_n[:, 1], kind='linear', bounds_error=False)
             fd_min = np.abs(cross_n_interp(cs_list) - lim_val)
             print 'Cross Section Limit: ', cs_list[np.argmin(fd_min)]
             mstart = f.find('_mx_')
-            mstart = mstart + 4
+            mstart += 4
             j = 0
             found_mass = False
             while not found_mass:
@@ -96,7 +96,7 @@ class DM_Limits(object):
 
             limarr[i] = [mx, cs_list[np.argmin(fd_min)]]
 
-        limarr = limarr[np.argsort(limarr[:,0])]
+        limarr = limarr[np.argsort(limarr[:, 0])]
         print 'Limit: '
         print limarr
 
@@ -119,24 +119,24 @@ class Poisson(object):
 
     def poisson_integ_up(self):
         norm = quad(self.pdf, 0., np.inf, args=(self.nbkg, self.nobs))[0]
+
         def min_quant(x):
             intag = quad(self.pdf, x, np.inf, args=(self.nbkg, self.nobs))
             return np.abs(intag[0] / norm - (1. - self.CL))
-        x = fminbound(min_quant, 0., 100.)
-        return x
+        return fminbound(min_quant, 0., 100.)
 
     def FeldmanCousins(self, nmax=60, mu_max=20., n_mu=1000):
         mu_tab = np.linspace(0., mu_max, n_mu)
         fc_tab = np.zeros(3 * nmax).reshape((nmax, 3))
         mu_band = np.zeros(3 * n_mu).reshape((n_mu, 3))
 
-        for i,muv in enumerate(mu_tab):
+        for i, muv in enumerate(mu_tab):
             for x in range(nmax):
                 hatval = np.max([0., x - self.nbkg])
                 fc_tab[x] = [x, self.pdf(muv, self.nbkg, x), self.pdf(muv, self.nbkg, x) /
                              self.pdf(hatval, self.nbkg, x)]
 
-            fc_tab = fc_tab[np.argsort(fc_tab[:,2])[:: -1]]
+            fc_tab = fc_tab[np.argsort(fc_tab[:, 2])[:: -1]]
             sumtot = 0.
             j = 0
 
@@ -149,22 +149,22 @@ class Poisson(object):
         r_found = False
         m_regions = False
 
-        for i in range(mu_band[:,0].size):
-            if mu_band[i,1] <= self.nobs <= mu_band[i,2]:
+        for i in range(mu_band[:, 0].size):
+            if mu_band[i, 1] <= self.nobs <= mu_band[i, 2]:
                 try:
                     cl_tab = np.append(cl_tab, mu_band[i, 0])
                 except NameError:
                     cl_tab = np.array([mu_band[i, 0]])
                 if not r_found:
                     r_found = True
-                elif r_found and not (mu_band[i-1,0] in cl_tab):
+                elif r_found and not (mu_band[i-1, 0] in cl_tab):
                     print 'Potentially have multiple disconnected regions'
                     m_regions = True
         if m_regions:
             print 'Full Tab. Look for multiple regions.'
             print cl_tab
 
-        print 'Minimum value of mu: ',np.min(cl_tab)
-        print 'Maximum value of mu: ',np.max(cl_tab)
+        print 'Minimum value of mu: ', np.min(cl_tab)
+        print 'Maximum value of mu: ', np.max(cl_tab)
 
         return [np.min(cl_tab), np.max(cl_tab)]
