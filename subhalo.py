@@ -63,8 +63,8 @@ class Model(object):
     def min_Flux(self, dist):
         """
         Wrapper that collects spatial extension and threshold information and returns
-        flux theshold for spatially extended sources
-        :param dist: distnace kpc
+        flux threshold for spatially extended sources
+        :param dist: distance kpc
         """
         extension = self.subhalo.Spatial_Extension(dist)
         return self.Threshold(self.gamma, extension)
@@ -85,7 +85,7 @@ class Model(object):
         
     def Partial_Flux(self, dist, theta):
         """
-        Returns partial flux of threhsold based on integrating out to some theta less than theta_max
+        Returns partial flux of threshold based on integrating out to some theta less than theta_max
         :param dist: distance of subhalo in kpc
         :param theta: integration bound
         :return: partial flux
@@ -101,7 +101,7 @@ class Model(object):
 
     def d_max_point(self, threshold=(7.0 * 10 ** (-10.))):
         """
-        Calculates the maximum distance a point-like  subhalo can be to still be observable,
+        Calculates the maximum distance a point-like subhalo can be to still be observable,
         given a particular threshold
         :param threshold: flux threshold in photons / cm^2 / s
         :return: distance in kpc
@@ -131,39 +131,41 @@ class Model(object):
     def Determine_Gamma(self):
         """
         Caclualtes the spectral index to be used to determine the spatial extended threshold
-
         :return: [1.5, 2.0, 2.5, 3.0] whichever spectral index most closely produces same average
         photon energy
         """
         #  TODO: Generalize beyond b\bar{b}
-        #  Also carefully check the accuracy
-        num_collisions = 10 ** 5.
-        spec_file = MAIN_PATH + "/Spectrum/" + str(int(self.mx)) + "GeV_" + self.annih_prod + "_DMspectrum.dat"
-        integrate_file = MAIN_PATH + "/Spectrum/IntegratedDMSpectrum" + self.annih_prod + ".dat"
+        #  TODO: Derive this information from Pythia8
+        # num_collisions = 10 ** 5.
+        # spec_file = MAIN_PATH + "/Spectrum/" + str(int(self.mx)) + "GeV_" + self.annih_prod + "_DMspectrum.dat"
+        # integrate_file = MAIN_PATH + "/Spectrum/IntegratedDMSpectrum" + self.annih_prod + ".dat"
+        # spectrum = np.loadtxt(spec_file)
+        # spectrum[:, 1] = spectrum[:, 1] / num_collisions
+        # integrated_list = np.loadtxt(integrate_file)
+        # integrated_rate = interp1d(integrated_list[:, 0], integrated_list[:, 1])
+        # gamma_list = [1.5, 2.0, 2.5, 3.0]
+        # normalize = np.zeros(len(gamma_list))
+        # for g in range(len(gamma_list)):
+        #     int_spec = self.mx ** (-gamma_list[g] + 1.) / (-gamma_list[g] + 1.) - 1. / (-gamma_list[g] + 1.)
+        #     normalize[g] = integrated_rate(self.mx) / integrate.quad(lambda x: x ** (-gamma_list[g]), 1., self.mx)[0]
 
-        spectrum = np.loadtxt(spec_file)
-        spectrum[:, 1] = spectrum[:, 1] / num_collisions
+        # def int_meanes(x):
+        #    return interpola(x, spectrum[:, 0], spectrum[:, 0] * spectrum[:, 1])
+        # meanE = integrate.quad(int_meanes, 1., self.mx, epsabs=10.**-4, epsrel=10.**-4)[0]
 
-        integrated_list = np.loadtxt(integrate_file)
-        integrated_rate = interp1d(integrated_list[:, 0], integrated_list[:, 1])
+        # meanE_gam = np.zeros(len(gamma_list))
+        # for g in range(len(gamma_list)):
+        #     meanE_gam[g] = integrate.quad(lambda x: normalize[g] * x ** (-gamma_list[g] + 1.), 1., self.mx,
+        #                                   epsabs=10.**-4, epsrel=10.**-4)[0]
+        # diff_meanE = np.abs(meanE_gam - meanE)
+        gamma_tab = np.loadtxt(MAIN_PATH + '/SubhaloDetection/Data/Misc_Items/GammaIndex_given_mx_for_annih_prod_' +
+                               self.annih_prod + '.dat')
+        gamma = interpola(self.mx, gamma_tab[:, 0], gamma_tab[:, 1])
+        def myround(x, prec=2, base=.5):
+            return round(base * round(float(x) / base), prec)
+        gamma_approx = myround(gamma)
 
-        gamma_list = [1.5, 2.0, 2.5, 3.0]
-        normalize = np.zeros(len(gamma_list))
-        for g in range(len(gamma_list)):
-            normalize[g] = integrated_rate(self.mx) / integrate.quad(lambda x: x ** (-gamma_list[g]), 1., self.mx)[0]
-
-        def int_meanes(x):
-           return interpola(x, spectrum[:, 0], spectrum[:, 0] * spectrum[:, 1])
-        meanE = integrate.quad(int_meanes, 1., self.mx, epsabs=10.**-4, epsrel=10.**-4)[0]
-
-        meanE_gam = np.zeros(len(gamma_list))
-        for g in range(len(gamma_list)):
-            meanE_gam[g] = integrate.quad(lambda x: normalize[g] * x ** (-gamma_list[g] + 1.), 1., self.mx,
-                                          epsabs=10.**-4, epsrel=10.**-4)[0]
-
-        diff_meanE = np.abs(meanE_gam - meanE)
-
-        return gamma_list[diff_meanE.argmin()]
+        return gamma_approx
 
     def Threshold(self, gamma, extension):
         """

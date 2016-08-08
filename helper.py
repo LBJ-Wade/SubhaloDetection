@@ -195,7 +195,7 @@ def table_gamma_index(annih_prod='BB'):
         gamma_mx[i] = gamma_list[diff_meanE.argmin()]
 
     sv_dir = MAIN_PATH + "/SubhaloDetection/Data/Misc_Items/"
-    file_name = 'GammaIndex_given_mx_for_annih_prod_' + annih_prod + '.pdf'
+    file_name = 'GammaIndex_given_mx_for_annih_prod_' + annih_prod + '.dat'
     sv_info = np.column_stack((mass_tab, gamma_mx))
     sv_info = sv_info[np.argsort(sv_info[:, 0])]
     np.savetxt(sv_dir + file_name, sv_info)
@@ -211,10 +211,14 @@ def integrated_rate_test(mx=100., annih_prod='BB'):
         return interpola(x, spectrum[:, 0], spectrum[:, 1])
 
     #  num_gamma = quad(int_rate, 1., mx, epsabs=10. ** -4., epsrel=10. ** -4.)[0] / 10.**5.
+    binspace = spectrum[1, 1] - spectrum[2, 1]
     rate_interp = UnivariateSpline(spectrum[:, 0], spectrum[:, 1])
-    num_gamma = rate_interp.integral(1., 10.) / 10**5.
+    avg_e_interp = UnivariateSpline(spectrum[:, 0], spectrum[:, 0] * spectrum[:, 1])
+    num_gamma = rate_interp.integral(1., mx) / 10**5.
+    mean_e = avg_e_interp.integral(1., mx) / 10**5.
     print 'DM Mass: ', mx
     print 'Annihilation Products: ', annih_prod
     print 'Number of Gammas > 1 GeV: ', num_gamma
+    print '<E> Gamma: ', mean_e
 
     return
