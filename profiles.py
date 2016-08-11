@@ -11,8 +11,8 @@ from helper import *
 from Limits import *
 import scipy.integrate as integrate
 import scipy.special as special
-from scipy.optimize import fminbound
-from scipy.interpolate import interp1d
+from scipy.optimize import fminbound, minimize_scalar
+from scipy.interpolate import interp1d, interpn
 
 
 class Subhalo(object):
@@ -112,9 +112,8 @@ class Subhalo(object):
         obtain flux thresholds for spatially extended sources
         :param theta: Max angle of integration in degrees
         :param dist: Subhalo distance in kpc
-        :return: In principle we would like to find the angle theta at which the ratio of
-        J(d,t)/J_pointlike(d) = 0.68. To facilitate this (and use more manageable numbers)
-        we take the log10 of each side and minimize the abs value.
+        :return: We are looking to find the angle theta at which the ratio of
+        J(d,t)/J_pointlike(d) = 0.68.
         """
         return np.abs(10. ** self.J(dist, theta) / 10. ** self.J_pointlike(dist) - 0.68)
 
@@ -125,9 +124,21 @@ class Subhalo(object):
         :return: returns quoted spatial extension to be used for calculation of
         flux threshold of spatially extended sources
         """
-        extension = fminbound(self.AngRad68, 10**-2., radtodeg *
-                              np.arctan(self.max_radius / dist), args=[dist],
-                              xtol=10**-3.)
+#        try:
+#            file_name = 'SpatialExtension_' + str(self.halo_name) + '_Truncate_' + \
+#                        str(self.truncate) + '_Cparam_' + str(self.arxiv_num) + '_alpha_' + \
+#                        str(self.alpha) + '.dat'
+#            se_table = np.loadtxt(MAIN_PATH + '/SubhaloDetection/Data/' + file_name)
+#            m_list = np.log10(np.sort(np.unique(se_table[:, 0])))
+#            c_list = np.log10(np.sort(np.unique(se_table[:, 1])))
+#            d_list = np.log10(np.sort(np.unique(se_table[:, 2])))
+#            se = np.log10(se_table[:,3].reshape((m_list.size, c_list.size, d_list.size)))
+#            extension = interpn((m_list, c_list, d_list), se,
+#                                np.array([np.log10(self.halo_mass), np.log10(self.c), np.log10(dist)]),
+#                                bounds_error=False, fill_value=None)
+#        except:
+#            extension = minimize_scalar(self.AngRad68, args=dist, tol=10**-3.)
+        extension = fminbound(self.AngRad68, 0.01, self.Full_Extension(dist), args=[dist], xtol=10**-3.)
         return extension
 
     def Full_Extension(self, dist):
@@ -175,6 +186,8 @@ class Einasto(Subhalo):
         self.halo_mass = halo_mass
         self.alpha = alpha
         self.halo_name = 'Einasto'
+        self.truncate = truncate
+        self.arxiv_num = arxiv_num
         if concentration_param is None:
             concentration_param = Concentration_parameter(halo_mass, z, arxiv_num)
         self.c = concentration_param
@@ -265,6 +278,8 @@ class NFW(Subhalo):
         self.halo_mass = halo_mass
         self.alpha = alpha
         self.halo_name = 'NFW'
+        self.truncate = truncate
+        self.arxiv_num = arxiv_num
         if concentration_param is None:
             concentration_param = Concentration_parameter(halo_mass, z, arxiv_num)
         self.c = concentration_param
@@ -292,16 +307,23 @@ class NFW(Subhalo):
             self.max_radius = self.Truncated_radius()
 
     def density(self, r):
-        return self.scale_density / ((r / self.scale_radius) * (1. + r / self.scale_radius) ** 2.)
+        if r > 0:
+            return self.scale_density / ((r / self.scale_radius) * (1. + r / self.scale_radius) ** 2.)
+        else:
+            return 0.
 
     def int_over_density(self, r):
         if r > 0:
             return (self.scale_density * 4. * np.pi * self.scale_radius ** 3. *
                     (np.log((r + self.scale_radius) / self.scale_radius) - r / (r + self.scale_radius)) *
                     kpctocm ** 3. * GeVtoSolarM)
+        else:
+            return 0.
 
     def int_over_rho_sqr(self, r):
         if r > 0:
             return (4. * np.pi * self.scale_density ** 2. * self.scale_radius ** 3. / 3. *
                     (1. - 1. / (1. + r / self.scale_radius) ** 3.) * kpctocm)
+        else:
+            return 0.
 

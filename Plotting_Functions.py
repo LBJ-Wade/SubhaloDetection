@@ -625,7 +625,7 @@ def extension_vs_dist(m_sub=1.*10**7., arxiv_num=[13131729], M200=[False]):
         print 'I dont know what to do with arxiv num input...'
         exit()
 
-    mindist = -1.5
+    mindist = -1.
     e_tr = Einasto(m_sub / 0.005, .16, truncate=True, arxiv_num=arxiv_num[0], M200=M200[0])
     n_tr = NFW(m_sub / 0.005, .16, truncate=True, arxiv_num=arxiv_num[1], M200=M200[1])
     e_ntr = Einasto(m_sub, .16, truncate=False, arxiv_num=arxiv_num[2], M200=M200[2])
@@ -641,9 +641,13 @@ def extension_vs_dist(m_sub=1.*10**7., arxiv_num=[13131729], M200=[False]):
     for i,d in enumerate(dist_tab):
         print i+1, '/', num_dist_pts
         e_tr_se[i] = e_tr.Spatial_Extension(d)
+        print d, e_tr_se[i]
         n_tr_se[i] = n_tr.Spatial_Extension(d)
+        print d, n_tr_se[i]
         e_ntr_se[i] = e_ntr.Spatial_Extension(d)
+        print d, e_ntr_se[i]
         n_ntr_se[i] = n_ntr.Spatial_Extension(d)
+        print d, n_ntr_se[i]
 
     fig = plt.figure(figsize=(8., 6.))
     ax = plt.gca()
