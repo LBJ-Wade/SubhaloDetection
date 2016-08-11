@@ -35,7 +35,7 @@ def table_spatial_extension(profile=0, truncate=False, arxiv_num=10070438,
     for m in mass_list:
         print 'Subhalo mass: ', m
         for c in c_list:
-            print 'Concentration parameter: ', c
+            print '     Concentration parameter: ', c
 
             extension_tab = np.zeros(len(dist_list))
             if profile == 0:
@@ -48,6 +48,7 @@ def table_spatial_extension(profile=0, truncate=False, arxiv_num=10070438,
                 'Profile not implemented yet'
 
             for ind, d in enumerate(dist_list):
+                print '         Distance', d
                 try:
                     look_array = np.loadtxt(dir + file_name)
                     if any((np.round([m, c, d], 5) == x).all() for x in np.round(look_array[:, 0:3], 5)):
