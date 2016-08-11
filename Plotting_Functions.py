@@ -10,11 +10,13 @@ from helper import *
 from subhalo import *
 import os
 from scipy.interpolate import interp1d, interp2d
+from scipy.optimize import fminbound
 import matplotlib as mpl
 import pylab as pl
 import matplotlib.pyplot as plt
 from matplotlib import rc
 import itertools
+from profiles import Einasto, NFW
 
 #  mpl.use('pdf')
 rc('font', **{'family': 'serif', 'serif': ['Times', 'Palatino']})
@@ -384,13 +386,13 @@ class model_plots(object):
         pl.xlabel(r'$<\sigma v> $  [$cm^3/s$]', fontsize=self.fs)
         pl.ylabel(r'$N_{obs}$', fontsize=self.fs)
 
-        figname = self.folder + '../Plots/' + 'CrossSec_vs_Nobs_' + self.profile_name +\
+        fig_name = self.folder + '../Plots/' + 'CrossSec_vs_Nobs_' + self.profile_name +\
             '_Truncate_' + str(self.truncate) + '_Cparam_' + str(self.arxiv_num) + '_alpha_' +\
             str(self.alpha) + '_mx_' + str(self.mx) + '_annih_prod_' + self.annih_prod +\
-            '_bmin_' + str(self.b_min) + ptag + '.pdf' \
+            '_bmin_' + str(self.b_min) + ptag + '.pdf'
 
         fig.set_tight_layout(True)
-        pl.savefig(figname)
+        pl.savefig(fig_name)
         return c_list, nobs_list
 
 
@@ -399,23 +401,301 @@ def plot_spectrum(mx=100., annih_prod='BB'):
     file_path += '{}'.format(int(mx)) + 'GeV_' + annih_prod + '_DMspectrum.dat'
 
     spectrum = np.loadtxt(file_path)
-    e_gamma_tab = np.logspace(spectrum[0, 0], spectrum[-1, 0], 300)
-    max_lim = np.max(spectrum[:, 0] ** 2. * spectrum[:, 1] / 10 ** .5)
-    spec_plot = interpola(e_gamma_tab, spectrum[:, 0], spectrum[:, 0] ** 2. * spectrum[:, 1] / (10**.5 * max_lim))
+    imax = 0
+    for i in range(len(spectrum)):
+        if spectrum[i, 1] < 10 or i == (len(spectrum) - 1):
+            imax = i
+            break
+
+    spectrum = spectrum[0:imax, :]
+    Nevents = 10. ** 5.
+    spectrum[:, 1] /= Nevents
+    e_gamma_tab = np.logspace(np.log10(spectrum[0, 0]), np.log10(spectrum[-1, 0]), 200)
+    max_lim = np.max(np.array([spectrum[:, 0] ** 2. * spectrum[:, 1]]))
+    spec_plot = interpola(e_gamma_tab, spectrum[:, 0], spectrum[:, 0] ** 2. * spectrum[:, 1] / max_lim)
 
     fig = plt.figure(figsize=(8., 6.))
     ax = plt.gca()
     ax.set_xscale("log")
     ax.set_yscale('log')
     pl.xlim([10. ** -1., 10. ** 2.])
-    pl.ylim([10. ** -1.5, 1.2])
-    plt.plot(e_gamma_tab, spec_plot, lw=2, color='Black')
+    pl.ylim([10. ** -1., 1.2])
+    plt.plot(e_gamma_tab, spec_plot, '--', lw=2, color='Black')
 
     pl.xlabel(r'$E_\gamma$  [GeV]', fontsize=20)
     pl.ylabel(r'$E_\gamma^2 dN / dE_\gamma$  [GeV $cm^2$ / s]', fontsize=20)
     folder = MAIN_PATH + "/SubhaloDetection/Data/"
-    figname = folder + '../Plots/' + 'GammaSpectrum_mx_' + str(mx) + '_annih_prod_' +\
+    fig_name = folder + '../Plots/' + 'GammaSpectrum_mx_' + str(mx) + '_annih_prod_' +\
         annih_prod + '.pdf'
     fig.set_tight_layout(True)
-    pl.savefig(figname)
+    pl.savefig(fig_name)
     return
+
+
+def plot_profiles(m_sub=10.**7., arxiv_num=[13131729], density_sqr=False, M200=[False]):
+
+    if len(arxiv_num) == 1:
+        arxiv_num *= 4
+    elif len(arxiv_num) == 2:
+        arxiv_num *= 2
+    elif len(arxiv_num) == 3:
+        print 'I dont know what to do with arxiv num input...'
+        exit()
+    if len(M200) == 1:
+        M200 *= 4
+    elif len(M200) == 2:
+        M200 *= 2
+    elif len(M200) == 3:
+        print 'I dont know what to do with M200 num input...'
+        exit()
+
+    minrad = -2.
+    e_tr = Einasto(m_sub / 0.005, .16, truncate=True, arxiv_num=arxiv_num[0], M200=M200[0])
+    n_tr = NFW(m_sub / 0.005, .16, truncate=True, arxiv_num=arxiv_num[1], M200=M200[1])
+    e_ntr = Einasto(m_sub, .16, truncate=False, arxiv_num=arxiv_num[2], M200=M200[2])
+    n_ntr = NFW(m_sub, .16, truncate=False, arxiv_num=arxiv_num[3], M200=M200[3])
+
+    r1_e_tr = np.logspace(minrad, np.log10(e_tr.max_radius), 100)
+    r2_e_tr = np.logspace(np.log10(e_tr.max_radius), np.log10(e_tr.virial_radius), 100)
+    r1_n_tr = np.logspace(minrad, np.log10(n_tr.max_radius), 100)
+    r2_n_tr = np.logspace(np.log10(n_tr.max_radius), np.log10(n_tr.virial_radius), 100)
+    r_e_ntr = np.logspace(minrad, np.log10(e_ntr.max_radius), 200)
+    r2_e_ntr = np.logspace(np.log10(e_tr.max_radius), np.log10(e_ntr.virial_radius), 100)
+    r_n_ntr = np.logspace(minrad, np.log10(n_ntr.max_radius), 200)
+    r2_n_ntr = np.logspace(np.log10(e_tr.max_radius), np.log10(n_ntr.virial_radius), 100)
+
+    if not density_sqr:
+        den_e_tr1 = e_tr.density(r1_e_tr) * GeVtoSolarM * kpctocm ** 3.
+        den_e_tr2 = e_tr.density(r2_e_tr) * GeVtoSolarM * kpctocm ** 3.
+        den_n_tr1 = n_tr.density(r1_n_tr) * GeVtoSolarM * kpctocm ** 3.
+        den_n_tr2 = n_tr.density(r2_n_tr) * GeVtoSolarM * kpctocm ** 3.
+        den_e_ntr = e_ntr.density(r_e_ntr) * GeVtoSolarM * kpctocm ** 3.
+        den_n_ntr = n_ntr.density(r_n_ntr) * GeVtoSolarM * kpctocm ** 3.
+        den_e_ntr2 = e_ntr.density(r2_e_ntr) * GeVtoSolarM * kpctocm ** 3.
+        den_n_ntr2 = n_ntr.density(r2_n_ntr) * GeVtoSolarM * kpctocm ** 3.
+    else:
+        den_e_tr1 = e_tr.density(r1_e_tr) ** 2.
+        den_e_tr2 = e_tr.density(r2_e_tr) ** 2.
+        den_n_tr1 = n_tr.density(r1_n_tr) ** 2.
+        den_n_tr2 = n_tr.density(r2_n_tr) ** 2.
+        den_e_ntr = e_ntr.density(r_e_ntr) ** 2.
+        den_n_ntr = n_ntr.density(r_n_ntr) ** 2.
+        den_e_ntr2 = e_ntr.density(r2_e_ntr) ** 2.
+        den_n_ntr2 = n_ntr.density(r2_n_ntr) ** 2.
+
+    fig = plt.figure(figsize=(8., 6.))
+    ax = plt.gca()
+    ax.set_xscale("log")
+    ax.set_yscale('log')
+    pl.xlim([10 ** minrad, 3. * 10. ** 1.])
+    plt.plot(r1_e_tr, den_e_tr1, lw=1, color='Black', label='Einasto, T')
+    plt.plot(r2_e_tr, den_e_tr2, '.', ms=1, color='Black')
+    plt.plot(r1_n_tr, den_n_tr1, lw=1, color='Blue', label='NFW, T')
+    plt.plot(r2_n_tr, den_n_tr2, '.', ms=1, color='Blue')
+    plt.plot(r_e_ntr, den_e_ntr, lw=1, color='Red', label='Einasto, NT')
+    plt.plot(r2_e_ntr, den_e_ntr2, '.', ms=1, lw=1, color='Red')
+    plt.plot(r_n_ntr, den_n_ntr, lw=1, color='Magenta', label='NFW, NT')
+    plt.plot(r2_n_ntr, den_n_ntr2, '.', ms=1, lw=1, color='Magenta')
+    plt.legend()
+
+    pl.xlabel('Radius [kpc]', fontsize=20)
+    folder = MAIN_PATH + "/SubhaloDetection/Data/"
+    if not density_sqr:
+        pl.ylabel(r'$\rho [M_\odot / kpc^3$]', fontsize=20)
+        pl.ylim([10. ** 3., 10. ** 11.])
+        fig_name = folder + '../Plots/' + 'Density_Comparison_msubhalo_' + str(m_sub) + \
+            '_arxiv_nums_' + str(arxiv_num[0]) + '_' + str(arxiv_num[1]) + '_' + \
+            str(arxiv_num[2]) + '_' + str(arxiv_num[3]) + '.pdf'
+    else:
+        pl.ylabel(r'$\rho^2$ [$GeV^2 / cm^6$]', fontsize=20)
+        pl.ylim([10. ** -8., 10. ** 6.])
+        fig_name = folder + '../Plots/' + 'DensitySqr_Comparison_msubhalo_' + str(m_sub) + \
+            '_arxiv_nums_' + str(arxiv_num[0]) + '_' + str(arxiv_num[1]) + '_' + \
+            str(arxiv_num[2]) + '_' + str(arxiv_num[3]) + '.pdf'
+
+    fig.set_tight_layout(True)
+    pl.savefig(fig_name)
+    return
+
+
+def Jfactor_plots(m_sub=10.**7., arxiv_num=[13131729], M200=[False], mx=100.,
+                  cross_sec=3.*10**-26., annih_prod='BB'):
+
+    if len(arxiv_num) == 1:
+        arxiv_num *= 4
+    elif len(arxiv_num) == 2:
+        arxiv_num *= 2
+    elif len(arxiv_num) == 3:
+        print 'I dont know what to do with arxiv num input...'
+        exit()
+    if len(M200) == 1:
+        M200 *= 4
+    elif len(M200) == 2:
+        M200 *= 2
+    elif len(M200) == 3:
+        print 'I dont know what to do with M200 num input...'
+        exit()
+
+    e_tr = Einasto(m_sub / 0.005, .16, truncate=True, arxiv_num=arxiv_num[0], M200=M200[0])
+    mod_e_tr = Model(mx, cross_sec, annih_prod, m_sub / 0.005, 0.16,
+                     truncate=True, arxiv_num=arxiv_num[0], profile=0, m200=M200[0])
+    n_tr = NFW(m_sub / 0.005, .16, truncate=True, arxiv_num=arxiv_num[1], M200=M200[1])
+    mod_n_tr = Model(mx, cross_sec, annih_prod, m_sub / 0.005, 0.16,
+                     truncate=True, arxiv_num=arxiv_num[1], profile=1, m200=M200[0])
+    e_ntr = Einasto(m_sub, .16, truncate=False, arxiv_num=arxiv_num[2], M200=M200[2])
+    mod_e_ntr = Model(mx, cross_sec, annih_prod, m_sub, 0.16,
+                      truncate=False, arxiv_num=arxiv_num[2], profile=0, m200=M200[0])
+    n_ntr = NFW(m_sub, .16, truncate=False, arxiv_num=arxiv_num[3], M200=M200[3])
+    mod_n_ntr = Model(mx, cross_sec, annih_prod, m_sub, 0.16,
+                      truncate=False, arxiv_num=arxiv_num[3], profile=1, m200=M200[0])
+
+    def se_boundary(dist, prof, min_ext=0.1):
+        return np.abs(prof.Spatial_Extension(10. ** dist) - min_ext)
+
+    se_bound_e_tr = mod_e_tr.D_max_extend()
+    print 'Spatial Extension Boundary Einasto (Truncated): ', se_bound_e_tr
+    se_bound_n_tr = mod_n_tr.D_max_extend()
+    print 'Spatial Extension Boundary NFW (Truncated): ', se_bound_n_tr
+    se_bound_e_ntr = mod_e_ntr.D_max_extend()
+    print 'Spatial Extension Boundary Einasto (Not Truncated): ', se_bound_e_ntr
+    se_bound_n_ntr = mod_n_ntr.D_max_extend()
+    print 'Spatial Extension Boundary NFW (Not Truncated): ', se_bound_n_ntr
+
+    num_dist_pts = 30
+    dist_tab = np.logspace(-3., 1., num_dist_pts)
+    e_tr_j = np.zeros(dist_tab.size * 2).reshape((dist_tab.size, 2))
+    n_tr_j = np.zeros(dist_tab.size * 2).reshape((dist_tab.size, 2))
+    e_ntr_j = np.zeros(dist_tab.size * 2).reshape((dist_tab.size, 2))
+    n_ntr_j = np.zeros(dist_tab.size * 2).reshape((dist_tab.size, 2))
+    for i, d in enumerate(dist_tab):
+        print i+1, '/', num_dist_pts
+        if d <= se_bound_e_tr:
+            e_tr_j[i] = [d, np.power(10, e_tr.J_pointlike(d))]
+        if d <= se_bound_n_tr:
+            n_tr_j[i] = [d, np.power(10, n_tr.J_pointlike(d))]
+        if d <= se_bound_e_ntr:
+            e_ntr_j[i] = [d, np.power(10, e_ntr.J_pointlike(d))]
+        if d <= se_bound_n_ntr:
+            n_ntr_j[i] = [d, np.power(10, n_ntr.J_pointlike(d))]
+
+    e_tr_j = e_tr_j[~np.all([e_tr_j[:, 0] == 0], axis=0)]
+    n_tr_j = n_tr_j[~np.all([n_tr_j[:, 0] == 0], axis=0)]
+    e_ntr_j = e_ntr_j[~np.all([e_ntr_j[:, 0] == 0], axis=0)]
+    n_ntr_j = n_ntr_j[~np.all([n_ntr_j[:, 0] == 0], axis=0)]
+
+    fig = plt.figure(figsize=(8., 6.))
+    ax = plt.gca()
+    ax.set_xscale("log")
+    ax.set_yscale('log')
+
+    pl.xlim([10 ** -4., 10. ** 1.])
+    pl.ylim([10 ** 20., np.max([e_tr_j[0], n_tr_j[0]])])
+    plt.plot(e_tr_j[:, 0], e_tr_j[:, 1], lw=1, color='Black', label='Einasto, T')
+    plt.plot(n_tr_j[:, 0], n_tr_j[:, 1], lw=1, color='Blue', label='NFW, T')
+    plt.plot(e_ntr_j[:, 0], e_ntr_j[:, 1], lw=1, color='Red', label='Einasto, NT')
+    plt.plot(n_ntr_j[:, 0], n_ntr_j[:, 1], lw=1, color='Magenta', label='NFW, NT')
+
+    plt.axvline(x=se_bound_e_tr, ymin=0., ymax=1., linewidth=1, color='Black', alpha=0.2)
+    plt.axvline(x=se_bound_n_tr,  ymin=0., ymax=1., linewidth=1, color='Blue', alpha=0.2)
+    plt.axvline(x=se_bound_e_ntr,  ymin=0., ymax=1., linewidth=1, color='Red', alpha=0.2)
+    plt.axvline(x=se_bound_n_ntr,  ymin=0., ymax=1., linewidth=1, color='Magenta', alpha=0.2)
+
+    plt.legend()
+
+    pl.xlabel('Distance [kpc]', fontsize=20)
+    pl.ylabel(r'J   [$GeV^2 / cm^5$]', fontsize=20)
+    folder = MAIN_PATH + "/SubhaloDetection/Data/"
+    fig_name = folder + '../Plots/' + 'Jfactor_Comparison_msubhalo_' + str(m_sub) + \
+               '_arxiv_nums_' + str(arxiv_num[0]) + '_' + str(arxiv_num[1]) + '_' + \
+               str(arxiv_num[2]) + '_' + str(arxiv_num[3]) + '.pdf'
+    fig.set_tight_layout(True)
+    pl.savefig(fig_name)
+    return
+
+
+def extension_vs_dist(m_sub=1.*10**7., arxiv_num=[13131729], M200=[False]):
+
+    #  NFW nontruncate having issues
+    if len(arxiv_num) == 1:
+        arxiv_num *= 4
+    elif len(arxiv_num) == 2:
+        arxiv_num *= 2
+    elif len(arxiv_num) == 3:
+        print 'I dont know what to do with arxiv num input...'
+        exit()
+    if len(M200) == 1:
+        M200 *= 4
+    elif len(M200) == 2:
+        M200 *= 2
+    elif len(M200) == 3:
+        print 'I dont know what to do with arxiv num input...'
+        exit()
+
+    mindist = -1.5
+    e_tr = Einasto(m_sub / 0.005, .16, truncate=True, arxiv_num=arxiv_num[0], M200=M200[0])
+    n_tr = NFW(m_sub / 0.005, .16, truncate=True, arxiv_num=arxiv_num[1], M200=M200[1])
+    e_ntr = Einasto(m_sub, .16, truncate=False, arxiv_num=arxiv_num[2], M200=M200[2])
+    n_ntr = NFW(m_sub, .16, truncate=False, arxiv_num=arxiv_num[3], M200=M200[3])
+
+    num_dist_pts = 30
+    dist_tab = np.logspace(mindist, 1.5, num_dist_pts)
+
+    e_tr_se = np.zeros(dist_tab.size)
+    n_tr_se = np.zeros(dist_tab.size)
+    e_ntr_se = np.zeros(dist_tab.size)
+    n_ntr_se = np.zeros(dist_tab.size)
+    for i,d in enumerate(dist_tab):
+        print i+1, '/', num_dist_pts
+        e_tr_se[i] = e_tr.Spatial_Extension(d)
+        n_tr_se[i] = n_tr.Spatial_Extension(d)
+        e_ntr_se[i] = e_ntr.Spatial_Extension(d)
+        n_ntr_se[i] = n_ntr.Spatial_Extension(d)
+
+    fig = plt.figure(figsize=(8., 6.))
+    ax = plt.gca()
+    ax.set_xscale("log")
+    ax.set_yscale('log')
+
+    print 'Einasto Truncated: ', np.column_stack((dist_tab, e_tr_se))
+    print 'NFW Truncated: ', np.column_stack((dist_tab, n_tr_se))
+    print 'Einasto Not Truncated: ', np.column_stack((dist_tab, e_ntr_se))
+    print 'NFW Not Truncated: ', np.column_stack((dist_tab, n_ntr_se))
+
+    dist_plot = np.logspace(mindist, 1., 200)
+    e_tr_plot = interpola(dist_plot, dist_tab, e_tr_se)
+    n_tr_plot = interpola(dist_plot, dist_tab, n_tr_se)
+    e_ntr_plot = interpola(dist_plot, dist_tab, e_ntr_se)
+    n_ntr_plot = interpola(dist_plot, dist_tab, n_ntr_se)
+
+    def rad_ext(dist, prof):
+        return radtodeg * np.arctan(prof.max_radius / dist)
+    rad_ex_e_tr = rad_ext(dist_plot, e_tr)
+    rad_ex_n_tr = rad_ext(dist_plot, n_tr)
+    rad_ex_e_ntr = rad_ext(dist_plot, e_ntr)
+    rad_ex_n_ntr = rad_ext(dist_plot, n_ntr)
+
+    pl.xlim([10 ** mindist, 8. * 10. ** 1.])
+    pl.ylim([np.min([e_tr_se[-1], n_tr_se[-1], e_ntr_se[-1], n_ntr_se[-1]]),
+             3.0 * np.max([e_tr_se[0], n_tr_se[0], e_ntr_se[0], n_ntr_se[0]])])
+    plt.plot(dist_plot, e_tr_plot, lw=1, color='Black', label='Einasto, T')
+    plt.plot(dist_plot, rad_ex_e_tr, '--', ms=1, color='Black')
+    plt.plot(dist_plot, n_tr_plot, lw=1, color='Blue', label='NFW, T')
+    plt.plot(dist_plot, rad_ex_n_tr, '--', ms=1, color='Blue')
+    plt.plot(dist_plot, e_ntr_plot, lw=1, color='Red', label='Einasto, NT')
+    plt.plot(dist_plot, rad_ex_e_ntr, '--', ms=1, color='Red')
+    plt.plot(dist_plot, n_ntr_plot, lw=1, color='Magenta', label='NFW, NT')
+    plt.plot(dist_plot, rad_ex_n_ntr, '--', ms=1, color='Magenta')
+
+    plt.text(9., 4. * 10 ** -25., r'$\theta = 0.1^\circ$', fontsize=15, ha='right', va='center')
+    plt.legend()
+
+    pl.xlabel('Distance [kpc]', fontsize=20)
+    pl.ylabel('Spatial Extension [degrees]', fontsize=20)
+    folder = MAIN_PATH + "/SubhaloDetection/Data/"
+    fig_name = folder + '../Plots/' + 'SpatialExt_Distance_msubhalo_' + str(m_sub) + \
+        '_arxiv_nums_' + str(arxiv_num[0]) + '_' + str(arxiv_num[1]) + '_' + \
+        str(arxiv_num[2]) + '_' + str(arxiv_num[3]) + '.pdf'
+    fig.set_tight_layout(True)
+    pl.savefig(fig_name)
+    return
+

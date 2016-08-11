@@ -32,6 +32,7 @@ parser.add_argument('--b_min', default=20., type=float)
 parser.add_argument('--m_num', default=25, type=int)
 parser.add_argument('--c_num', default=15, type=int)
 parser.add_argument('--thresh', default=7 * 10.**-10., type=float)
+parser.add_argument('--M200', default=False)
 parser.add_argument('--path', default=os.environ['SUBHALO_MAIN_PATH'] + '/SubhaloDetection/')
 
 args = parser.parse_args()
@@ -47,6 +48,7 @@ dmax = str2bool(args.dmax)
 nobs = str2bool(args.nobs)
 pointlike = str2bool(args.pointlike)
 truncate = str2bool(args.truncate)
+m200 = str2bool(args.M200)
 
 profile_list = ['Einasto', 'NFW']
 pf = profile_list[args.profile]

@@ -12,6 +12,7 @@ from Limits import *
 import scipy.integrate as integrate
 import scipy.special as special
 from scipy.optimize import fminbound
+from scipy.interpolate import interp1d
 
 
 class Subhalo(object):
@@ -31,15 +32,19 @@ class Subhalo(object):
         if theta > max_theta:
             theta = max_theta
         theta = theta * np.pi / 180.
-        if (self.los_max(0., dist) - self.los_max(theta, dist)) > 10 ** -5.:
+
+        def eps(th, d):
+            return (self.los_max(th, d) - self.los_min(th, d)) / 10. ** 4.
+
+        if theta > 0.01 * np.pi / 180:
             jfact = integrate.dblquad(lambda x, t:
                                       2. * np.pi * kpctocm * np.sin(t) *
                                       self.density(np.sqrt(dist ** 2. + x ** 2. -
                                                            2.0 * dist * x * np.cos(t))
                                                    ) ** 2.0,
-                                      0., theta, lambda x: self.los_min(x, dist),
-                                      lambda x: self.los_max(x, dist), epsabs=10 ** -5,
-                                      epsrel=10 ** -5)
+                                      0., theta, lambda th: self.los_min(th, dist) + eps(th, dist),
+                                      lambda th: self.los_max(th, dist) - eps(th, dist), epsabs=10 ** -4,
+                                      epsrel=10 ** -4)
 
             return np.log10(jfact[0])
         else:
@@ -47,13 +52,16 @@ class Subhalo(object):
 
     def J_pointlike(self, dist):
         """
-        Calculates J factor, assuming its pointlike.
+        Calculates J factor, assuming its point-like.
         :param dist: Distance to subhalo in kpc
-        :return: returns log10 of J factor
+        :return: returns log10 of J factor in GeV^2 /
         """
+        min_r = 0.
+        if self.halo_name == 'NFW':
+            min_r = 10**-15.
         jfact = integrate.quad(lambda x: 4. * np.pi * kpctocm / dist ** 2. *
                                self.density(x) ** 2. * x ** 2.,
-                               0., self.max_radius, epsabs=10 ** -5, epsrel=10 ** -5)
+                               min_r, self.max_radius, epsabs=10 ** -4, epsrel=10 ** -4)
 
         return np.log10(jfact[0])
 
@@ -114,19 +122,19 @@ class Subhalo(object):
         :param theta: Max angle of integration in degrees
         :param dist: Subhalo distance in kpc
         :return: In principle we would like to find the angle theta at which the ratio of
-        J(d,t)/J_pointlike(d) = 0.68. To facilitiate this (and use more manageable numbers)
+        J(d,t)/J_pointlike(d) = 0.68. To facilitate this (and use more manageable numbers)
         we take the log10 of each side and minimize the abs value.
         """
-        return np.abs(self.J(dist, theta) - self.J_pointlike(dist) - np.log10(0.68))
+        return np.abs(10. ** self.J(dist, theta) / 10. ** self.J_pointlike(dist) - 0.68)
 
     def Spatial_Extension(self, dist):
         """
         Function that minimizes AngRad68
         :param dist: Distance of subhalo in kpc
         :return: returns quoted spatial extension to be used for calculation of
-        flux threhosld of spatially extended sources
+        flux threshold of spatially extended sources
         """
-        extension = fminbound(self.AngRad68, 10**-7., radtodeg *
+        extension = fminbound(self.AngRad68, 10**-2., radtodeg *
                               np.arctan(self.max_radius / dist), args=[dist],
                               xtol=10**-3.)
         return extension
@@ -140,6 +148,9 @@ class Subhalo(object):
         """
         return radtodeg * np.arctan(self.max_radius / dist)
 
+    def find_tidal_radius(self, r):
+        return np.abs(self.halo_mass - self.Mass_in_R(10. ** r))
+
 
 class Einasto(Subhalo):
     """
@@ -152,8 +163,8 @@ class Einasto(Subhalo):
 
     concentration_param: Concentration parameter. If set to None, it uses c(M).
 
-    z: Redshift (currently unused but included becuase one of concentration
-    paramater sources has possible z dependence)
+    z: Redshift (currently unused but included because one of concentration
+    parameter sources has possible z dependence)
 
     truncate: If True, analysis follows Hooper et al. If False, subhalo is
     assumed to be fit by Einasto profile after tidal stripping
@@ -172,26 +183,39 @@ class Einasto(Subhalo):
             '_Truncate_' + str(truncate)
         self.halo_mass = halo_mass
         self.alpha = alpha
-
+        self.halo_name = 'Einasto'
         if concentration_param is None:
             concentration_param = Concentration_parameter(halo_mass, z, arxiv_num)
         self.c = concentration_param
-        if M200:
-            self.virial_radius = (3. * self.halo_mass / (4. * np.pi * rho_critical
-                                                         * delta_200))**(1. / 3.)
+
+        self.virial_radius = Virial_radius(self.halo_mass, m200=M200)
+
+        if arxiv_num == 160106781:
+            rmax, vmax = rmax_vmax(self.halo_mass)
+            self.scale_radius = (rmax / 1.21) / 2.163
+            self.scale_density = ((vmax ** 2. * rmax * np.exp(-2. / self.alpha) * 8. ** (1. / self.alpha)) /
+                                  (4. * np.pi * newton_G * self.scale_radius ** 2. *
+                                   self.alpha ** (3. / self.alpha) * special.gamma(3. / self.alpha) *
+                                   (1. - special.gammaincc(3. / self.alpha, 2. *
+                                                           (rmax / self.scale_radius) ** self.alpha / self.alpha))) *
+                                  SolarMtoGeV * cmtokpc ** 3.)
+
         else:
-            self.virial_radius = Virial_radius(self.halo_mass)
-        self.scale_radius = self.virial_radius / self.c
-        self.scale_density = ((self.halo_mass * self.alpha * np.exp(-2. / self.alpha) *
-                               (2. / self.alpha) ** (3. / self.alpha)) /
-                              (4. * np.pi * self.scale_radius ** 3. *
-                               special.gamma(3. / self.alpha) *
-                               (1. - special.gammaincc(3. / self.alpha, 2. *
-                                self.c ** self.alpha / self.alpha))) *
-                              SolarMtoGeV * cmtokpc ** 3.)
+
+            self.scale_radius = self.virial_radius / self.c
+            self.scale_density = ((self.halo_mass * self.alpha * np.exp(-2. / self.alpha) *
+                                   (2. / self.alpha) ** (3. / self.alpha)) /
+                                  (4. * np.pi * self.scale_radius ** 3. *
+                                   special.gamma(3. / self.alpha) *
+                                   (1. - special.gammaincc(3. / self.alpha, 2. *
+                                                           self.c ** self.alpha / self.alpha))) *
+                                  SolarMtoGeV * cmtokpc ** 3.)
 
         if not truncate:
-            self.max_radius = self.virial_radius
+            if arxiv_num == 160106781:
+                self.max_radius = np.power(10, fminbound(self.find_tidal_radius, -4., 1.3))
+            else:
+                self.max_radius = self.virial_radius
         else:
             self.max_radius = self.Truncated_radius()
 
@@ -207,7 +231,7 @@ class NFW(Subhalo):
 
     halo_mass: Subhalo mass (if truncate = True, this mass is pre-tidal stripping mass)
 
-    alpha: Does not do antying -- I'm keeping it becuase I have some ideas...
+    alpha: Does not do anything -- I'm keeping it because I have some ideas...
 
     concentration_param: Concentration parameter. If set to None, it uses c(M).
 
@@ -231,29 +255,40 @@ class NFW(Subhalo):
                      '_Truncate_' + str(truncate)
         self.halo_mass = halo_mass
         self.alpha = alpha
-
+        self.halo_name = 'NFW'
         if concentration_param is None:
             concentration_param = Concentration_parameter(halo_mass, z, arxiv_num)
-
         self.c = concentration_param
-        if M200:
-            self.virial_radius = (3. * self.halo_mass / (4. * np.pi * rho_critical *
-                                                         delta_200))**(1. / 3.)
+        self.virial_radius = Virial_radius(self.halo_mass, m200=M200)
+
+        if arxiv_num == 160106781:
+            rmax, vmax = rmax_vmax(self.halo_mass)
+            self.scale_radius = (rmax / 1.21) / 2.163
+            self.scale_density = (2.163 * vmax ** 2. / (4. * np.pi * newton_G * self.scale_radius ** 2. *
+                                                       (np.log(3.163) - 2.163 / 3.163)) * SolarMtoGeV *
+                                  cmtokpc ** 3.)
         else:
-            self.virial_radius = Virial_radius(self.halo_mass)
-        self.scale_radius = self.virial_radius / self.c
-        self.scale_density = ((self.halo_mass * SolarMtoGeV * cmtokpc ** 3.) /
+            self.scale_radius = self.virial_radius / self.c
+            self.scale_density = ((self.halo_mass * SolarMtoGeV * cmtokpc ** 3.) /
                               (4. * np.pi * self.scale_radius ** 3. *
                                (np.log(1.0 + self.c) -
                                 1.0 / (1.0 + 1.0 / self.c))))
 
         if not truncate:
-            self.max_radius = self.virial_radius
+            if arxiv_num == 160106781:
+                self.max_radius = np.power(10, fminbound(self.find_tidal_radius, -4., 1.3))
+            else:
+                self.max_radius = self.virial_radius
         else:
             self.max_radius = self.Truncated_radius()
 
     def density(self, r):
+        return self.scale_density / ((r / self.scale_radius) * (1. + r / self.scale_radius) ** 2.)
+
+    def int_over_density(self, r):
         if r > 0:
-            return self.scale_density / ((r / self.scale_radius) * (1. + r / self.scale_radius) ** 2.)
-        else:
-            return 0.
+            return (self.scale_density * 4. * np.pi * self.scale_radius ** 3. *
+                    (np.log((r + self.scale_radius) / self.scale_radius) - r / (r + self.scale_radius)) *
+                    kpctocm ** 3. * GeVtoSolarM)
+
+

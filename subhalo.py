@@ -35,7 +35,8 @@ class Model(object):
     """
     def __init__(self, mx, cross_sec, annih_prod, halo_mass, alpha, 
                  concentration_param=None, z=0., truncate=False,
-                 arxiv_num=10070438, profile=0, pointlike=True):
+                 arxiv_num=10070438, profile=0, pointlike=False,
+                 m200=False):
 
         self.mx = mx
         self.c_sec = cross_sec
@@ -45,17 +46,19 @@ class Model(object):
         self.alpha = alpha
         self.profile = profile
         self.plike = str2bool(pointlike)
-        if not self.plike:
-            self.gamma = self.Determine_Gamma()
+        self.gamma = self.Determine_Gamma()
+        self.m200 = m200
 
         if profile == 0:
             self.subhalo = Einasto(halo_mass, alpha, 
                                    concentration_param=concentration_param, 
-                                   truncate=truncate, arxiv_num=arxiv_num)
+                                   truncate=truncate, arxiv_num=arxiv_num,
+                                   M200=self.m200)
         elif profile == 1:
             self.subhalo = NFW(halo_mass, alpha, 
                                concentration_param=concentration_param, 
-                               truncate=truncate, arxiv_num=arxiv_num)
+                               truncate=truncate, arxiv_num=arxiv_num,
+                               M200=self.m200)
         else:
             "Profile does not exist..."  
             exit()                   
@@ -123,9 +126,8 @@ class Model(object):
         :return: distance in kpc
         """
         def flux_diff_lten(x):
-            return np.abs(self.Total_Flux(10**x) - self.min_Flux(10**x))
+            return np.abs(self.Total_Flux(10. ** x) - self.min_Flux(10. ** x))
         d_max = fminbound(flux_diff_lten, -4., 1.4, xtol= 10**-4.)
-        #  print 10.**float(d_max)
         return 10.**float(d_max)
 
     def Determine_Gamma(self):
@@ -135,36 +137,14 @@ class Model(object):
         photon energy
         """
         #  TODO: Generalize beyond b\bar{b}
-        #  TODO: Derive this information from Pythia8
-        # num_collisions = 10 ** 5.
-        # spec_file = MAIN_PATH + "/Spectrum/" + str(int(self.mx)) + "GeV_" + self.annih_prod + "_DMspectrum.dat"
-        # integrate_file = MAIN_PATH + "/Spectrum/IntegratedDMSpectrum" + self.annih_prod + ".dat"
-        # spectrum = np.loadtxt(spec_file)
-        # spectrum[:, 1] = spectrum[:, 1] / num_collisions
-        # integrated_list = np.loadtxt(integrate_file)
-        # integrated_rate = interp1d(integrated_list[:, 0], integrated_list[:, 1])
-        # gamma_list = [1.5, 2.0, 2.5, 3.0]
-        # normalize = np.zeros(len(gamma_list))
-        # for g in range(len(gamma_list)):
-        #     int_spec = self.mx ** (-gamma_list[g] + 1.) / (-gamma_list[g] + 1.) - 1. / (-gamma_list[g] + 1.)
-        #     normalize[g] = integrated_rate(self.mx) / integrate.quad(lambda x: x ** (-gamma_list[g]), 1., self.mx)[0]
-
-        # def int_meanes(x):
-        #    return interpola(x, spectrum[:, 0], spectrum[:, 0] * spectrum[:, 1])
-        # meanE = integrate.quad(int_meanes, 1., self.mx, epsabs=10.**-4, epsrel=10.**-4)[0]
-
-        # meanE_gam = np.zeros(len(gamma_list))
-        # for g in range(len(gamma_list)):
-        #     meanE_gam[g] = integrate.quad(lambda x: normalize[g] * x ** (-gamma_list[g] + 1.), 1., self.mx,
-        #                                   epsabs=10.**-4, epsrel=10.**-4)[0]
-        # diff_meanE = np.abs(meanE_gam - meanE)
+        #  TODO: Derive this information from Pythia8 (currently done using PPPC)
         gamma_tab = np.loadtxt(MAIN_PATH + '/SubhaloDetection/Data/Misc_Items/GammaIndex_given_mx_for_annih_prod_' +
                                self.annih_prod + '.dat')
         gamma = interpola(self.mx, gamma_tab[:, 0], gamma_tab[:, 1])
+
         def myround(x, prec=2, base=.5):
             return round(base * round(float(x) / base), prec)
         gamma_approx = myround(gamma)
-
         return gamma_approx
 
     def Threshold(self, gamma, extension):
@@ -177,7 +157,7 @@ class Model(object):
         :return: Flux threshold
         """
         file = MAIN_PATH + "/ExtendedThresholds/DetectionThresholdGamma" + \
-               str(int(gamma * 10)) + ".dat"
+            str(int(gamma * 10)) + ".dat"
 
         thresh_list = np.loadtxt(file)
         if extension > 2.0:
@@ -196,7 +176,7 @@ class Observable(object):
     def __init__(self, mx, cross_sec, annih_prod, m_low=np.log10(3.24 * 10**4.),
                  m_high=np.log10(1.0 * 10 ** 7.), c_low=np.log10(20.),
                  c_high=2.1, alpha=0.16, profile=0, truncate=False, 
-                 arxiv_num=10070438, point_like=True):
+                 arxiv_num=10070438, point_like=True, m200=False):
 
         point_like = str2bool(point_like)
         Profile_list = ["Einasto", "NFW"]
@@ -209,9 +189,10 @@ class Observable(object):
         self.alpha = alpha
         self.profile = profile
         self.profile_name = Profile_list[self.profile]
+        self.m200 = m200
         if self.truncate:
-            self.m_low = np.log10(10.**m_low / 0.005)
-            self.m_high = np.log10(10.**m_high / 0.005)
+            self.m_low = np.log10(10. ** m_low / 0.005)
+            self.m_high = np.log10(10. ** m_high / 0.005)
         else:
             self.m_low = m_low
             self.m_high = m_high
@@ -261,7 +242,7 @@ class Observable(object):
         mass_list = np.logspace(self.m_low, self.m_high, m_num)
         dist_list = np.logspace(d_low, d_high, d_num)
         c_list = np.logspace(self.c_low, self.c_high, c_num)  
-        
+        print 'Cross Section: ', self.cross_sec, '\n'
         for m in mass_list:
             print 'Subhalo mass: ', m
             for c in c_list:
@@ -270,17 +251,17 @@ class Observable(object):
                 extension_tab = np.zeros(len(dist_list))
                 if self.profile == 0:
                     subhalo = Einasto(m, self.alpha, c, truncate=self.truncate, 
-                                      arxiv_num=self.arxiv_num)
+                                      arxiv_num=self.arxiv_num, M200=self.m200)
                 elif self.profile == 1:
                     subhalo = NFW(m, self.alpha, c, truncate=self.truncate, 
-                                  arxiv_num=self.arxiv_num)
+                                  arxiv_num=self.arxiv_num, M200=self.m200)
                 else:
-                    'Profile not implimented yet'
+                    'Profile not implemented yet'
                 
                 for ind,d in enumerate(dist_list):
                     try:
                         look_array = np.loadtxt(self.folder + file_name)
-                        if any((np.round([m,c,d],5) == x).all() for x in np.round(look_array[:,0:3],5)):
+                        if any((np.round([m, c, d], 5) == x).all() for x in np.round(look_array[:, 0:3], 5)):
                             exists = True
                         else:
                             exists = False
@@ -306,7 +287,7 @@ class Observable(object):
                     np.savetxt(self.folder + file_name, full_tab)
         return
     
-    def Table_Dmax_Pointlike(self, m_num=20, c_num = 15, threshold=1.*10.**-9.):
+    def Table_Dmax_Pointlike(self, m_num=20, c_num=15, threshold=1.*10.**-9.):
         """
         Tables the maximimum distance a point-like source can be detected for a specified
         threshold given a particular DM candidate and subhalo specificiations
@@ -335,8 +316,8 @@ class Observable(object):
                     str(np.log10(self.cross_sec)) + '_annih_prod_' + self.annih_prod + '.dat'
                         
         mass_list = np.logspace(self.m_low, self.m_high, m_num)
-        c_list = np.logspace(self.c_low, self.c_high, c_num)  
-        
+        c_list = np.logspace(self.c_low, self.c_high, c_num)
+        print 'Cross Section: ', self.cross_sec, '\n'
         for m in mass_list:
             print 'Subhalo mass: ', m
             for c in c_list:
@@ -359,7 +340,8 @@ class Observable(object):
                                      m, self.alpha, concentration_param=c,
                                      truncate=self.truncate,
                                      arxiv_num=self.arxiv_num,
-                                     profile=self.profile, pointlike=self.point_like)
+                                     profile=self.profile, pointlike=self.point_like,
+                                     m200=self.m200)
                     
                     dmax = dm_model.d_max_point(threshold=threshold)
                     if self.truncate:
@@ -370,7 +352,7 @@ class Observable(object):
                         
                     if os.path.isfile(self.folder+file_name):
                         load_info = np.loadtxt(self.folder + file_name)
-                        add_to_table = np.vstack((load_info,tab))
+                        add_to_table = np.vstack((load_info, tab))
                         np.savetxt(self.folder + file_name, add_to_table)
                     else:
                         np.savetxt(self.folder + file_name, tab)        
@@ -406,7 +388,7 @@ class Observable(object):
 
         mass_list = np.logspace(self.m_low, self.m_high, m_num)
         c_list = np.logspace(self.c_low, self.c_high, c_num)
-
+        print 'Cross Section: ', self.cross_sec, '\n'
         for m in mass_list:
             print 'Subhalo mass: ', m
             for c in c_list:
@@ -429,7 +411,8 @@ class Observable(object):
                                      m, self.alpha, concentration_param=c,
                                      truncate=self.truncate,
                                      arxiv_num=self.arxiv_num,
-                                     profile=self.profile, pointlike=self.point_like)
+                                     profile=self.profile, pointlike=self.point_like,
+                                     m200=self.m200)
 
                     dmax = dm_model.D_max_extend()
                     if self.truncate:
@@ -445,8 +428,70 @@ class Observable(object):
                     else:
                         np.savetxt(self.folder + file_name, tab)
         return
-    
-    def N_Extended(self, bmin):
+
+    def Table_Dmax_Extended_Constrained(self, min_extension=0.3):
+        """
+        Tables the maximum distance a subhalo to be observed as spatially extended
+        and have a specified minimum extension (in degrees)
+
+        Note: Table_Dmax_Extended should have already been run!
+        """
+        # TODO: Test. Also think about whether min_ext should be compared to full extension or that calulated from 68% containment
+        Profile_names = ['Einasto', 'NFW']
+
+        load_file_name = 'Dmax_' + str(Profile_names[self.profile]) + '_Truncate_' + \
+            str(self.truncate) + '_Cparam_' + str(self.arxiv_num) + '_alpha_' + \
+            str(self.alpha) + '_mx_' + str(self.mx) + '_cross_sec_' + \
+            str(np.log10(self.cross_sec)) + '_annih_prod_' + self.annih_prod + '.dat'
+
+        save_file_name = 'Dmax_Constrained_MinExtension_' + str(min_extension) +\
+            str(Profile_names[self.profile]) + '_Truncate_' + \
+            str(self.truncate) + '_Cparam_' + str(self.arxiv_num) + '_alpha_' + \
+            str(self.alpha) + '_mx_' + str(self.mx) + '_cross_sec_' + \
+            str(np.log10(self.cross_sec)) + '_annih_prod_' + self.annih_prod + '.dat'
+
+        try:
+            load_dmax = np.loadtxt(self.folder + load_file_name)
+        except:
+            load_dmax = []
+            print 'File Not Found! Exiting...'
+            exit()
+
+        print 'Cross Section: ', self.cross_sec, '\n'
+
+        def extension_line(d, model):
+            return np.abs(model.subhalo.Spatial_Extension(d) - min_extension)
+
+        for i in range(load_dmax[:, 0]):
+            m = load_dmax[i, 0]
+            c = load_dmax[i, 1]
+            print 'Subhalo mass: ', m, 'Concentration parameter: ', c
+
+            dm_model = Model(self.mx, self.cross_sec, self.annih_prod,
+                             m, self.alpha, concentration_param=c,
+                             truncate=self.truncate,
+                             arxiv_num=self.arxiv_num,
+                             profile=self.profile, pointlike=False,
+                             m200=self.m200)
+
+            dext = fminbound(extension_line, -5., np.log10(load_dmax[i, 2]),
+                             args=dm_model)
+            if self.truncate:
+                mm = 0.005 * m
+            else:
+                mm = m
+
+            tab = np.array([mm, c, np.power(10., dext)]).transpose()
+
+            if os.path.isfile(self.folder + save_file_name):
+                load_info = np.loadtxt(self.folder + save_file_name)
+                add_to_table = np.vstack((load_info, tab))
+                np.savetxt(self.folder + save_file_name, add_to_table)
+            else:
+                np.savetxt(self.folder + save_file_name, tab)
+        return
+
+    def N_Extended(self, bmin, constrained=False, min_extension=0.3):
         """
         For pre tabled d_max functions, calculates the number of observable spatially
         extended subhalos
@@ -466,13 +511,18 @@ class Observable(object):
             sigma_c = 0.24
             return (np.exp(- (np.log(c / cm) / (np.sqrt(2.0) * sigma_c)) ** 2.0) /
                    (np.sqrt(2. * np.pi) * sigma_c * c))
-           
-        file_name = 'Dmax_' + str(Profile_names[self.profile]) + '_Truncate_' +\
-                    str(self.truncate) + '_Cparam_' + str(self.arxiv_num) + '_alpha_' +\
-                    str(self.alpha) + '_mx_' + str(self.mx) + '_cross_sec_' +\
-                    str(np.log10(self.cross_sec)) + '_annih_prod_' + self.annih_prod + '.dat'
-        
-        
+        if constrained:
+            file_name = 'Dmax__Constrained_MinExtension_' + str(min_extension) +\
+                str(Profile_names[self.profile]) + '_Truncate_' +\
+                str(self.truncate) + '_Cparam_' + str(self.arxiv_num) + '_alpha_' +\
+                str(self.alpha) + '_mx_' + str(self.mx) + '_cross_sec_' +\
+                str(np.log10(self.cross_sec)) + '_annih_prod_' + self.annih_prod + '.dat'
+        else:
+            file_name = 'Dmax_' + str(Profile_names[self.profile]) + '_Truncate_' +\
+                str(self.truncate) + '_Cparam_' + str(self.arxiv_num) + '_alpha_' +\
+                str(self.alpha) + '_mx_' + str(self.mx) + '_cross_sec_' +\
+                str(np.log10(self.cross_sec)) + '_annih_prod_' + self.annih_prod + '.dat'
+
         integrand_table = np.loadtxt(self.folder+file_name)
         if self.truncate:
             integrand_table[:, 2] = (260. * (integrand_table[:, 0]) ** (-1.9) *
@@ -493,13 +543,10 @@ class Observable(object):
             
         m_num = mass_list.size
         c_num = c_list.size
-        
         int_prep_spline = np.reshape(integrand_table[:,2], (m_num, c_num))
-       
         integrand = RectBivariateSpline(mass_list, c_list, int_prep_spline)
         integr = integrand.integral(3.24 * 10**4., 1.0 * 10**7., 0., 1000.)
-                                    
-        # TODO: consider alternative ways of performing this integral
+
         print self.cross_sec, (4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr)
         return 4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr
 
@@ -507,20 +554,18 @@ class Observable(object):
         """
         For pre tabled d_max functions, calculates the number of observable point-like subhalos
 
-        :param bmin: These anlayses cut out the galactic plane, b_min (in degrees) specifies location
+        :param bmin: These analyses cut out the galactic plane, b_min (in degrees) specifies location
         of the cut
         """
-
         Profile_names = ['Einasto', 'NFW']
-
         openfile = open(self.folder+"param_list.pkl", 'rb')
         dict = pickle.load(openfile)
         openfile.close()
         mass_list = np.logspace(dict['m_low'], dict['m_high'], dict['m_num'])
         c_list = np.logspace(dict['c_low'], dict['c_high'], dict['c_num'])
 
-        def prob_c(c, M):
-            cm = Concentration_parameter(M, arxiv_num=self.arxiv_num)
+        def prob_c(c, m):
+            cm = Concentration_parameter(m, arxiv_num=self.arxiv_num)
             sigma_c = 0.24
             return (np.exp(- (np.log(c / cm) / (np.sqrt(2.0) * sigma_c)) ** 2.0) /
                     (np.sqrt(2. * np.pi) * sigma_c * c))
@@ -542,13 +587,9 @@ class Observable(object):
 
         m_num = mass_list.size
         c_num = c_list.size
-
         int_prep_spline = np.reshape(integrand_table[:, 2], (m_num, c_num))
-        #  TODO: Verify legitimacy of rectbivariatespline... I have doubts
         integrand = RectBivariateSpline(mass_list, c_list, int_prep_spline)
         integr = integrand.integral(3.24 * 10. ** 4., 10. ** 7., 0., np.inf)
-
         print self.cross_sec, (4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr)
         return 4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr
-
 

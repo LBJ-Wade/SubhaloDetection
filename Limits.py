@@ -13,6 +13,11 @@ from scipy.interpolate import interp1d
 import glob
 from subhalo import *
 
+try:
+    MAIN_PATH = os.environ['SUBHALO_MAIN_PATH']
+except KeyError:
+    MAIN_PATH = os.getcwd() + '/../'
+
 
 class DM_Limits(object):
     """
