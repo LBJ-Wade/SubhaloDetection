@@ -262,3 +262,15 @@ def integrated_rate_test(mx=100., annih_prod='BB'):
     print '<E> Gamma: ', mean_e, mean_e2
 
     return
+
+
+def eliminate_redundant_lines(directory):
+    files = glob.glob(directory + '/*.dat')
+    for f in files:
+        print f
+        load_f = np.loadtxt(f)
+        load_f = np.vstack({tuple(row) for row in load_f})
+        load_f = load_f[np.argsort(load_f[:,0])]
+        np.savetxt(f, load_f)
+    print 'Done!'
+    return

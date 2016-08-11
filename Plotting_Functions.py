@@ -562,26 +562,20 @@ def Jfactor_plots(m_sub=10.**7., arxiv_num=[13131729], M200=[False], mx=100.,
     print 'Spatial Extension Boundary NFW (Not Truncated): ', se_bound_n_ntr
 
     num_dist_pts = 30
-    dist_tab = np.logspace(-3., 1., num_dist_pts)
-    e_tr_j = np.zeros(dist_tab.size * 2).reshape((dist_tab.size, 2))
-    n_tr_j = np.zeros(dist_tab.size * 2).reshape((dist_tab.size, 2))
-    e_ntr_j = np.zeros(dist_tab.size * 2).reshape((dist_tab.size, 2))
-    n_ntr_j = np.zeros(dist_tab.size * 2).reshape((dist_tab.size, 2))
-    for i, d in enumerate(dist_tab):
+    e_tr_j = np.zeros(num_dist_pts* 2).reshape((num_dist_pts, 2))
+    dist_tab1 = np.logspace(-3., se_bound_e_tr, num_dist_pts)
+    n_tr_j = np.zeros(num_dist_pts * 2).reshape((num_dist_pts, 2))
+    dist_tab2 = np.logspace(-3., se_bound_n_tr, num_dist_pts)
+    e_ntr_j = np.zeros(num_dist_pts * 2).reshape((num_dist_pts, 2))
+    dist_tab3 = np.logspace(-3., se_bound_e_ntr, num_dist_pts)
+    n_ntr_j = np.zeros(num_dist_pts * 2).reshape((num_dist_pts, 2))
+    dist_tab4 = np.logspace(-3., se_bound_n_ntr, num_dist_pts)
+    for i in range(num_dist_pts):
         print i+1, '/', num_dist_pts
-        if d <= se_bound_e_tr:
-            e_tr_j[i] = [d, np.power(10, e_tr.J_pointlike(d))]
-        if d <= se_bound_n_tr:
-            n_tr_j[i] = [d, np.power(10, n_tr.J_pointlike(d))]
-        if d <= se_bound_e_ntr:
-            e_ntr_j[i] = [d, np.power(10, e_ntr.J_pointlike(d))]
-        if d <= se_bound_n_ntr:
-            n_ntr_j[i] = [d, np.power(10, n_ntr.J_pointlike(d))]
-
-    e_tr_j = e_tr_j[~np.all([e_tr_j[:, 0] == 0], axis=0)]
-    n_tr_j = n_tr_j[~np.all([n_tr_j[:, 0] == 0], axis=0)]
-    e_ntr_j = e_ntr_j[~np.all([e_ntr_j[:, 0] == 0], axis=0)]
-    n_ntr_j = n_ntr_j[~np.all([n_ntr_j[:, 0] == 0], axis=0)]
+        e_tr_j[i] = [dist_tab1[i], np.power(10, e_tr.J_pointlike(dist_tab1[i]))]
+        n_tr_j[i] = [dist_tab2[i], np.power(10, n_tr.J_pointlike(dist_tab2[i]))]
+        e_ntr_j[i] = [dist_tab3[i], np.power(10, e_ntr.J_pointlike(dist_tab3[i]))]
+        n_ntr_j[i] = [dist_tab4[i], np.power(10, n_ntr.J_pointlike(dist_tab4[i]))]
 
     fig = plt.figure(figsize=(8., 6.))
     ax = plt.gca()
@@ -599,7 +593,7 @@ def Jfactor_plots(m_sub=10.**7., arxiv_num=[13131729], M200=[False], mx=100.,
     plt.axvline(x=se_bound_n_tr,  ymin=0., ymax=1., linewidth=1, color='Blue', alpha=0.2)
     plt.axvline(x=se_bound_e_ntr,  ymin=0., ymax=1., linewidth=1, color='Red', alpha=0.2)
     plt.axvline(x=se_bound_n_ntr,  ymin=0., ymax=1., linewidth=1, color='Magenta', alpha=0.2)
-
+    plt.text(9., 1. * 10 ** 23., r'$\theta = 0.1^\circ$', fontsize=15, ha='right', va='center')
     plt.legend()
 
     pl.xlabel('Distance [kpc]', fontsize=20)
@@ -686,7 +680,6 @@ def extension_vs_dist(m_sub=1.*10**7., arxiv_num=[13131729], M200=[False]):
     plt.plot(dist_plot, n_ntr_plot, lw=1, color='Magenta', label='NFW, NT')
     plt.plot(dist_plot, rad_ex_n_ntr, '--', ms=1, color='Magenta')
 
-    plt.text(9., 4. * 10 ** -25., r'$\theta = 0.1^\circ$', fontsize=15, ha='right', va='center')
     plt.legend()
 
     pl.xlabel('Distance [kpc]', fontsize=20)

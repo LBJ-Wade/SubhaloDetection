@@ -227,65 +227,6 @@ class Observable(object):
         self.param_list['m_low'] = self.m_low 
         self.param_list['m_high'] = self.m_high
 
-    def Table_Spatial_Extension(self, d_low=-3., d_high=1., d_num=80, m_num=60, 
-                                c_num=50):
-        """ Tables spatial extension for future use. 
-            
-            Profile Numbers correspond to [Einasto, NFW] # 0 - 1
-        """
-        Profile_names=['Einasto','NFW']
-
-        file_name = 'SpatialExtension_' + str(Profile_names[self.profile]) + '_Truncate_' +\
-                    str(self.truncate) + '_Cparam_' + str(self.arxiv_num) + '_alpha_' +\
-                    str(self.alpha) + '.dat'
-                        
-        mass_list = np.logspace(self.m_low, self.m_high, m_num)
-        dist_list = np.logspace(d_low, d_high, d_num)
-        c_list = np.logspace(self.c_low, self.c_high, c_num)  
-        print 'Cross Section: ', self.cross_sec, '\n'
-        for m in mass_list:
-            print 'Subhalo mass: ', m
-            for c in c_list:
-                print 'Concentration parameter: ', c
-                
-                extension_tab = np.zeros(len(dist_list))
-                if self.profile == 0:
-                    subhalo = Einasto(m, self.alpha, c, truncate=self.truncate, 
-                                      arxiv_num=self.arxiv_num, M200=self.m200)
-                elif self.profile == 1:
-                    subhalo = NFW(m, self.alpha, c, truncate=self.truncate, 
-                                  arxiv_num=self.arxiv_num, M200=self.m200)
-                else:
-                    'Profile not implemented yet'
-                
-                for ind,d in enumerate(dist_list):
-                    try:
-                        look_array = np.loadtxt(self.folder + file_name)
-                        if any((np.round([m, c, d], 5) == x).all() for x in np.round(look_array[:, 0:3], 5)):
-                            exists = True
-                        else:
-                            exists = False
-                    except:
-                        exists = False
-                    
-                    if not exists and subhalo.Full_Extension(d) > .05:
-                        extension_tab[ind] = subhalo.Spatial_Extension(d)
-    
-                extension_tab = extension_tab[np.nonzero(extension_tab)]
-                assert isinstance(extension_tab, object)
-                entries_added = extension_tab.size
-                full_tab = np.vstack((np.ones(entries_added) * m,
-                                      np.ones(entries_added) * c, 
-                                      dist_list[:entries_added],
-                                      extension_tab)).transpose()
-                    
-                if os.path.isfile(self.folder+file_name):
-                    load_info = np.loadtxt(self.folder + file_name)
-                    add_to_table = np.vstack((load_info,full_tab))
-                    np.savetxt(self.folder + file_name, add_to_table)
-                else:
-                    np.savetxt(self.folder + file_name, full_tab)
-        return
     
     def Table_Dmax_Pointlike(self, m_num=20, c_num=15, threshold=1.*10.**-9.):
         """
@@ -545,7 +486,7 @@ class Observable(object):
         c_num = c_list.size
         int_prep_spline = np.reshape(integrand_table[:,2], (m_num, c_num))
         integrand = RectBivariateSpline(mass_list, c_list, int_prep_spline)
-        integr = integrand.integral(3.24 * 10**4., 1.0 * 10**7., 0., 1000.)
+        integr = integrand.integral(3.24 * 10**4., 1.0 * 10**7., 0., 300.)
 
         print self.cross_sec, (4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr)
         return 4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr
@@ -589,7 +530,7 @@ class Observable(object):
         c_num = c_list.size
         int_prep_spline = np.reshape(integrand_table[:, 2], (m_num, c_num))
         integrand = RectBivariateSpline(mass_list, c_list, int_prep_spline)
-        integr = integrand.integral(3.24 * 10. ** 4., 10. ** 7., 0., np.inf)
+        integr = integrand.integral(3.24 * 10. ** 4., 10. ** 7., 0., 300.)
         print self.cross_sec, (4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr)
         return 4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr
 

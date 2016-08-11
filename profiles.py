@@ -42,8 +42,8 @@ class Subhalo(object):
                                       self.density(np.sqrt(dist ** 2. + x ** 2. -
                                                            2.0 * dist * x * np.cos(t))
                                                    ) ** 2.0,
-                                      0., theta, lambda th: self.los_min(th, dist) + eps(th, dist),
-                                      lambda th: self.los_max(th, dist) - eps(th, dist), epsabs=10 ** -4,
+                                      0., theta, lambda th: self.los_min(th, dist),
+                                      lambda th: self.los_max(th, dist), epsabs=10 ** -4,
                                       epsrel=10 ** -4)
 
             return np.log10(jfact[0])
@@ -56,14 +56,8 @@ class Subhalo(object):
         :param dist: Distance to subhalo in kpc
         :return: returns log10 of J factor in GeV^2 /
         """
-        min_r = 0.
-        if self.halo_name == 'NFW':
-            min_r = 10**-15.
-        jfact = integrate.quad(lambda x: 4. * np.pi * kpctocm / dist ** 2. *
-                               self.density(x) ** 2. * x ** 2.,
-                               min_r, self.max_radius, epsabs=10 ** -4, epsrel=10 ** -4)
-
-        return np.log10(jfact[0])
+        jfact = self.int_over_rho_sqr(self.max_radius) / dist**2.
+        return np.log10(jfact)
 
     def los_min(self, theta, dist):
         """
@@ -91,9 +85,7 @@ class Subhalo(object):
         :param r: upper limit of radial integration
         :return: Mass enclosed
         """
-        mass_enc = integrate.quad(lambda x: 4. * np.pi * x ** 2. * self.density(x) *
-                                  GeVtoSolarM * kpctocm ** 3., 0., r)
-        return mass_enc[0]
+        return self.int_over_density(r)
 
     def Mass_diff_005(self, rmax):
         """
@@ -103,9 +95,8 @@ class Subhalo(object):
         :return: Mass difference
         """
         rmax = 10**rmax
-        mass_enc = integrate.quad(lambda x: x ** 2. * self.density(x), 0., rmax)
-        return np.abs(4. * np.pi * GeVtoSolarM * kpctocm ** 3. *
-                      mass_enc[0] - 0.005 * self.halo_mass)
+        mass_enc = self.int_over_density(rmax)
+        return np.abs(mass_enc - 0.005 * self.halo_mass)
 
     def Truncated_radius(self):
         """
@@ -149,7 +140,7 @@ class Subhalo(object):
         return radtodeg * np.arctan(self.max_radius / dist)
 
     def find_tidal_radius(self, r):
-        return np.abs(self.halo_mass - self.Mass_in_R(10. ** r))
+        return np.abs(self.halo_mass - self.int_over_density(10. ** r))
 
 
 class Einasto(Subhalo):
@@ -223,6 +214,24 @@ class Einasto(Subhalo):
         return self.scale_density * np.exp(-2. / self.alpha * (((r / self.scale_radius) **
                                                                 self.alpha) - 1.))
 
+    def int_over_density(self, r):
+        if r > 0:
+            return ((4. * np.pi * np.exp(2. / self.alpha) * self.scale_density *
+                    (self.alpha / 2.) ** (3. / self.alpha) * self.scale_radius ** 3. *
+                    special.gamma(3. / self.alpha) *
+                    (1. - special.gammaincc(3. / self.alpha, 2. / self.alpha *
+                                            (r / self.scale_radius) ** self.alpha))) *
+                    kpctocm ** 3. * GeVtoSolarM / self.alpha)
+
+    def int_over_rho_sqr(self, r):
+        if r > 0:
+            return ((4. * np.pi * np.exp(4. / self.alpha) * self.scale_density ** 2. *
+                    self.alpha ** (3. / self.alpha - 1.) * self.scale_radius ** 3. *
+                    special.gamma(3. / self.alpha) *
+                    (1. - special.gammaincc(3. / self.alpha, 4. / self.alpha *
+                                            (r / self.scale_radius) ** self.alpha))) *
+                    kpctocm / 4. ** (3. / self.alpha))
+
 
 class NFW(Subhalo):
     """
@@ -291,4 +300,8 @@ class NFW(Subhalo):
                     (np.log((r + self.scale_radius) / self.scale_radius) - r / (r + self.scale_radius)) *
                     kpctocm ** 3. * GeVtoSolarM)
 
+    def int_over_rho_sqr(self, r):
+        if r > 0:
+            return (4. * np.pi * self.scale_density ** 2. * self.scale_radius ** 3. / 3. *
+                    (1. - 1. / (1. + r / self.scale_radius) ** 3.) * kpctocm)
 
