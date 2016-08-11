@@ -127,7 +127,7 @@ class Model(object):
         """
         def flux_diff_lten(x):
             return np.abs(self.Total_Flux(10. ** x) - self.min_Flux(10. ** x))
-        d_max = fminbound(flux_diff_lten, -4., 1.4, xtol= 10**-4.)
+        d_max = fminbound(flux_diff_lten, -4., 2., xtol= 10**-4.)
         return 10.**float(d_max)
 
     def Determine_Gamma(self):
