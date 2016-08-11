@@ -138,7 +138,7 @@ class Subhalo(object):
 #                                bounds_error=False, fill_value=None)
 #        except:
 #            extension = minimize_scalar(self.AngRad68, args=dist, tol=10**-3.)
-        extension = fminbound(self.AngRad68, 0.01, self.Full_Extension(dist), args=[dist], xtol=10**-3.)
+        extension = fminbound(self.AngRad68, 0.01, 90., args=[dist], xtol=10**-3.)
         return extension
 
     def Full_Extension(self, dist):
