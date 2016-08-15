@@ -36,7 +36,7 @@ class Subhalo(object):
         def eps(th, d):
             return (self.los_max(th, d) - self.los_min(th, d)) / 10. ** 4.
 
-        if theta > 0.01 * np.pi / 180:
+        if theta > 0.01 * 180. / np.pi:
             jfact = integrate.dblquad(lambda x, t:
                                       2. * np.pi * kpctocm * np.sin(t) *
                                       self.density(np.sqrt(dist ** 2. + x ** 2. -
@@ -124,21 +124,23 @@ class Subhalo(object):
         :return: returns quoted spatial extension to be used for calculation of
         flux threshold of spatially extended sources
         """
-#        try:
-#            file_name = 'SpatialExtension_' + str(self.halo_name) + '_Truncate_' + \
-#                        str(self.truncate) + '_Cparam_' + str(self.arxiv_num) + '_alpha_' + \
-#                        str(self.alpha) + '.dat'
-#            se_table = np.loadtxt(MAIN_PATH + '/SubhaloDetection/Data/' + file_name)
-#            m_list = np.log10(np.sort(np.unique(se_table[:, 0])))
-#            c_list = np.log10(np.sort(np.unique(se_table[:, 1])))
-#            d_list = np.log10(np.sort(np.unique(se_table[:, 2])))
-#            se = np.log10(se_table[:,3].reshape((m_list.size, c_list.size, d_list.size)))
-#            extension = interpn((m_list, c_list, d_list), se,
-#                                np.array([np.log10(self.halo_mass), np.log10(self.c), np.log10(dist)]),
-#                                bounds_error=False, fill_value=None)
-#        except:
-#            extension = minimize_scalar(self.AngRad68, args=dist, tol=10**-3.)
-        extension = fminbound(self.AngRad68, 0.01, 90., args=[dist], xtol=10**-3.)
+        try:
+            file_name = 'SpatialExtension_' + str(self.halo_name) + '_Truncate_' + \
+                        str(self.truncate) + '_Cparam_' + str(self.arxiv_num) + '_alpha_' + \
+                        str(self.alpha) + '.dat'
+            se_table = np.loadtxt(MAIN_PATH + '/SubhaloDetection/Data/' + file_name)
+
+            pos_index = np.where(np.round(se_table[:, 0], 5) == np.round(self.halo_mass, 5))
+            pos_index = np.where(np.round(se_table[pos_index][:, 1], 5) == np.round(self.c, 5))
+            mind = np.min(se_table[pos_index][:, 2])
+            maxd = np.max(se_table[pos_index][:, 2])
+            if not mind < dist < maxd:
+                raise ValueError
+            exten_interp = interp1d(np.log10(se_table[pos_index][:, 2]), np.log10(se_table[pos_index][:, 3]),
+                                    kind='cubic')
+            extension = 10.**exten_interp(np.log10(dist))
+        except:
+            extension = fminbound(self.AngRad68, 0.01, 90., args=[dist], xtol=10**-3.)
         return extension
 
     def Full_Extension(self, dist):
@@ -152,6 +154,11 @@ class Subhalo(object):
 
     def find_tidal_radius(self, r):
         return np.abs(self.halo_mass - self.int_over_density(10. ** r))
+
+    def vel_r_max(self):
+        min = minimize_scalar(lambda r: -np.sqrt(self.int_over_density(r) * newton_G / r),
+                              bounds=(10**-5., self.max_radius), method='bounded')
+        return [-min.fun, min.x]
 
 
 class Einasto(Subhalo):
@@ -178,7 +185,7 @@ class Einasto(Subhalo):
     If True, virial radius is taken to be the radius at which the average density
     is equal to 200 times the critical density.
     """
-    def __init__(self, halo_mass, alpha, concentration_param=None,
+    def __init__(self, halo_mass, alpha=0.16, concentration_param=None,
                  z=0., truncate=False, arxiv_num=10070438, M200=False):
 
         self.pname = 'Einasto_alpha_' + str(alpha) + '_C_params_' + str(arxiv_num) + \
@@ -215,7 +222,7 @@ class Einasto(Subhalo):
                                                            self.c ** self.alpha / self.alpha))) *
                                   SolarMtoGeV * cmtokpc ** 3.)
 
-        if not truncate:
+        if not self.truncate:
             if arxiv_num == 160106781:
                 self.max_radius = np.power(10, fminbound(self.find_tidal_radius, -4., 1.3))
             else:
@@ -228,6 +235,11 @@ class Einasto(Subhalo):
                                                                 self.alpha) - 1.))
 
     def int_over_density(self, r):
+        try:
+            if r > self.max_radius:
+                r = self.max_radius
+        except AttributeError:
+            pass
         if r > 0:
             return ((4. * np.pi * np.exp(2. / self.alpha) * self.scale_density *
                     (self.alpha / 2.) ** (3. / self.alpha) * self.scale_radius ** 3. *
@@ -236,7 +248,10 @@ class Einasto(Subhalo):
                                             (r / self.scale_radius) ** self.alpha))) *
                     kpctocm ** 3. * GeVtoSolarM / self.alpha)
 
+
     def int_over_rho_sqr(self, r):
+        if r > self.max_radius:
+            r = self.max_radius
         if r > 0:
             return ((4. * np.pi * np.exp(4. / self.alpha) * self.scale_density ** 2. *
                     self.alpha ** (3. / self.alpha - 1.) * self.scale_radius ** 3. *
@@ -313,14 +328,19 @@ class NFW(Subhalo):
             return 0.
 
     def int_over_density(self, r):
+        try:
+            if r > self.max_radius:
+                r = self.max_radius
+        except AttributeError:
+            pass
         if r > 0:
             return (self.scale_density * 4. * np.pi * self.scale_radius ** 3. *
                     (np.log((r + self.scale_radius) / self.scale_radius) - r / (r + self.scale_radius)) *
                     kpctocm ** 3. * GeVtoSolarM)
-        else:
-            return 0.
 
     def int_over_rho_sqr(self, r):
+        if r > self.max_radius:
+            r = self.max_radius
         if r > 0:
             return (4. * np.pi * self.scale_density ** 2. * self.scale_radius ** 3. / 3. *
                     (1. - 1. / (1. + r / self.scale_radius) ** 3.) * kpctocm)
