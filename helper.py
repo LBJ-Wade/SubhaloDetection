@@ -8,6 +8,7 @@ import numpy as np
 import os
 from scipy.interpolate import interp1d, UnivariateSpline
 from scipy.integrate import quad
+from scipy.special import hyp2f1, gammaincc, gamma
 import glob
 import re
 
@@ -18,12 +19,15 @@ except KeyError:
     MAIN_PATH = os.getcwd() + '/../'
 
 via_lactea = np.loadtxt(MAIN_PATH + '/SubhaloDetection/Data/Misc_Items/ViaLacteaII_Info.dat')
+#via_lactea = np.loadtxt(MAIN_PATH + '/SubhaloDetection/Data/Misc_Items/ViaLacteaII_Useable_Subhalos.dat')
 #  rmax_interp = np.poly1d(np.polyfit(np.log10(via_lactea[:, 5]), np.log10(via_lactea[:, 4]), 1))
-rmax_interp = lambda x: interpola(x, np.log10(via_lactea[:, 5]), np.log10(via_lactea[:, 4]))
-#  vmax_interp = np.poly1d(np.polyfit(np.log10(via_lactea[:, 5]), np.log10(via_lactea[:, 3]), 1))
+#vmax_interp = np.poly1d(np.polyfit(np.log10(via_lactea[:, 5]), np.log10(via_lactea[:, 3]), 1))
 vmax_interp = lambda x: interpola(x, np.log10(via_lactea[:, 5]), np.log10(via_lactea[:, 3]))
 #  tidal_interp = np.poly1d(np.polyfit(np.log10(via_lactea[:, 5]), np.log10(via_lactea[:, 6]), 1))
-tidal_interp = lambda x: interpola(x, np.log10(via_lactea[:, 5]), np.log10(via_lactea[:, 6]))
+def rmax_interp(x):
+    return interpola(x, np.log10(via_lactea[:, 5]), np.log10(via_lactea[:, 4]))
+def tidal_interp(x):
+    return interpola(x, np.log10(via_lactea[:, 5]), np.log10(via_lactea[:, 6]))
 
 #  Conversions
 SolarMtoGeV = 1.11547 * 10 ** 57.
@@ -37,16 +41,16 @@ newton_G = 4.301 * 10. ** -6  # Units: km^2 kpc / (Solar Mass * s^2)
 #  Numerical Quantities -- taken from PDG
 hubble = 0.673
 H0 = 0.1 * hubble  # Units: km / (s * kpc)
-rho_critical = 2.775 * 10 ** 11. * hubble**2. * 10. ** -9.  # Units: Solar Mass / (kpc)^3
+rho_critical = 2.775 * 10 ** 11. * hubble ** 2. * 10. ** -9.  # Units: Solar Mass / (kpc)^3
 delta_200 = 200.
 
 
-def Concentration_parameter(mass, z=0, arxiv_num=13131729):
+def Concentration_parameter(mass, z=0, arxiv_num=13131729, dist=1., vmax = 3.):
     """
     Calculates concentration parameter given a subhalo mass and choice of
     paramaterization
 
-    NOTE: If you call 1601.06781, it returns rmax!!!!
+    160304057 -- For NFW only
     """
     c = 0.
     if arxiv_num == 13131729:
@@ -71,9 +75,27 @@ def Concentration_parameter(mass, z=0, arxiv_num=13131729):
     elif arxiv_num == 160106781:
         scale_radius = (10. ** rmax_interp(np.log10(mass)) / 1.21) / 2.163
         c = Virial_radius(mass, m200=True) / scale_radius
+    elif arxiv_num == 160304057:
+        xsub = dist / 200.
+        b = np.array([1., 2., 3.])
+        # Mass relation
+        #a = np.array([-0.195, 0.089, 0.089])
+        #c = 19.9 * (1. + np.sum((a * np.log(mass * hubble/ 10. ** 8.)) ** b)) *\
+        #    (1. + -0.54 * np.log(xsub))
+
+        # Vmax relation
+        a = np.array([-1.38, 0.83, -0.49])
+        bb = -2.5
+        c = 3.5 * 10. ** 4. * (1. + np.sum((a * np.log(vmax / 10.)) ** b)) *\
+            (1. + bb * np.log(xsub))
     else:
         print 'Wrong arXiv Number for Concentration Parameter'
     
+    return c
+
+
+def concentrate_in_vmax(vmax, rmax):
+    c = 2. * (vmax / (H0 * rmax)) ** 2.
     return c
 
 
@@ -93,8 +115,9 @@ def Virial_radius(mass, m200=False):
         return (3. * mass / (4. * np.pi * rho_critical * delta_200)) ** (1. / 3.)
 
 
-def Tidal_radius(mass):
-    return 10. ** tidal_interp(np.log10(mass))
+def Tidal_radius(mass, arxiv=160106781):
+    if arxiv == 160106781:
+        return 10. ** tidal_interp(np.log10(mass))
 
 
 def interpola(val, x, y):
@@ -245,10 +268,12 @@ def integrated_rate_test(mx=100., annih_prod='BB'):
     spectrum = spectrum[0:imax, :]
     Nevents = 10. ** 5.
     spectrum[:, 1] /= Nevents
-    test = interp1d(spectrum[:, 0], spectrum[:, 1], kind='cubic', bounds_error=False, fill_value=0.)
+    test = interp1d(np.log10(spectrum[:, 0] / mx), np.log10(mx * np.log(10.) * spectrum[:, 1]), kind='cubic', bounds_error=False, fill_value=0.)
     test2 = interp1d(spectrum[:, 0], spectrum[:, 0] * spectrum[:, 1], kind='cubic', bounds_error=False, fill_value=0.)
     e_gamma_tab = np.logspace(0., np.log10(spectrum[-1, 0]), 200)
-    ng2 = np.trapz(test(e_gamma_tab), e_gamma_tab)
+    print np.column_stack((np.log10(spectrum[:, 0] / mx), np.log10(mx * np.log(10.) * spectrum[:, 1])))
+    xtab = np.linspace(np.log10(1. / mx), 0., 200)
+    ng2 = np.trapz(10.**test(xtab) / 10. ** xtab, xtab) / np.log(10.)
     mean_e2 = np.trapz(test2(e_gamma_tab), e_gamma_tab)
     rate_interp = UnivariateSpline(spectrum[:, 0], spectrum[:, 1])
     avg_e_interp = UnivariateSpline(spectrum[:, 0], spectrum[:, 0] * spectrum[:, 1])
@@ -274,3 +299,12 @@ def eliminate_redundant_lines(directory):
         np.savetxt(f, load_f)
     print 'Done!'
     return
+
+
+def find_max_gen_prof(x, r1, r2):
+    return - np.sqrt(x ** (2. - r1) * hyp2f1(3. - r1, r2, 4. - r1, -x) / (3. - r1))
+
+
+def find_max_KMMDSM_prof(x, gam):
+    return - np.sqrt(gamma(3. - gam) * (1. - gammaincc(3. - gam, x)) / x)
+

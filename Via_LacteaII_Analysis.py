@@ -36,7 +36,8 @@ class Via_Lactea_II(object):
 
     def __init__(self, profile=0, alpha=0.16, c=None, truncate=False, arxiv_num=13131729):
         self.dir = MAIN_PATH + '/SubhaloDetection/Data/Misc_Items/'
-        self.f_name = 'ViaLacteaII_Info.dat'
+        #self.f_name = 'ViaLacteaII_Info.dat'
+        self.f_name = 'ViaLacteaII_Useable_Subhalos.dat'
         self.profile = profile
         self.truncate = truncate
         self.alpha = alpha
@@ -50,16 +51,43 @@ class Via_Lactea_II(object):
         self.mass_part = 4.1 * 10 ** 3.
 
     def kill_unuseable_halos(self):
-        via_lac_file = np.loadtxt(self.dir + self.f_name)
+        f_name = 'ViaLacteaII_Info.dat'
+        via_lac_file = np.loadtxt(self.dir + f_name)
+        index_toss = []
         for i, f in enumerate(via_lac_file):
-            pass
+        #    if f[5] < self.mass_part:
+        #        index_toss.append(i)
+            if f[3] < 3.:
+                index_toss.append(i)
+            if f[1] > 300.:
+                index_toss.append(i)
+            if f[5] < 4.1 * 10 ** 3.:
+                index_toss.append(i)
+            f[4] /= 1.21
+        #    for x in np.delete(via_lac_file, (i), axis=0):
+        #        xrange = [x[7] - x[6], x[7] + x[6]]
+        #        yrange = [x[8] - x[6], x[8] + x[6]]
+        #        zrange = [x[9] - x[6], x[9] + x[6]]
+        #        if (x[5] > f[5]) and (xrange[0] < f[7] < xrange[1]) and\
+        #                (yrange[0] < f[8] < yrange[1]) and\
+        #                (zrange[0] < f[9] < zrange[1]):
+        #            index_toss.append(i)
+        index_toss = list(set(index_toss))
+        full_ind = set(range(len(via_lac_file)))
+        ind_of_int = list(full_ind.difference(index_toss))
+        print ind_of_int
+        format = ''
+        np.savetxt(self.dir + 'ViaLacteaII_Useable_Subhalos.dat', via_lac_file[ind_of_int], fmt='%.2f')
+        return
 
     def find_subhalos(self, min_mass=4.1 * 10 ** 3., max_mass=10. ** 12., gcd_min=0., gcd_max=4000.,
-                      print_info=True):
+                      del_vmax_min=0., del_vmax_max=1., print_info=True):
         via_lac_file = np.loadtxt(self.dir + self.f_name)
         list_of_interest = []
         for i,f in enumerate(via_lac_file):
-            if (min_mass < f[5] < max_mass) and (gcd_min < f[1] < gcd_max):
+            del_vmax = (f[2] - f[3]) / f[2]
+            if (min_mass < f[5] < max_mass) and (gcd_min < f[1] < gcd_max) and \
+                (del_vmax_min < del_vmax < del_vmax_max):
                 list_of_interest.append(i)
         print 'Mass Range: ', [min_mass, max_mass]
         print 'GC Distance Range: ', [gcd_min, gcd_max]
@@ -113,7 +141,7 @@ class Via_Lactea_II(object):
         return
 
     def Density_Uncertanity(self):
-        # TODO : Fix
+
         via_lac_file = np.loadtxt(self.dir + self.f_name)
         # File Organization: [id, GC dist, peakVmax, Vmax, Rvmax, Mass, rtidal,     (0-6)
         #                     rel_pos (3), rel_pos (3), M300, M600]                 (7-14)
@@ -217,11 +245,11 @@ class Via_Lactea_II(object):
         print 'Reduced Chi-squared TS: ', gof / (num_obs - n_fitted)
 
 
-def plot_sample_comparison(sub_num=0, plot=True):
+def plot_sample_comparison(sub_num=0, plot=True, show_plot=False):
 
-    color_list = ['Aqua', 'Magenta', 'Orange', 'Green', 'Red', 'Brown']
+    color_list = ['Aqua', 'Magenta', 'Orange', 'Green', 'Red', 'Brown', 'Purple']
     dir = MAIN_PATH + '/SubhaloDetection/Data/Misc_Items/'
-    f_name = 'ViaLacteaII_Info.dat'
+    f_name = 'ViaLacteaII_Useable_Subhalos.dat'
     via_lac_file = np.loadtxt(dir + f_name)
     # File Organization: [id, GC dist, peakVmax, Vmax, Rvmax, Mass, rtidal,     (0-6)
     #                     rel_pos, rel_pos, M300, M600]                         (7-14)
@@ -229,28 +257,58 @@ def plot_sample_comparison(sub_num=0, plot=True):
     mass_per_p = 4.1 * 10 ** 3.
     s_mass = via_lac_file[sub_num, 5]
     subhalo_e_t = Einasto(s_mass / 0.005, 0.16, truncate=True, arxiv_num=13131729)
-    subhalo_n_t = NFW(s_mass / 0.005, 0.16, truncate=True, arxiv_num=13131729)
-    subhalo_e_nt = Einasto(s_mass, 0.16, truncate=False, arxiv_num=13131729)
-    subhalo_n_nt = NFW(s_mass, 0.16, truncate=False, arxiv_num=13131729)
-    subhalo_e_bert = Einasto(s_mass, 0.16, truncate=False, arxiv_num=160106781)
-    subhalo_n_bert = NFW(s_mass, 0.16, truncate=False, arxiv_num=160106781)
+#    subhalo_n_t = NFW(s_mass / 0.005, 0.16, truncate=True, arxiv_num=13131729)
+#    subhalo_e_nt = Einasto(s_mass, 0.16, truncate=False, arxiv_num=13131729)
+#    subhalo_n_nt = NFW(s_mass, 0.16, truncate=False, arxiv_num=13131729)
+
+    subhalo_n_bert = NFW(s_mass, 0.16, truncate=False, arxiv_num=160106781,
+                         vmax=via_lac_file[sub_num, 3], rmax=via_lac_file[sub_num, 4])
+
+#    subhalo_n_sc = NFW(s_mass, 0.16, truncate=False, arxiv_num=160304057,
+#                       gcd=via_lac_file[sub_num, 1], vmax=via_lac_file[sub_num, 3])
+
+
+    bf_alpha = find_alpha(s_mass, via_lac_file[sub_num, 3], via_lac_file[sub_num, 4])
+    bf_line = find_r1_r2(s_mass, via_lac_file[sub_num, 3], via_lac_file[sub_num, 4])
+    try:
+        bf_gamma = find_gamma(s_mass, via_lac_file[sub_num, 3], via_lac_file[sub_num, 4])
+    except ValueError:
+        print 'Setting gamma = 1 for KMMDSM profile'
+        bf_gamma = 1.
+    sub_gen_n = []
+    r1_list = []
+    r2_list = []
+    vmax_load = via_lac_file[sub_num, 3]
+    rmax_load = via_lac_file[sub_num, 4]
+    print 'Vmax, Rvmax, Mass: ', vmax_load, rmax_load, via_lac_file[sub_num, 5]
+    subhalo_e_fit = Einasto(s_mass, alpha=bf_alpha, arxiv_num=160106781,
+                            vmax=vmax_load, rmax=rmax_load)
+    subhalo_kmmdsm = KMMDSM(s_mass, bf_gamma, arxiv_num=160106781,
+                            vmax=vmax_load, rmax=rmax_load)
+    print 'BF Gamma, Rb: ', bf_gamma, subhalo_kmmdsm.rb
+    for i in range(len(bf_line[:, 0])):
+        r1, r2 = bf_line[i]
+        r1_list.append(r1)
+        r2_list.append(r2)
+        sub_gen_n.append(Over_Gen_NFW(s_mass, r1, r2, vmax=vmax_load, rmax=rmax_load))
+    r1_list.sort()
+    r2_list.sort()
 
     num_d_pts = 100
     r_tab = np.logspace(-2., 1., num_d_pts)
 
     den_e_t = np.zeros_like(r_tab)
-    den_n_t = np.zeros_like(r_tab)
-    den_e_nt = np.zeros_like(r_tab)
-    den_n_nt = np.zeros_like(r_tab)
     den_n_bert = np.zeros_like(r_tab)
-    den_e_bert = np.zeros_like(r_tab)
+    den_e_fit = np.zeros_like(r_tab)
+    den_kmmdsm = np.zeros_like(r_tab)
+    den_n_gen_n = np.zeros(r_tab.size * len(sub_gen_n)).reshape((len(sub_gen_n), r_tab.size))
     for i in range(num_d_pts):
         den_e_t[i] = subhalo_e_t.int_over_density(r_tab[i])
-        den_n_t[i] = subhalo_n_t.int_over_density(r_tab[i])
-        den_e_nt[i] = subhalo_e_nt.int_over_density(r_tab[i])
-        den_n_nt[i] = subhalo_n_nt.int_over_density(r_tab[i])
-        den_e_bert[i] = subhalo_e_bert.int_over_density(r_tab[i])
         den_n_bert[i] = subhalo_n_bert.int_over_density(r_tab[i])
+        den_e_fit[i] = subhalo_e_fit.int_over_density(r_tab[i])
+        den_kmmdsm[i] = subhalo_kmmdsm.int_over_density(r_tab[i])
+        for j in range(len(sub_gen_n)):
+            den_n_gen_n[j, i] = sub_gen_n[j].int_over_density(r_tab[i])
 
     sub = via_lac_file[sub_num]
     del_m_list = np.array([[0., 0., 0.], [0.3, sub[13], np.sqrt(sub[13] * mass_per_p)],
@@ -265,11 +323,7 @@ def plot_sample_comparison(sub_num=0, plot=True):
     for k in range(len(del_m_list)):
         if del_m_list[k, 1] > del_m_list[vr_pos, 1]:
             del_m_list[k, 1] = del_m_list[vr_pos, 1]
-    plotpoints = np.zeros((len(del_m_list) - 1) * 3).reshape(((len(del_m_list) - 1), 3))
-    plotpoints[:, 0] = del_m_list[1:, 0]
-    plotpoints[:, 1] = np.diff(del_m_list[:, 1])
-    for y in range(len(del_m_list[:, 2]) - 1):
-        plotpoints[y, 2] = (del_m_list[y, 2] + del_m_list[y + 1, 2])
+
     if plot:
         fig = plt.figure(figsize=(8., 6.))
         ax = plt.gca()
@@ -293,22 +347,45 @@ def plot_sample_comparison(sub_num=0, plot=True):
                         linewidth=1, color='Black')
 
         plt.plot(r_tab, den_e_t, lw=1, color=color_list[0], label='Ein (T)')
-        plt.plot(r_tab, den_n_t, lw=1, color=color_list[1], label='NFW (T)')
-        plt.plot(r_tab, den_e_nt, lw=1, color=color_list[2], label='Ein (NT)')
-        plt.plot(r_tab, den_n_nt, lw=1, color=color_list[3], label='NFW (NT)')
-        plt.plot(r_tab, den_e_bert, lw=1, color=color_list[4], label='Ein (Bertone)')
+        plt.plot(r_tab, den_kmmdsm, lw=1, color=color_list[2], label='Ein (T)')
+#        plt.plot(r_tab, den_n_t, lw=1, color=color_list[1], label='NFW (T)')
+#        plt.plot(r_tab, den_e_nt, lw=1, color=color_list[2], label='Ein (NT)')
+#        plt.plot(r_tab, den_n_nt, lw=1, color=color_list[3], label='NFW (NT)')
+#        plt.plot(r_tab, den_e_bert, lw=1, color=color_list[4], label='Ein (Bertone)')
         plt.plot(r_tab, den_n_bert, lw=1, color=color_list[5], label='NFW (Bertone)')
+        plt.plot(r_tab, den_e_fit, lw=1, color=color_list[3], label='Einasto (Fit)')
+#        plt.plot(r_tab, den_n_sc, lw=1, color=color_list[6], label='SC')
+        for i in range(len(sub_gen_n)):
+            plt.plot(r_tab, den_n_gen_n[i], lw=1, color=color_list[1], label='DGen NFW', alpha=0.2)
 
         plt.text(2., 1. * 10 ** 4., 'Einasto (T)', fontsize=10, ha='left', va='center', color=color_list[0])
-        plt.text(2., 1. * 10 ** 3.8, 'NFW (T)', fontsize=10, ha='left', va='center', color=color_list[1])
-        plt.text(2., 1. * 10 ** 3.6, 'Einasto (NT)', fontsize=10, ha='left', va='center', color=color_list[2])
-        plt.text(2., 1. * 10 ** 3.4, 'NFW (NT)', fontsize=10, ha='left', va='center', color=color_list[3])
-        plt.text(2., 1. * 10 ** 3.2, 'Einasto (Bertone)', fontsize=10, ha='left', va='center', color=color_list[4])
-        plt.text(2., 1. * 10 ** 3., 'NFW (Bertone)', fontsize=10, ha='left', va='center', color=color_list[5])
+        plt.text(2., 1. * 10 ** 4.6, 'KMMDSM', fontsize=10, ha='left', va='center', color=color_list[2])
+        plt.text(2., 1. * 10 ** 4.3, r'$\gamma =$ ' + '{:.2f}'.format(bf_gamma), fontsize=10,
+                 ha='left', va='center', color=color_list[2])
+#        plt.text(2., 1. * 10 ** 3.8, 'NFW (T)', fontsize=10, ha='left', va='center', color=color_list[1])
+#        plt.text(2., 1. * 10 ** 3.6, 'Einasto (NT)', fontsize=10, ha='left', va='center', color=color_list[2])
+        plt.text(2., 1. * 10 ** 3.7, 'Einasto (Fit)', fontsize=10, ha='left', va='center', color=color_list[3])
+        plt.text(2., 1. * 10 ** 3.4, r'$\alpha =$ ' + '{:.2f}'.format(bf_alpha),
+                 fontsize=10, ha='left', va='center', color=color_list[3])
+#        plt.text(2., 1. * 10 ** 3.4, 'NFW (NT)', fontsize=10, ha='left', va='center', color=color_list[3])
+#        plt.text(2., 1. * 10 ** 3.2, 'Einasto (Bertone)', fontsize=10, ha='left', va='center', color=color_list[4])
+        plt.text(2., 1. * 10 ** 3.1, 'NFW (Bertone)', fontsize=10, ha='left', va='center', color=color_list[5])
+#        plt.text(2., 1. * 10 ** 2.8, 'NFW (SC)', fontsize=10, ha='left', va='center', color=color_list[6])
+        plt.text(2., 1. * 10 ** 2.8, 'DGen NFW', fontsize=10, ha='left', va='center', color=color_list[1])
+        try:
+            plt.text(2., 1. * 10 ** 2.5, r'$r_{inner}$ ' + '[{:.2f}, {:.2f}]'.format(r1_list[0], r1_list[-1]),
+                     fontsize=10, ha='left', va='center', color=color_list[1])
+            plt.text(2., 1. * 10 ** 2.2, r'$r_{outter}$ ' + '[{:.2f}, {:.2f}]'.format(r2_list[0], r2_list[-1]),
+                     fontsize=10, ha='left', va='center', color=color_list[1])
+        except:
+            pass
+
 
         plt.text(1.3 * 10**-2., 1. * 10 ** 7., r'Halo Mass: {:.1e} $M_\odot$'.format(via_lac_file[sub_num, 5]),
                  fontsize=10, ha='left', va='center', color='Black')
         plt.text(1.3 * 10 ** -2., 1. * 10 ** 6.8, 'GC Dist {:.1f} kpc'.format(via_lac_file[sub_num, 1]),
+                 fontsize=10, ha='left', va='center', color='Black')
+        plt.text(1.3 * 10 ** -2., 1. * 10 ** 6.6, 'Vmax {:.1f} km/s'.format(via_lac_file[sub_num, 3]),
                  fontsize=10, ha='left', va='center', color='Black')
 
         fig_name = dir + '/Via_Lac_plots/' + 'Subhalo_Number_' + str(sub_num) +\
@@ -320,7 +397,7 @@ def plot_sample_comparison(sub_num=0, plot=True):
         pl.savefig(fig_name)
         return
     else:
-        return del_m_list, r_tab, den_e_t, den_n_t, den_e_nt, den_n_nt, den_e_bert, den_n_bert
+        return del_m_list, r_tab, den_e_t, den_n_bert
 
 
 def multi_slice(m_low=4.1 * 10 ** 3., m_high =10.**12., m_num=10, gc_d_min=0., gc_d_max=4000.,
@@ -339,7 +416,7 @@ def multi_slice(m_low=4.1 * 10 ** 3., m_high =10.**12., m_num=10, gc_d_min=0., g
     ymax = 10. ** 9.
     ymin = 10 ** 2.
     pl.ylim([ymin, ymax])
-    for g in range(gcd_list.size - 1):
+    for g in range(len(gcd_list) - 1):
         for m in range(m_list.size - 1):
             print [m_list[m], m_list[m+1]],[gcd_list[g],gcd_list[g+1]]
             collect_info = plot_slice(m_low=m_list[m], m_high =m_list[m + 1], gc_d_min=gcd_list[g],
@@ -379,7 +456,7 @@ def plot_slice(m_low=4.1 * 10 ** 3., m_high =10.**12., gc_d_min=0., gc_d_max=200
                alpha=.1, ms=1):
     color_list = ['Aqua', 'Magenta', 'Orange', 'Green', 'Red', 'Brown']
     dir = MAIN_PATH + '/SubhaloDetection/Data/Misc_Items/'
-    f_name = 'ViaLacteaII_Info.dat'
+    f_name = 'ViaLacteaII_Useable_Subhalos.dat.dat'
     via_lac_file = np.loadtxt(dir + f_name)
     # File Organization: [id, GC dist, peakVmax, Vmax, Rvmax, Mass, rtidal,     (0-6)
     #                     rel_pos, rel_pos, M300, M600]                         (7-14)
@@ -489,12 +566,13 @@ def plot_slice(m_low=4.1 * 10 ** 3., m_high =10.**12., gc_d_min=0., gc_d_max=200
         return collection
 
 
-def catagorial_subplots(min_mass=4.1 * 10 ** 3., max_mass=10. ** 12., gcd_min=0., gcd_max=4000., n_plots=2):
+def catagorial_subplots(min_mass=4.1 * 10 ** 3., max_mass=10. ** 12., gcd_min=0., gcd_max=4000.,
+                        n_plots=2, tag=''):
     dir = MAIN_PATH + '/SubhaloDetection/Data/Misc_Items/'
-    f_name = 'ViaLacteaII_Info.dat'
+    f_name = 'ViaLacteaII_Useable_Subhalos.dat'
     via_lac_file = np.loadtxt(dir + f_name)
     list_of_interest = []
-    color_list = ['Aqua', 'Magenta', 'Orange', 'Green', 'Red', 'Brown']
+    color_list = ['Aqua', 'Magenta', 'Orange', 'Green', 'Red', 'Brown', 'Purple']
     for i, f in enumerate(via_lac_file):
         if (min_mass < f[5] < max_mass) and (gcd_min < f[1] < gcd_max):
             list_of_interest.append(i)
@@ -507,27 +585,34 @@ def catagorial_subplots(min_mass=4.1 * 10 ** 3., max_mass=10. ** 12., gcd_min=0.
     print 'Subhalo Numbers: ', n_plots
     ncol = 2
     nrows = n_plots / ncol
+
     f, ax = plt.subplots(nrows, ncol)
+    vmax_list = np.zeros_like(ax)
+    mass_list = np.zeros_like(ax)
     pl.xlim([10 ** -2., 10.])
     ymax = 10. ** 8.
     ymin = 10 ** 2.
     j = 0
     numbers = '_'
     for i, halo in enumerate(list_of_interest):
+        print i, '/', n_plots
         if i == nrows:
             j = 1
         ii = i % nrows
-        del_m_list, r_tab, den_e_t, den_n_t, den_e_nt, \
-            den_n_nt, den_e_bert, den_n_bert = plot_sample_comparison(sub_num=halo, plot=False)
+        del_m_list, r_tab, den_e_t, den_n_bert = plot_sample_comparison(sub_num=halo, plot=False)
 
         if nrows > 1:
             ax[ii, j].set_xscale("log")
             ax[ii, j].set_yscale('log')
             ax[ii, j].set_ylim([ymin, ymax])
+            vmax_list[ii, j] = via_lac_file[halo, 3]
+            mass_list[ii, j] = via_lac_file[halo, 5]
         else:
             ax[j].set_xscale("log")
             ax[j].set_yscale('log')
             ax[j].set_ylim([ymin, ymax])
+            vmax_list[j] = via_lac_file[halo, 3]
+            mass_list[j] = via_lac_file[halo, 5]
         for x in range(del_m_list[:, 0].size - 1):
             if nrows > 1:
                 ax[ii, j].plot(del_m_list[x + 1, 0], del_m_list[x + 1, 1], 'o', ms=3, color='Black')
@@ -553,22 +638,22 @@ def catagorial_subplots(min_mass=4.1 * 10 ** 3., max_mass=10. ** 12., gcd_min=0.
                               linewidth=1, color='Black')
         if nrows > 1:
             ax[ii, j].plot(r_tab, den_e_t, lw=1, color=color_list[0], label='Ein (T)')
-            ax[ii, j].plot(r_tab, den_n_t, lw=1, color=color_list[1], label='NFW (T)')
-            ax[ii, j].plot(r_tab, den_e_nt, lw=1, color=color_list[2], label='Ein (NT)')
-            ax[ii, j].plot(r_tab, den_n_nt, lw=1, color=color_list[3], label='NFW (NT)')
-            ax[ii, j].plot(r_tab, den_e_bert, lw=1, color=color_list[4], label='Ein (Bertone)')
             ax[ii, j].plot(r_tab, den_n_bert, lw=1, color=color_list[5], label='NFW (Bertone)')
+            ax[ii, j].text(.02, 10**3., 'Vmax {}'.format(vmax_list[ii, j]), horizontalalignment='left',
+                           verticalalignment='center', fontsize=10)
+            ax[ii, j].text(.02, 10 ** 2.4, 'Mass {:.1e}'.format(mass_list[ii, j]), horizontalalignment='left',
+                           verticalalignment='center', fontsize=10)
         else:
             ax[j].plot(r_tab, den_e_t, lw=1, color=color_list[0], label='Ein (T)')
-            ax[j].plot(r_tab, den_n_t, lw=1, color=color_list[1], label='NFW (T)')
-            ax[j].plot(r_tab, den_e_nt, lw=1, color=color_list[2], label='Ein (NT)')
-            ax[j].plot(r_tab, den_n_nt, lw=1, color=color_list[3], label='NFW (NT)')
-            ax[j].plot(r_tab, den_e_bert, lw=1, color=color_list[4], label='Ein (Bertone)')
             ax[j].plot(r_tab, den_n_bert, lw=1, color=color_list[5], label='NFW (Bertone)')
+            ax[j].text(.02, 10 ** 3., 'Vmax {}'.format(vmax_list[j]), horizontalalignment='left',
+                           verticalalignment='center', fontsize=10)
+            ax[j].text(.02, 10 ** 2.4, 'Mass {:.1e}'.format(mass_list[ii, j]), horizontalalignment='left',
+                           verticalalignment='center', fontsize=10)
         numbers += str(halo) + '_'
     f.set_tight_layout(True)
 
-    fname = 'HaloSubplots_Numbers_' + numbers + '.pdf'
+    fname = 'HaloSubplots_Numbers_' + numbers + tag + '.pdf'
     print fname
     pl.savefig(dir + '/Via_Lac_plots/' + fname)
     return
@@ -576,7 +661,7 @@ def catagorial_subplots(min_mass=4.1 * 10 ** 3., max_mass=10. ** 12., gcd_min=0.
 
 def mass_ratio_vs_gcd(min_mass=10.**7., max_mass=2.*10**7., var1='M300', var2='Mtot'):
     dir = MAIN_PATH + '/SubhaloDetection/Data/Misc_Items/'
-    f_name = 'ViaLacteaII_Info.dat'
+    f_name = 'ViaLacteaII_Useable_Subhalos.dat'
     via_lac_file = np.loadtxt(dir + f_name)
     list_of_interest = []
     color_list = ['Aqua', 'Magenta', 'Orange', 'Green', 'Red', 'Brown']
@@ -635,6 +720,8 @@ def mass_ratio_vs_gcd(min_mass=10.**7., max_mass=2.*10**7., var1='M300', var2='M
     subhalo_n_nt_2 = NFW(max_mass, 0.16, truncate=False, arxiv_num=13131729)
     subhalo_e_bert_2 = Einasto(max_mass, 0.16, truncate=False, arxiv_num=160106781)
     subhalo_n_bert_2 = NFW(max_mass, 0.16, truncate=False, arxiv_num=160106781)
+
+    subhalo_n_sc = NFW(max_mass, 0.16, truncate=False, arxiv_num=160106781)
 
     m1 = 0.3
     m2 = 0.6
@@ -711,7 +798,7 @@ def number_subhalo_histogram(mass_low=10. ** 4, mass_high = 10.**8., gcd_low=0.,
                              gcd_high=4000., nbins=20):
 
     dir = MAIN_PATH + '/SubhaloDetection/Data/Misc_Items/'
-    f_name = 'ViaLacteaII_Info.dat'
+    f_name = 'ViaLacteaII_Useable_Subhalos.dat'
     via_lac_file = np.loadtxt(dir + f_name)
     m_bins = np.logspace(np.log10(mass_low), np.log10(mass_high), nbins)
 
@@ -722,6 +809,7 @@ def number_subhalo_histogram(mass_low=10. ** 4, mass_high = 10.**8., gcd_low=0.,
              weights=np.ones(ntot), alpha=0.3, color='Blue', label=r'$\frac{N}{\Delta M}$')
     plt.hist(via_lac_file[sub_of_int][:, 5], bins=m_bins, log=True, normed=True,
              weights=via_lac_file[sub_of_int][:, 5] * ntot, alpha=0.3, color='Red', label=r'$\frac{M \times N}{\Delta M}$')
+
     pl.xlim([mass_low, mass_high])
     pl.gca().set_xscale("log")
     plt.xlabel(r'Mass  [$M_\odot$]', fontsize=16)
@@ -733,4 +821,73 @@ def number_subhalo_histogram(mass_low=10. ** 4, mass_high = 10.**8., gcd_low=0.,
             '_GCDlow_{:.1f}'.format(gcd_low) + '_GCDhigh_{:.1f}'.format(gcd_high) + '.pdf'
     pl.savefig(dir + '/Via_Lac_plots/' + fname)
 
+    return
+
+
+def variable_vs_variable(var1=3, var2=5, gcd_min=0., gcd_max=200.):
+    dir = MAIN_PATH + '/SubhaloDetection/Data/Misc_Items/'
+    f_name = 'ViaLacteaII_Useable_Subhalos.dat'
+    via_lac = np.loadtxt(dir + f_name)
+
+    soi = Via_Lactea_II().find_subhalos(gcd_min=gcd_min, gcd_max=gcd_max, print_info=False)
+
+    fig = plt.figure(figsize=(8., 6.))
+    ax = plt.gca()
+    ax.set_xscale("log")
+    ax.set_yscale('log')
+
+    for sub in via_lac[soi]:
+        pl.plot(sub[var1], sub[var2], 'o', ms=1, color='Black')
+
+    sv_name = dir + '/Via_Lac_plots/Var_vs_Var_Test.pdf'
+    #pl.show()
+    pl.savefig(sv_name)
+    return
+
+def cv_vs_vmax(xsub_boundaries=np.array([0., 0.1, 0.3, 1., 1.5])):
+    # TODO: Finish this functions...
+
+    dir = MAIN_PATH + '/SubhaloDetection/Data/Misc_Items/'
+    f_name = 'ViaLacteaII_Useable_Subhalos.dat'
+
+    xsub = np.zeros(4)
+    for i in range(xsub.size - 1):
+        xsub[i] = Via_Lactea_II().find_subhalos(min_mass=4.1 * 10 ** 3., max_mass=10. ** 12.,
+                                                gcd_min=xsub_boundaries[i], gcd_max=xsub_boundaries[i + 1],
+                                                print_info=False)
+
+
+def Preferred_Density_Slopes_VL(mass_low=10. ** 4, mass_high = 10.**8., gcd_min=0., gcd_max=200.,
+                             tag=''):
+    dir = MAIN_PATH + '/SubhaloDetection/Data/Misc_Items/'
+    f_name = 'ViaLacteaII_Useable_Subhalos.dat'
+    via_lac = np.loadtxt(dir + f_name)
+    failures = 0
+    soi = Via_Lactea_II().find_subhalos(min_mass=mass_low, max_mass=mass_high,
+                                        gcd_min=gcd_min, gcd_max=gcd_max, print_info=False)
+    print 'Num Subhalos: ', len(soi)
+    fig = plt.figure(figsize=(8., 6.))
+    ax = plt.gca()
+    rtab = np.linspace(0., 2., 200)
+    for i, halo in enumerate(via_lac[soi]):
+        print i
+        rmax, vmax, mass = [halo[4], halo[3], halo[5]]
+        print mass, rmax, vmax
+
+        try:
+            bf_line = find_r1_r2(mass, vmax, rmax)
+            plot_bf = interpola(rtab[rtab < bf_line[-1, 0]], bf_line[:, 0], bf_line[:, 1])
+            pl.plot(rtab[rtab < bf_line[-1, 0]], plot_bf)
+        except:
+            failures += 1
+            print 'Fail.'
+    pl.xlim([0., 2.])
+    plt.xlabel(r'$r_{inner}$', fontsize=16)
+    plt.ylabel(r'$r_{outer}$', fontsize=16)
+    plt.text(1.5, 40., 'Failures: {}'.format(failures),
+             fontsize=10, ha='left', va='center', color='Black')
+    sv_fname = dir + '/Via_Lac_plots/InnerOuterSlope' + tag + '.pdf'
+    print sv_fname
+    print 'Failures: ', failures
+    pl.savefig(sv_fname)
     return

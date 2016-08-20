@@ -9,6 +9,7 @@ import numpy as np
 from helper import *
 from subhalo import *
 import os
+import pickle
 from scipy.interpolate import interp1d, interp2d
 from scipy.optimize import fminbound
 import matplotlib as mpl
