@@ -61,7 +61,7 @@ class Via_Lactea_II(object):
                 index_toss.append(i)
             if f[1] > 300.:
                 index_toss.append(i)
-            if f[5] < 4.1 * 10 ** 3.:
+            if f[5] < 100. * 4.1 * 10 ** 3.:
                 index_toss.append(i)
             f[4] /= 1.21
         #    for x in np.delete(via_lac_file, (i), axis=0):
@@ -244,6 +244,83 @@ class Via_Lactea_II(object):
         print 'Degrees of Freedom: ', num_obs - n_fitted
         print 'Reduced Chi-squared TS: ', gof / (num_obs - n_fitted)
 
+    def evolution_tracks(self, return_all=False, return_recent=False):
+        full_sub_info = np.loadtxt(self.dir + 'ViaLacteaII_Info.dat')
+        x_hist = np.loadtxt(self.dir + 'ViaLac_x_hist.dat')
+        y_hist = np.loadtxt(self.dir + 'ViaLac_y_hist.dat')
+        z_hist = np.loadtxt(self.dir + 'ViaLac_z_hist.dat')
+        host_x = x_hist[-2]
+        host_y = y_hist[-2]
+        host_z = z_hist[-2]
+        con_fact = 40. * 10. ** 3.
+
+        useable_sub = np.loadtxt(self.dir + self.f_name)
+        near_gc = []
+        recent_near_gc = []
+
+        for i, sub in enumerate(useable_sub):
+            id_num = sub[0]
+            halo_arg = np.argwhere(full_sub_info[:, 0] == id_num)[0]
+            if halo_arg != 20047:
+                x, y, z = [x_hist[halo_arg], y_hist[halo_arg], z_hist[halo_arg]]
+                gcd = np.sqrt(con_fact ** 2. * ((x - host_x) ** 2. + (y - host_y) **
+                                                2. + (z - host_z) ** 2.))
+                if np.min(gcd) < 20.:
+                    near_gc.append(id_num)
+                if np.min(gcd[:9]) < 20.:
+                    recent_near_gc.append(id_num)
+
+        #print 'Halos passing near GC: ', near_gc
+        #print '\n Halos passing near GC RECENTLY (z < 0.5): ', recent_near_gc
+        if return_all:
+            return near_gc
+        elif return_recent:
+            return recent_near_gc
+
+    def KMMDSM_fit(self, subhalo_ids=[]):
+        subhalos = np.loadtxt(self.dir + self.f_name)
+        gam_rb_array = np.array([])
+        for id in subhalo_ids:
+            halo_arg = np.argwhere(subhalos[:, 0] == id)[0,0]
+            sub = subhalos[halo_arg]
+            try:
+                bf_gamma = find_gamma(sub[5], sub[3], sub[4],
+                                      error=np.sqrt(sub[5] * self.mass_part))
+            except ValueError:
+                print 'Setting gamma = 0 for KMMDSM profile'
+                bf_gamma = 0.
+            subhalo_kmmdsm = KMMDSM(sub[5], bf_gamma, arxiv_num=160106781,
+                                    vmax=sub[3], rmax=sub[4])
+            try:
+                gam_rb_array = np.vstack((gam_rb_array, [bf_gamma, subhalo_kmmdsm.rb]))
+            except:
+                gam_rb_array = np.append(gam_rb_array, [bf_gamma, subhalo_kmmdsm.rb])
+        print gam_rb_array
+        return
+
+    def obtain_number_density(self, min_mass=4.10e+05, max_mass=1.e+8):
+        gcd_range = np.array([0., 50.])
+
+        sub_o_int = self.find_subhalos(min_mass=min_mass, max_mass=max_mass,
+                                       gcd_min=gcd_range[0], gcd_max=gcd_range[-1],
+                                       print_info=False)
+        via_lac_file = np.loadtxt(self.dir + self.f_name)
+        subhalos = via_lac_file[sub_o_int]
+        print 'Num Subhalos: ', len(subhalos)
+        mass_bins = np.logspace(np.log10(min_mass), np.log10(max_mass), 20)
+        print 'Making Subhalo Number Density Histogram...'
+        plt.hist(subhalos[:, 5], bins=mass_bins, log=True, normed=False,
+                 weights=np.ones(subhalos[:, 5].size),
+                 color='White')
+        pl.gca().set_xscale("log")
+        pl.xlim([min_mass, max_mass])
+        plt.xlabel(r'Subhalo Mass [$M_\odot$]', fontsize=16)
+        plt.ylabel(r'$\frac{dN}{dM}$', fontsize=16)
+
+        fname = 'VLII_Subhalo_Number_Density_Mass_Range_{:.1e}_{:.1e}'.format(min_mass, max_mass) + \
+                'GCD_range_{:.1f}_{:.1f}'.format(gcd_range[0], gcd_range[1]) + '.pdf'
+        pl.savefig(self.dir + '/Via_Lac_plots/' + fname)
+        return
 
 def plot_sample_comparison(sub_num=0, plot=True, show_plot=False):
 
@@ -271,7 +348,8 @@ def plot_sample_comparison(sub_num=0, plot=True, show_plot=False):
     bf_alpha = find_alpha(s_mass, via_lac_file[sub_num, 3], via_lac_file[sub_num, 4])
     bf_line = find_r1_r2(s_mass, via_lac_file[sub_num, 3], via_lac_file[sub_num, 4])
     try:
-        bf_gamma = find_gamma(s_mass, via_lac_file[sub_num, 3], via_lac_file[sub_num, 4])
+        bf_gamma = find_gamma(s_mass, via_lac_file[sub_num, 3], via_lac_file[sub_num, 4],
+                              error=np.sqrt(via_lac_file[sub_num, 5] / mass_per_p))
     except ValueError:
         print 'Setting gamma = 1 for KMMDSM profile'
         bf_gamma = 1.

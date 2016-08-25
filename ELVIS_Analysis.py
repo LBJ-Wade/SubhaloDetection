@@ -87,7 +87,7 @@ class ELVIS(object):
         FILE OUTPUT FORMAT:
         ID, GC Dist (kpc), Vmax (hist) (km/s), Vmax (z=0), Rmax (z=0),
         Mass (SM), R_tidal (kpc), 3-pos (MPC), 3-vel, Number of Particles,
-        mass per particle
+        mass per particle, HAS_BEEN_NEAR_GC_RECENTLY (1/0)
         """
         load_fname_hi = self.dir + 'Hi_Res_Subhalos.dat'
         load_fname_iso = self.dir + 'Iso_Subhalos.dat'
@@ -97,17 +97,23 @@ class ELVIS(object):
         iso = np.loadtxt(load_fname_iso)
         pair = np.loadtxt(load_fname_pair)
 
+        hi_neargc, iso_neargc, pair_neargc = self.evolution_tracks()
+
         h = 0.71
         gc_pos = np.array([25. / h, 25. / h, 25. / h])
         index_toss = []
-        file_ord = np.zeros(len(iso) * 15).reshape((len(iso), 15))
+        file_ord = np.zeros(len(iso) * 16).reshape((len(iso), 16))
         rvir = iso[0, 11]
         for i, f in enumerate(iso):
             if i == 0:
                 index_toss.append(i)
+            if f[0] in iso_neargc:
+                hist_gc = 1
+            else:
+                hist_gc = 0
             gcd = np.sqrt(np.dot(gc_pos - f[1:4], gc_pos - f[1:4])) * 1000.
             file_ord[i] = [f[0], gcd, f[8], f[7], f[12], f[9], f[11], f[1], f[2], f[3],
-                           f[4], f[5], f[6], f[16], 1.9 * 10. ** 5.]
+                           f[4], f[5], f[6], f[16], 1.9 * 10. ** 5., hist_gc]
             if file_ord[i, 1] > rvir:
                 index_toss.append(i)
             file_ord[i, 4] /= 1.045
@@ -118,14 +124,18 @@ class ELVIS(object):
         iso = file_ord[ind_of_int]
 
         index_toss = []
-        file_ord = np.zeros(len(hi_res) * 15).reshape((len(hi_res), 15))
+        file_ord = np.zeros(len(hi_res) * 16).reshape((len(hi_res), 16))
         rvir = hi_res[0, 11]
         for i, f in enumerate(hi_res):
             if i == 0:
                 index_toss.append(i)
+            if f[0] in hi_neargc:
+                hist_gc = 1
+            else:
+                hist_gc = 0
             gcd = np.sqrt(np.dot(gc_pos - f[1:4], gc_pos - f[1:4])) * 1000.
             file_ord[i] = [f[0], gcd, f[8], f[7], f[12], f[9], f[11], f[1], f[2], f[3],
-                        f[4], f[5], f[6], f[16], 2.35 * 10. ** 4.]
+                        f[4], f[5], f[6], f[16], 2.35 * 10. ** 4., hist_gc]
             if file_ord[i, 1] > rvir:
                 index_toss.append(i)
             file_ord[i, 4] /= 1.045
@@ -138,16 +148,20 @@ class ELVIS(object):
         index_toss = []
         gc_pos1 = np.array([pair[0, 1], pair[0, 2], pair[0, 3]])
         gc_pos2 = np.array([pair[1, 1], pair[0, 2], pair[0, 3]])
-        file_ord = np.zeros(len(pair) * 15).reshape((len(pair), 15))
+        file_ord = np.zeros(len(pair) * 16).reshape((len(pair), 16))
         rvir = np.max([pair[0, 11], pair[1, 11]])
         for i, f in enumerate(pair):
             if i == 0 or i == 1:
                 index_toss.append(i)
+            if f[0] in pair_neargc:
+                hist_gc = 1
+            else:
+                hist_gc = 0
             gcd_1 = np.sqrt(np.dot(gc_pos1 - f[1:4], gc_pos1 - f[1:4])) * 1000.
             gcd_2 = np.sqrt(np.dot(gc_pos2 - f[1:4], gc_pos2 - f[1:4])) * 1000.
             gcd = np.min([gcd_1, gcd_2])
             file_ord[i] = [f[0], gcd, f[8], f[7], f[12], f[9], f[11], f[1], f[2], f[3],
-                           f[4], f[5], f[6], f[16], 1.9 * 10. ** 5.]
+                           f[4], f[5], f[6], f[16], 1.9 * 10. ** 5., hist_gc]
             if file_ord[i, 1] > rvir:
                 index_toss.append(i)
             file_ord[i, 4] /= 1.045
@@ -184,12 +198,12 @@ class ELVIS(object):
         hires_err = np.array([])
         for i, sub in enumerate(elvis):
             if sub[5] < 10. ** 8.:
-                if sub[-1] == 1.9 * 10 ** 5.:
+                if sub[-2] == 1.9 * 10 ** 5.:
                     pair_iso_err = np.append(pair_iso_err,
-                                             (sub[5] - sub[-2] * sub[-1]) / (sub[-2] * sub[-1]))
-                elif sub[-1] == 2.35 * 10 ** 4.:
+                                             (sub[5] - sub[-3] * sub[-2]) / (sub[-3] * sub[-2]))
+                elif sub[-2] == 2.35 * 10 ** 4.:
                     hires_err = np.append(pair_iso_err,
-                                          (sub[5] - sub[-2] * sub[-1]) / (sub[-2] * sub[-1]))
+                                          (sub[5] - sub[-3] * sub[-2]) / (sub[-3] * sub[-2]))
         print 'Num Halos: ', pair_iso_err.size + hires_err.size
 
         print 'Pair/Iso Mass Err: ', np.mean(np.abs(pair_iso_err)), \
@@ -198,6 +212,110 @@ class ELVIS(object):
             np.median(np.abs(hires_err)), np.sum(hires_err) / hires_err.size
 
         return
+
+    def evolution_tracks(self):
+
+        hres = glob.glob(self.dir + 'HiResTrees/*')
+
+        hres_recent_near_gc = []
+
+        for ex in hres:
+            x_hist = np.loadtxt(ex + '/X.txt')
+            y_hist = np.loadtxt(ex + '/Y.txt')
+            z_hist = np.loadtxt(ex + '/Z.txt')
+            ids = np.loadtxt(ex + '/ID.txt')
+            host_x = x_hist[0]
+            host_y = y_hist[0]
+            host_z = z_hist[0]
+
+            dir_st = ex.find('HiResTrees')
+            hires_or = np.loadtxt(ex[:dir_st] + 'HiResCatalogs/' + ex[dir_st+10:] + '.txt')
+
+            for i, sub in enumerate(hires_or):
+                if i != 0:
+                    id_num = sub[0]
+                    x, y, z = [x_hist[i], y_hist[i], z_hist[i]]
+                    gcd = np.sqrt(10. ** 6. * ((x - host_x) ** 2. + (y - host_y) ** 2. + (z - host_z) ** 2.))
+
+                    if np.min(gcd[:9]) < 20.:
+                        hres_recent_near_gc.append(id_num)
+
+        iso_recent_near_gc = []
+        iso = glob.glob(self.dir + 'IsolatedTrees/*')
+
+        for ex in iso:
+            x_hist = np.loadtxt(ex + '/X.txt')
+            y_hist = np.loadtxt(ex + '/Y.txt')
+            z_hist = np.loadtxt(ex + '/Z.txt')
+            ids = np.loadtxt(ex + '/ID.txt')
+            host_x = x_hist[0]
+            host_y = y_hist[0]
+            host_z = z_hist[0]
+
+            dir_st = ex.find('IsolatedTrees')
+            iso_or = np.loadtxt(ex[:dir_st] + 'IsolatedCatalogs/' + ex[dir_st + 13:] + '.txt')
+
+            for i, sub in enumerate(iso_or):
+                if i != 0:
+                    id_num = sub[0]
+                    x, y, z = [x_hist[i], y_hist[i], z_hist[i]]
+                    gcd = 10. ** 3. * np.sqrt(
+                        ((x - host_x) ** 2. + (y - host_y) ** 2. + (z - host_z) ** 2.))
+
+                    if np.min(gcd[:9]) < 20.:
+                        iso_recent_near_gc.append(id_num)
+
+        pair = glob.glob(self.dir + 'PairedTrees/*')
+        pair_recent_near_gc = []
+
+        for ex in pair:
+            x_hist = np.loadtxt(ex + '/X.txt')
+            y_hist = np.loadtxt(ex + '/Y.txt')
+            z_hist = np.loadtxt(ex + '/Z.txt')
+            ids = np.loadtxt(ex + '/ID.txt')
+            host_x = x_hist[0]
+            host_y = y_hist[0]
+            host_z = z_hist[0]
+
+            dir_st = ex.find('PairedTrees')
+            pair_or = np.loadtxt(ex[:dir_st] + 'PairedCatalogs/' + ex[dir_st + 11:] + '.txt')
+
+            for i, sub in enumerate(pair_or):
+                if i != 0:
+                    id_num = sub[0]
+                    x, y, z = [x_hist[i], y_hist[i], z_hist[i]]
+                    gcd = 10. ** 3. * np.sqrt(
+                        ((x - host_x) ** 2. + (y - host_y) ** 2. + (z - host_z) ** 2.))
+
+                    if np.min(gcd[:35]) < 20.:
+                        pair_recent_near_gc.append(id_num)
+
+        return hres_recent_near_gc, iso_recent_near_gc, pair_recent_near_gc
+
+    def obtain_number_density(self, min_mass=1.0e+6, max_mass=1.e+10):
+        gcd_range = np.array([0., 300.])
+
+        sub_o_int = self.find_subhalos(min_mass=min_mass, max_mass=max_mass,
+                                       gcd_min=gcd_range[0], gcd_max=gcd_range[-1],
+                                       print_info=False)
+        elvis = np.loadtxt(self.dir + '../' + self.f_name)
+        subhalos = elvis[sub_o_int]
+        print 'Num Subhalos: ', len(subhalos)
+        mass_bins = np.logspace(np.log10(min_mass), np.log10(max_mass), 20)
+        print 'Making Subhalo Number Density Histogram...'
+        plt.hist(subhalos[:, 5], bins=mass_bins, log=True, normed=False,
+                 weights=subhalos[:, 5],
+                 color='White')
+        pl.gca().set_xscale("log")
+        pl.xlim([min_mass, max_mass])
+        plt.xlabel(r'Subhalo Mass [$M_\odot$]', fontsize=16)
+        plt.ylabel(r'$\frac{dN}{dM}$', fontsize=16)
+
+        fname = 'ELVIS_Subhalo_Number_Density_Mass_Range_{:.1e}_{:.1e}'.format(min_mass, max_mass) + \
+                'GCD_range_{:.1f}_{:.1f}'.format(gcd_range[0], gcd_range[1]) + '.pdf'
+        pl.savefig(self.dir + '../Elvis_plots/' + fname)
+        return
+
 
 def plot_sample_comparison_elv(sub_num=0, plot=True, show_plot=False):
 
@@ -219,7 +337,8 @@ def plot_sample_comparison_elv(sub_num=0, plot=True, show_plot=False):
         bf_alpha = 1.
 
     try:
-        bf_gamma = find_gamma(s_mass, elvis[sub_num, 3], elvis[sub_num, 4])
+        bf_gamma = find_gamma(s_mass, elvis[sub_num, 3], elvis[sub_num, 4],
+                              error=np.sqrt(elvis[sub_num, -3]) * elvis[sub_num, -2])
     except ValueError:
         print 'Setting gamma = 1 for KMMDSM profile'
         bf_gamma = .0
@@ -266,8 +385,8 @@ def plot_sample_comparison_elv(sub_num=0, plot=True, show_plot=False):
     sub = elvis[sub_num]
     del_m_list = np.array([[0., 0., 0.],
                            [sub[4], sub[3] ** 2. * sub[4] / newton_G,
-                            np.sqrt(sub[3] ** 2. * sub[4] * sub[-1] / newton_G)],
-                           [sub[6], sub[5], np.sqrt(sub[-2] * sub[-1])]])
+                            np.sqrt(sub[3] ** 2. * sub[4] * sub[-2] / newton_G)],
+                           [sub[6], sub[5], np.sqrt(sub[-3] * sub[-2])]])
 
     if plot:
         fig = plt.figure(figsize=(8., 6.))

@@ -7,7 +7,6 @@ Created on Wed Jul 13 09:46:43 2016
 
 import numpy as np
 from helper import *
-import helper
 from Limits import *
 from profiles import *
 import scipy.integrate as integrate
@@ -33,10 +32,11 @@ class Model(object):
     maximum distance from Earth such a candidate can be to still be detectable by FermiLat
     (or the flux, spatially extended threshold, etc)
     """
-    def __init__(self, mx, cross_sec, annih_prod, halo_mass, alpha, 
+    def __init__(self, mx, cross_sec, annih_prod, halo_mass, alpha=.16,
                  concentration_param=None, z=0., truncate=False,
                  arxiv_num=10070438, profile=0, pointlike=False,
-                 m200=False):
+                 m200=False, gam=0.88, conservative=False, stiff_rb=False,
+                 optimistic=False):
 
         self.mx = mx
         self.c_sec = cross_sec
@@ -48,6 +48,9 @@ class Model(object):
         self.plike = str2bool(pointlike)
         self.gamma = self.Determine_Gamma()
         self.m200 = m200
+        self.conservative = conservative
+        self.stiff_rb = stiff_rb
+        self.optimistic = optimistic
 
         if profile == 0:
             self.subhalo = Einasto(halo_mass, alpha, 
@@ -59,6 +62,11 @@ class Model(object):
                                concentration_param=concentration_param, 
                                truncate=truncate, arxiv_num=arxiv_num,
                                M200=self.m200)
+        elif profile == 2:
+            self.subhalo = HW_Fit(halo_mass, gam=gam, gcd=8.5, M200=self.m200,
+                                  cons=self.conservative, stiff_rb=self.stiff_rb,
+                                  optimistic=self.optimistic)
+
         else:
             "Profile does not exist..."  
             exit()                   
@@ -176,10 +184,14 @@ class Observable(object):
     def __init__(self, mx, cross_sec, annih_prod, m_low=np.log10(3.24 * 10**4.),
                  m_high=np.log10(1.0 * 10 ** 7.), c_low=np.log10(20.),
                  c_high=2.1, alpha=0.16, profile=0, truncate=False, 
-                 arxiv_num=10070438, point_like=True, m200=False):
+                 arxiv_num=10070438, point_like=True, m200=False,
+                 gam=0.88, conservative=False, stiff_rb=False,
+                 optimistic=False):
 
         point_like = str2bool(point_like)
-        Profile_list = ["Einasto", "NFW"]
+        conservative = str2bool(conservative)
+        stiff_rb = str2bool(stiff_rb)
+        optimistic = str2bool(optimistic)
         self.truncate = truncate
         self.mx = mx
         self.cross_sec = cross_sec
@@ -190,24 +202,36 @@ class Observable(object):
         self.profile = profile
         self.profile_name = Profile_list[self.profile]
         self.m200 = m200
+        self.gam = gam
+        self.cons = conservative
+        self.stiff_rb =stiff_rb
+        self.optim = optimistic
+
         if self.truncate:
             self.m_low = np.log10(10. ** m_low / 0.005)
             self.m_high = np.log10(10. ** m_high / 0.005)
+            self.tr_tag = '_Truncate_'
         else:
             self.m_low = m_low
             self.m_high = m_high
+            self.tr_tag = ''
         self.point_like = point_like
         if self.point_like:
             ptag = '_Pointlike'
         else:
             ptag = '_Extended'
 
+        if self.profile == 2:
+            self.extra_tag = '_gamma_{:.2f}_Conser_'.format(self.gam) + str(self.cons) +\
+                '_Optim_' + str(self.optim) + '_stiff_rb_' + str(self.stiff_rb)
+        else:
+            self.extra_tag = '_arxiv_' + str(self.arxiv_num)
+
         self.arxiv_num = arxiv_num
-        
         self.folder = MAIN_PATH + "/SubhaloDetection/Data/"
-        info_str = "Observable_Profile_" + self.profile_name + "_Truncate_" +\
-            str(self.truncate) + ptag + "_mx_" + str(mx) + "_annih_prod_" +\
-            annih_prod + "_arxiv_num_" + str(arxiv_num) + "/"
+        info_str = "Observable_Profile_" + self.profile_name + self.tr_tag +\
+            ptag + "_mx_" + str(mx) + "_annih_prod_" +\
+            annih_prod + self.extra_tag + "/"
         
         self.folder += info_str
         ensure_dir(self.folder)
@@ -215,7 +239,9 @@ class Observable(object):
         default_dict = {'profile': 'Einasto', 'truncate': False, 'mx': 100., 'alpha': 0.16,
                         'annih_prod': 'BB', 'arxiv_num': 10070438, 'c_low': np.log10(20.),
                         'c_high': 2.1, 'c_num': 15, 'm_low': np.log10(3.24 * 10 ** 4.),
-                        'm_high': np.log10(1.0 * 10 ** 7), 'm_num': 30}
+                        'm_high': np.log10(1.0 * 10 ** 7), 'm_num': 30, 'gamma': 0.88,
+                        'conservative': False, 'optimistic': False, 'stiff_rb': False}
+
         self.param_list = default_dict
         self.param_list['profile'] = self.profile_name
         self.param_list['truncate'] = self.truncate
@@ -226,9 +252,13 @@ class Observable(object):
         self.param_list['c_high'] = self.c_high
         self.param_list['m_low'] = self.m_low 
         self.param_list['m_high'] = self.m_high
+        self.param_list['gamma'] = self.gamma
+        self.param_list['conservative'] = self.cons
+        self.param_list['stiff_rb'] = self.stiff_rb
+        self.param_list['optimistic'] = self.optim
 
     
-    def Table_Dmax_Pointlike(self, m_num=20, c_num=15, threshold=1.*10.**-9.):
+    def Table_Dmax_Pointlike(self, m_num=20, c_num=15, threshold=7.*10.**-10.):
         """
         Tables the maximimum distance a point-like source can be detected for a specified
         threshold given a particular DM candidate and subhalo specificiations
@@ -247,20 +277,18 @@ class Observable(object):
                     os.remove(f)
                 pickle.dump(self.param_list, open(self.folder+"param_list.pkl", "wb")) 
         else:
-            pickle.dump(self.param_list, open(self.folder+"param_list.pkl", "wb"))        
+            pickle.dump(self.param_list, open(self.folder+"param_list.pkl", "wb"))
         
-        Profile_names=['Einasto','NFW']
-        
-        file_name = 'Dmax_POINTLIKE_' + str(Profile_names[self.profile]) + '_Truncate_' +\
-                    str(self.truncate) + '_Cparam_' + str(self.arxiv_num) + '_alpha_' +\
-                    str(self.alpha) + '_mx_' + str(self.mx) + '_cross_sec_' +\
-                    str(np.log10(self.cross_sec)) + '_annih_prod_' + self.annih_prod + '.dat'
+        file_name = 'Dmax_POINTLIKE_' + str(Profile_list[self.profile]) + self.tr_tag +\
+                    '_mx_' + str(self.mx) + '_cross_sec_{:.3e}'.format(self.cross_sec) +\
+                    '_annih_prod_' + self.annih_prod + self.extra_tag + '.dat'
                         
         mass_list = np.logspace(self.m_low, self.m_high, m_num)
         c_list = np.logspace(self.c_low, self.c_high, c_num)
         print 'Cross Section: ', self.cross_sec, '\n'
         for m in mass_list:
             print 'Subhalo mass: ', m
+
             for c in c_list:
                 print '    Concentration parameter: ', c
                 try:

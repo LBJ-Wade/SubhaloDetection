@@ -9,7 +9,10 @@ from ELVIS_Analysis import *
 
 
 #  Plot Sample
-plot_sample_comparison_elv(sub_num=22071, plot=True)
+#plot_sample_comparison_elv(sub_num=22071, plot=True)
+
+
+#id1, id2, id3 = ELVIS().evolution_tracks()
 
 
 #  Catagorical Subplots
@@ -38,3 +41,5 @@ plot_sample_comparison_elv(sub_num=22071, plot=True)
 
 #Inner Outer Slopes
 #Preferred_Density_Slopes_elv(mass_low=1*10.** 4, mass_high = 1*10.**7., gcd_min=0., gcd_max=20., tag='0to20kpc')
+
+ELVIS().obtain_number_density(min_mass=10**7.)

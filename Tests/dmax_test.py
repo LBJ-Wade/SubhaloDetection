@@ -17,23 +17,36 @@ dm_mass = 100.
 c_sec = 3. * 10**-26.
 subhalo_mass = 1. * 10. ** 7.
 arxiv_num = 13131729
-dist = 1.
+dist = 10.
 
 a = Model(dm_mass, c_sec, annih_prod, subhalo_mass / 0.005, .16,
-          truncate=True, arxiv_num=arxiv_num, profile=0,
+          truncate=True, arxiv_num=13131729, profile=0,
           pointlike=False)
 
-b = Model(dm_mass,c_sec, annih_prod, subhalo_mass / 0.005, .16,
-          truncate=True, arxiv_num=arxiv_num, profile=1,
+
+b = Model(dm_mass, c_sec, annih_prod, subhalo_mass, .16,
+          truncate=False, arxiv_num=160106781, profile=1,
           pointlike=False)
 
-c = Model(dm_mass, c_sec, annih_prod, subhalo_mass, .16,
-          truncate=False, arxiv_num=arxiv_num, profile=0,
-          pointlike=False)
+hw = Model(dm_mass, c_sec, annih_prod, subhalo_mass, profile=2,
+           gam=0.88, conservative=False, stiff_rb=False,
+           optimistic=False)
 
-d = Model(dm_mass, c_sec, annih_prod, subhalo_mass, .16,
-          truncate=False, arxiv_num=arxiv_num, profile=1,
-          pointlike=False)
+hw_c = Model(dm_mass, c_sec, annih_prod, subhalo_mass, profile=2,
+           gam=0.88, conservative=True, stiff_rb=False,
+           optimistic=False)
+
+hw_o = Model(dm_mass, c_sec, annih_prod, subhalo_mass, profile=2,
+           gam=0.88, conservative=False, stiff_rb=False,
+           optimistic=True)
+
+hw_gh = Model(dm_mass, c_sec, annih_prod, subhalo_mass, profile=2,
+           gam=1.316, conservative=False, stiff_rb=False,
+           optimistic=False)
+
+hw_gl = Model(dm_mass, c_sec, annih_prod, subhalo_mass, profile=2,
+           gam=0.426, conservative=False, stiff_rb=False,
+           optimistic=False)
 
 print 'Parameters: '
 print 'Dark Matter Mass: ', dm_mass
@@ -55,7 +68,7 @@ print 'D_max Extended: ', a.D_max_extend()
 
 print '\n'
 
-print 'Profile: NFW \nTruncate'
+print 'Profile: NFW \nNot Truncate'
 print 'Total Flux: ', b.Total_Flux(dist)
 print 'D_max Pointlike: ', b.d_max_point()
 print 'Spectral Index: ', b.Determine_Gamma()
@@ -64,21 +77,51 @@ print 'D_max Extended: ', b.D_max_extend()
 
 print '\n'
 
-print 'Profile: Einasto \nNot Truncated'
-print 'Total Flux: ', c.Total_Flux(dist)
-print 'D_max Pointlike: ', c.d_max_point()
-print 'Spectral Index: ', c.Determine_Gamma()
-print 'Minimum Flux (Extended): ', c.min_Flux(dist)
-print 'D_max Extended: ', c.D_max_extend()
+print 'Profile: HW Standard \n'
+print 'Total Flux: ', hw.Total_Flux(dist)
+print 'D_max Pointlike: ', hw.d_max_point()
+print 'Spectral Index: ', hw.Determine_Gamma()
+print 'Minimum Flux (Extended): ', hw.min_Flux(dist)
+print 'D_max Extended: ', hw.D_max_extend()
 
 
 print '\n'
 
-print 'Profile: NFW \nNot Truncated'
-print 'Total Flux: ', d.Total_Flux(dist)
-print 'D_max Pointlike: ', d.d_max_point()
-print 'Spectral Index: ', d.Determine_Gamma()
-print 'Minimum Flux (Extended): ', d.min_Flux(dist)
-print 'D_max Extended: ', d.D_max_extend()
+print 'Profile: HW \n Conservative'
+print 'Total Flux: ', hw_c.Total_Flux(dist)
+print 'D_max Pointlike: ', hw_c.d_max_point()
+print 'Spectral Index: ', hw_c.Determine_Gamma()
+print 'Minimum Flux (Extended): ', hw_c.min_Flux(dist)
+print 'D_max Extended: ', hw_c.D_max_extend()
+
+
+print '\n'
+
+print 'Profile: HW \n Optimistic'
+print 'Total Flux: ', hw_o.Total_Flux(dist)
+print 'D_max Pointlike: ', hw_o.d_max_point()
+print 'Spectral Index: ', hw_o.Determine_Gamma()
+print 'Minimum Flux (Extended): ', hw_o.min_Flux(dist)
+print 'D_max Extended: ', hw_o.D_max_extend()
+
+
+print '\n'
+
+print 'Profile: HW \n Gamma = 1.316'
+print 'Total Flux: ', hw_gh.Total_Flux(dist)
+print 'D_max Pointlike: ', hw_gh.d_max_point()
+print 'Spectral Index: ', hw_gh.Determine_Gamma()
+print 'Minimum Flux (Extended):', hw_gh.min_Flux(dist)
+print 'D_max Extended: IGNORE'#, hw_c.D_max_extend()
+
+
+print '\n'
+
+print 'Profile: HW \n Gamma = 0.426'
+print 'Total Flux: ', hw_gl.Total_Flux(dist)
+print 'D_max Pointlike: ', hw_gl.d_max_point()
+print 'Spectral Index: ', hw_gl.Determine_Gamma()
+print 'Minimum Flux (Extended): ', hw_gl.min_Flux(dist)
+print 'D_max Extended: ', hw_gl.D_max_extend()
 
 

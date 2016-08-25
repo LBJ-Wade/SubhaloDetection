@@ -11,9 +11,10 @@ from helper import *
 from Limits import *
 import scipy.integrate as integrate
 import scipy.special as special
-from scipy.optimize import fminbound, minimize_scalar, fmin, brentq
+from scipy.optimize import fminbound, minimize_scalar, minimize, brentq
 from scipy.interpolate import interp1d, interpn
 
+Profile_list = ["Einasto", "NFW", "HW"]
 
 class Subhalo(object):
     """
@@ -138,7 +139,21 @@ class Subhalo(object):
         #     extension = 10.**exten_interp(np.log10(dist))
         # except:
         #     extension = fminbound(self.AngRad68, 0.01, 90., args=[dist], xtol=10**-3.)
-        extension = fminbound(self.AngRad68, 0.01, self.Full_Extension(dist), args=[dist], xtol=10 ** -3.)
+
+        try:
+            extension = fminbound(self.AngRad68, 0.01, self.Full_Extension(dist), args=[dist], xtol=10 ** -2.)
+            if np.abs(10. ** (self.J(dist, extension) - self.J_pointlike(dist)) - 0.68) < 0.02:
+                extension = extension
+            else:
+                raise ValueError
+        except:
+            theta_tab = np.logspace(-1.3, np.log10(self.Full_Extension(dist)), 40)
+            full_tab = np.logspace(-1.3, np.log10(self.Full_Extension(dist)), 200)
+            ang68 = np.zeros(theta_tab.size)
+            for i, theta in enumerate(theta_tab):
+                ang68[i] = self.AngRad68(theta, dist)
+            extension = full_tab[np.argmin(interp1d(theta_tab, ang68, kind='linear', bounds_error=False,
+                                                    fill_value=np.inf)(full_tab))]
         return extension
 
     def Full_Extension(self, dist):
@@ -204,9 +219,11 @@ class Einasto(Subhalo):
         self.virial_radius = Virial_radius(self.halo_mass, m200=M200)
 
         if arxiv_num == 160106781:
-            #rmax, vmax = rmax_vmax(self.halo_mass)
-
-            self.scale_radius = rmax / xmax
+            try:
+                self.scale_radius = rmax / xmax
+            except TypeError:
+                rmax, vmax = rmax_vmax(self.halo_mass)
+                self.scale_radius = rmax / xmax
 
             self.scale_density = (xmax * vmax ** 2. / (4. * np.pi * newton_G * self.scale_radius ** 2. *
                                                     self.func_f(xmax)) * SolarMtoGeV *
@@ -324,35 +341,43 @@ class NFW(Subhalo):
         self.truncate = truncate
         self.arxiv_num = arxiv_num
 
-
-
         if arxiv_num == 160106781:
             if concentration_param is None:
                 concentration_param = Concentration_parameter(halo_mass, z, arxiv_num)
             self.c = concentration_param
             self.virial_radius = Virial_radius(self.halo_mass, m200=M200)
+            try:
+                self.scale_radius = rmax / 2.163
+            except TypeError:
+                rmax, vmax = rmax_vmax(self.halo_mass)
+                self.scale_radius = rmax / 2.163
 
-            #rmax, vmax = rmax_vmax(self.halo_mass)
-            self.scale_radius = rmax / 2.163
             self.scale_density = (2.163 * vmax ** 2. / (4. * np.pi * newton_G * self.scale_radius ** 2. *
                                                        (np.log(3.163) - 2.163 / 3.163)) * SolarMtoGeV *
                                   cmtokpc ** 3.)
 
         elif arxiv_num == 160304057:
             self.cv = Concentration_parameter(self.halo_mass, z=0, arxiv_num=160304057, dist=gcd, vmax=vmax)
-            rmax = vmax / H0 * np.sqrt(2. / self.cv)
-            self.scale_radius = rmax / 2.163
-            self.c = fminbound(self.solve_c200, 0., 150., args=[self.cv])
-            m200 = self.func_f(self.c) / self.func_f(2.163) * rmax * vmax ** 2. / newton_G
-            self.virial_radius = (3. * m200 / (4. * np.pi * rho_critical * delta_200)) ** (1. / 3.)
-
-            self.scale_density = (2.163 * vmax ** 2. / (4. * np.pi * newton_G * self.scale_radius ** 2. *
-                                                        (np.log(3.163) - 2.163 / 3.163)) * SolarMtoGeV *
-                                  cmtokpc ** 3.)
-
+            try:
+                rmax = vmax / H0 * np.sqrt(2. / self.cv)
+                self.scale_radius = rmax / 2.163
+                self.c = fminbound(self.solve_c200, 0., 150., args=[self.cv])
+                m200 = self.func_f(self.c) / self.func_f(2.163) * rmax * vmax ** 2. / newton_G
+                self.virial_radius = (3. * m200 / (4. * np.pi * rho_critical * delta_200)) ** (1. / 3.)
+                self.scale_density = (2.163 * vmax ** 2. / (4. * np.pi * newton_G * self.scale_radius ** 2. *
+                                                            (np.log(3.163) - 2.163 / 3.163)) * SolarMtoGeV *
+                                      cmtokpc ** 3.)
+            except:
+                self.c = self.cv
+                m200 = self.halo_mass
+                self.virial_radius = (3. * m200 / (4. * np.pi * rho_critical * delta_200)) ** (1. / 3.)
+                self.scale_radius = self.virial_radius / self.c
+                self.scale_density = ((self.halo_mass * SolarMtoGeV * cmtokpc ** 3.) /
+                                      (4. * np.pi * self.scale_radius ** 3. *
+                                       (np.log(1.0 + self.c) -
+                                        1.0 / (1.0 + 1.0 / self.c))))
 
         else:
-
             if concentration_param is None:
                 concentration_param = Concentration_parameter(halo_mass, z, arxiv_num, dist=gcd)
             self.c = concentration_param
@@ -366,8 +391,8 @@ class NFW(Subhalo):
 
         if not truncate:
             if arxiv_num == 160106781:
-                self.max_radius = self.scale_radius
-                #self.max_radius = np.power(10, fminbound(self.find_tidal_radius, -4., 1.3))
+                self.max_radius = np.power(10, fminbound(self.find_tidal_radius, -4., 1.3))
+                #self.max_radius = self.scale_radius
             elif arxiv_num == 160304057:
                 self.max_radius = np.power(10, fminbound(self.find_tidal_radius, -4., 1.3))
             else:
@@ -376,10 +401,15 @@ class NFW(Subhalo):
             self.max_radius = self.Truncated_radius()
 
     def density(self, r):
-        if r > 0:
-            return self.scale_density / ((r / self.scale_radius) * (1. + r / self.scale_radius) ** 2.)
-        else:
-            return 0.
+        try:
+            den_array = np.zeros(len(r))
+        except TypeError:
+            r = np.array([r])
+            den_array = np.zeros(len(r))
+        valid_args = r > 0.
+        den_array[valid_args] = self.scale_density / ((r[valid_args] / self.scale_radius) *
+                                                      (1. + r[valid_args] / self.scale_radius) ** 2.)
+        return den_array
 
     def int_over_density(self, r):
         try:
@@ -493,26 +523,85 @@ def find_r1_r2(mass, vmax, rmax):
     return np.column_stack((r1_tab, bf_line))
 
 
+class HW_Fit(Subhalo):
+
+    def __init__(self, halo_mass, gam=0.945, M200=True, gcd=8.5, cons=False,
+                 stiff_rb=False, optimistic=False):
+        self.halo_mass = halo_mass
+        self.gam = gam
+        self.optimistic = optimistic
+        m = self.halo_mass
+        if stiff_rb and self.halo_mass < 4. * 10 ** 5.:
+            m = 4. * 10 ** 5.
+        if cons:
+            self.rb = 10. ** (-4.664) * m ** 0.566
+        if optimistic:
+            self.rb = 10. ** (-4.976) * m ** 0.550
+        if not cons and not optimistic:
+            self.rb = 10. ** (-4.653) * m ** 0.533
+
+        self.virial_radius = Virial_radius(self.halo_mass, m200=M200)
+        self.scale_density = self.halo_mass / (4. * np.pi * self.rb ** (3. - self.gam) *
+            special.gamma(3. - self.gam) * (1. - special.gammaincc(3. - self.gam, self.virial_radius / self.rb))
+            * kpctocm ** 3. * GeVtoSolarM)
+        self.max_radius = self.virial_radius
+
+    def density(self, r):
+        try:
+            den_array = np.zeros(len(r))
+        except TypeError:
+            r = np.array([r])
+            den_array = np.zeros(len(r))
+        valid_args = r > 0.
+        den_array[valid_args] = self.scale_density * r[valid_args] ** (-self.gam) * np.exp(- r[valid_args] / self.rb)
+        return den_array
+
+    def int_over_density(self, r):
+        try:
+            den_array = np.zeros(len(r))
+        except TypeError:
+            r = np.array([r])
+            den_array = np.zeros(len(r))
+        valid_args = r > 0.
+        den_array[valid_args] = self.scale_density * 4. * np.pi * self.rb ** (3. - self.gam) * \
+            special.gamma(3. - self.gam) * (1. - special.gammaincc(3. - self.gam, r[valid_args] / self.rb)) \
+            * kpctocm ** 3. * GeVtoSolarM
+        return den_array
+
+    def int_over_rho_sqr(self, r):
+        try:
+            int_arr = np.zeros(len(r))
+        except TypeError:
+            r = np.array([r])
+            int_arr = np.zeros(len(r))
+        valid_args = r > 0.
+        int_arr[valid_args] = self.scale_density ** 2. * 4. * np.pi * 2. ** (2. * self.gam - 3.) * \
+            self.rb ** (3. - 2. * self.gam) * special.gamma(3. - 2. * self.gam) * \
+            (1. - special.gammaincc(3. - 2. * self.gam, 2. * r[valid_args] / self.rb)) * kpctocm
+        return int_arr
+
 class KMMDSM(Subhalo):
 
     def __init__(self, halo_mass, gam, concentration_param=None,
                  z=0., truncate=False, arxiv_num=10070438, M200=True,
-                 gcd=8.5, vmax=3., rmax=.4):
+                 gcd=8.5, vmax=3., rmax=.4, from_sim=True):
 
         self.pname = 'KMMDSM_' + '_C_params_' + str(arxiv_num) + \
                      '_Truncate_' + str(truncate)
         self.gam = gam
-        xmax = fminbound(find_max_KMMDSM_prof, 0., 100., args=[self.gam])
-        self.rb = rmax / xmax
-        self.scale_density = (rmax * vmax ** 2. / (4. * np.pi * newton_G *
-                                                   self.rb ** (3. - self.gam) *
-                                                   special.gamma(3. - self.gam) *
-                                                   (1. - special.gammaincc(3. - self.gam, xmax))) *
-                              SolarMtoGeV * cmtokpc ** 3.)
-        c_Delta = 2. * (vmax / (H0 * rmax)) ** 2.
-        m200 = self.int_over_density(30.)
-        self.virial_radius = Virial_radius(m200, m200=True)
-        self.max_radius = self.virial_radius
+        if from_sim:
+            xmax = fminbound(find_max_KMMDSM_prof, 0., 100., args=[self.gam])
+            self.rb = rmax / xmax
+            self.scale_density = (rmax * vmax ** 2. / (4. * np.pi * newton_G *
+                                                       self.rb ** (3. - self.gam) *
+                                                       special.gamma(3. - self.gam) *
+                                                       (1. - special.gammaincc(3. - self.gam, xmax))) *
+                                  SolarMtoGeV * cmtokpc ** 3.)
+            c_Delta = 2. * (vmax / (H0 * rmax)) ** 2.
+            m200 = self.int_over_density(30.)
+            self.virial_radius = Virial_radius(m200, m200=True)
+            self.max_radius = self.virial_radius
+
 
     def density(self, r):
         if r > 0:
@@ -543,16 +632,24 @@ class KMMDSM(Subhalo):
                     (1. - special.gammaincc(3. - 2. * self.gam, 2. * r / self.rb)) * kpctocm)
 
 
-def find_gamma(mass, vmax, rmax):
+def find_gamma(mass, vmax, rmax, error=0.):
     a_tab = np.linspace(0., 2., 100)
     var_r_tabs = np.zeros(a_tab.size)
     for i, gam in enumerate(a_tab):
-        subhalo = KMMDSM(1., gam, M200=True, arxiv_num=160106781, vmax=vmax, rmax=rmax)
+        subhalo = KMMDSM(1., gam, M200=True, vmax=vmax, rmax=rmax)
         var_r_tabs[i] = subhalo.int_over_density(subhalo.max_radius) - mass
     #print var_r_tabs
     try:
         bf_line = brentq(interp1d(a_tab, var_r_tabs, kind='linear'), a_tab[0], a_tab[-1])
     except:
-        bf_line = 0.
-        raise ValueError
+        try:
+            subhalo = KMMDSM(1., 0., M200=True, vmax=vmax, rmax=rmax)
+            check_3sig = subhalo.int_over_density(subhalo.max_radius) - (mass + 3. * error)
+            if check_3sig < 0.:
+                bf_line = 0.
+            else:
+                raise ValueError
+        except:
+            bf_line = 0.
+            raise ValueError
     return bf_line

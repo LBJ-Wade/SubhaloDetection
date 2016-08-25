@@ -20,14 +20,19 @@ except KeyError:
 
 via_lactea = np.loadtxt(MAIN_PATH + '/SubhaloDetection/Data/Misc_Items/ViaLacteaII_Info.dat')
 #via_lactea = np.loadtxt(MAIN_PATH + '/SubhaloDetection/Data/Misc_Items/ViaLacteaII_Useable_Subhalos.dat')
-#  rmax_interp = np.poly1d(np.polyfit(np.log10(via_lactea[:, 5]), np.log10(via_lactea[:, 4]), 1))
-#vmax_interp = np.poly1d(np.polyfit(np.log10(via_lactea[:, 5]), np.log10(via_lactea[:, 3]), 1))
-vmax_interp = lambda x: interpola(x, np.log10(via_lactea[:, 5]), np.log10(via_lactea[:, 3]))
-#  tidal_interp = np.poly1d(np.polyfit(np.log10(via_lactea[:, 5]), np.log10(via_lactea[:, 6]), 1))
-def rmax_interp(x):
-    return interpola(x, np.log10(via_lactea[:, 5]), np.log10(via_lactea[:, 4]))
+#def vmax_interp(x):
+#    return interpola(x, np.log10(via_lactea[:, 5]), np.log10(via_lactea[:, 3]))
+#def rmax_interp(x):
+#    return interpola(x, np.log10(via_lactea[:, 5]), np.log10(via_lactea[:, 4]))
 def tidal_interp(x):
-    return interpola(x, np.log10(via_lactea[:, 5]), np.log10(via_lactea[:, 6]))
+    return interp1d(np.log10(via_lactea[:, 5]), np.log10(via_lactea[:, 6]),
+                    bounds_error=False, fill_value='extrapolate')(x)
+
+
+def rmax_interp(x):
+    return -3.5069 + x * 0.42818
+def vmax_interp(x):
+    return -0.858705 + x * 0.25740337
 
 #  Conversions
 SolarMtoGeV = 1.11547 * 10 ** 57.
@@ -45,7 +50,7 @@ rho_critical = 2.775 * 10 ** 11. * hubble ** 2. * 10. ** -9.  # Units: Solar Mas
 delta_200 = 200.
 
 
-def Concentration_parameter(mass, z=0, arxiv_num=13131729, dist=1., vmax = 3.):
+def Concentration_parameter(mass, z=0, arxiv_num=13131729, dist=1., vmax=3.):
     """
     Calculates concentration parameter given a subhalo mass and choice of
     paramaterization
@@ -79,15 +84,15 @@ def Concentration_parameter(mass, z=0, arxiv_num=13131729, dist=1., vmax = 3.):
         xsub = dist / 200.
         b = np.array([1., 2., 3.])
         # Mass relation
-        #a = np.array([-0.195, 0.089, 0.089])
-        #c = 19.9 * (1. + np.sum((a * np.log(mass * hubble/ 10. ** 8.)) ** b)) *\
-        #    (1. + -0.54 * np.log(xsub))
+        a = np.array([-0.195, 0.089, 0.089])
+        c = 19.9 * (1. + np.sum((a * np.log(mass * hubble/ 10. ** 8.)) ** b)) *\
+            (1. + -0.54 * np.log(xsub))
 
         # Vmax relation
-        a = np.array([-1.38, 0.83, -0.49])
-        bb = -2.5
-        c = 3.5 * 10. ** 4. * (1. + np.sum((a * np.log(vmax / 10.)) ** b)) *\
-            (1. + bb * np.log(xsub))
+        #a = np.array([-1.38, 0.83, -0.49])
+        #bb = -2.5
+        #c = 3.5 * 10. ** 4. * (1. + np.sum((a * np.log(vmax / 10.)) ** b)) *\
+        #    (1. + bb * np.log(xsub))
     else:
         print 'Wrong arXiv Number for Concentration Parameter'
     

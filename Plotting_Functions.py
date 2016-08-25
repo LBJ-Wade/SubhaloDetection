@@ -6,7 +6,6 @@ Created on Wed Jul 13 09:46:43 2016
 """
 
 import numpy as np
-from helper import *
 from subhalo import *
 import os
 import pickle
@@ -17,7 +16,7 @@ import pylab as pl
 import matplotlib.pyplot as plt
 from matplotlib import rc
 import itertools
-from profiles import Einasto, NFW
+from profiles import *
 
 #  mpl.use('pdf')
 rc('font', **{'family': 'serif', 'serif': ['Times', 'Palatino']})
@@ -38,7 +37,6 @@ def Multi_Limit_Plots(annih_prod=['BB', 'BB'], profile=[0, 1], truncate=[True, T
     """
     Wrapper function that calls LimitPlotter for each list index
     """
-    profile_list = ['Einasto', 'NFW']
     lap = len(annih_prod)
     lpro = len(profile)
     ltrun = len(truncate)
@@ -77,11 +75,11 @@ def Multi_Limit_Plots(annih_prod=['BB', 'BB'], profile=[0, 1], truncate=[True, T
                                            b_min=list_prop[4][i],
                                            mass_low=mass_low, mass_high=mass_high).PlotLimit()
 
-        figname += profile_list[list_prop[1][i]] + '_' + list_prop[0][i] + '_' + str(list_prop[6][i])+\
+        figname += Profile_list[list_prop[1][i]] + '_' + list_prop[0][i] + '_' + str(list_prop[6][i])+\
             '_Truncate_' + str(list_prop[2][i]) + '_Cparam_' + str(list_prop[3][i]) + '_bmin_' +\
             str(list_prop[4][i]) + '_Nobs_' + str(list_prop[5][i]) + '_'
 
-        labels.append(profile_list[list_prop[1][i]][0] + ' ' + tlab + ' ' +
+        labels.append(Profile_list[list_prop[1][i]][0] + ' ' + tlab + ' ' +
                       list_prop[0][i] + ' ' + str(list_prop[6][i])[0] + ' C'
                       + str(list_prop[3][i]) + ' bmin' +
                       str(list_prop[4][i]) )
@@ -109,8 +107,7 @@ class LimitPlotter(object):
                  alpha=0.16, profile=0, truncate=True, arxiv_num=13131729, b_min=20.,
                  mass_low=1., mass_high=3., fs=20, save_plot=True):
 
-        Profile_List = ["Einasto", "NFW"]
-        self.profile_name = Profile_List[profile]
+        self.profile_name = Profile_list[profile]
         self.annih_prod = annih_prod
         self.nobs = n_obs
         self.CL = CL
@@ -200,21 +197,26 @@ class LimitPlotter(object):
 
 class model_plots(object):
     def __init__(self, cross_sec=3. * 10 ** -26., mx=100., annih_prod='BB', pointlike=True, alpha=0.16, profile=0,
-                 truncate=True, arxiv_num=10070438, mass_low=-5., mass_high=7., fs=20, b_min = 20.):
-        profile_list = ['Einasto', 'NFW']
+                 truncate=True, arxiv_num=10070438, mass_low=-5., mass_high=7., fs=20, b_min=20.,
+                 gam=0.88, conservative=False, stiff_rb=False, optimistic=False):
+
         self.cross_sec = cross_sec
         self.mx = mx
         self.annih_prod = annih_prod
         self.pointlike = pointlike
         self.alpha = alpha
         self.profile = profile
-        self.profile_name = profile_list[profile]
+        self.profile_name = Profile_list[profile]
         self.truncate = truncate
         self.arxiv_num = arxiv_num
         self.mass_low = mass_low
         self.mass_high = mass_high
         self.fs = fs
         self.b_min = b_min
+        self.gam = gam
+        self.cons = conservative
+        self.optim = optimistic
+        self.stiff_rb = stiff_rb
         self.folder = MAIN_PATH + "/SubhaloDetection/Data/"
 
     def constant_flux_contours(self, threshold=10 ** -9., flux_low=-18., flux_high=6.):
@@ -265,8 +267,7 @@ class model_plots(object):
         ax.set_yscale('log')
         pl.xlim([10 ** self.mass_low, 10 ** self.mass_high])
         pl.ylim([10 ** -4., 10.])
-        Profile_List = ["Einasto", "NFW"]
-        profile_name = Profile_List[self.profile]
+        profile_name = Profile_list[self.profile]
         plt.title('{}'.format(profile_name), fontsize=20)
         if self.pointlike:
             plabel = 'Pointlike'
@@ -296,12 +297,11 @@ class model_plots(object):
 
     def dmax_obs_splice(self):
 
-        Profile_names = ['Einasto', 'NFW']
         if self.pointlike:
             ptag = '_Pointlike'
         else:
             ptag = '_Extended'
-        info_str = "Observable_Profile_" + str(Profile_names[self.profile]) + "_Truncate_" + \
+        info_str = "Observable_Profile_" + str(Profile_list[self.profile]) + "_Truncate_" + \
                    str(self.truncate) + ptag + "_mx_" + str(self.mx) + "_annih_prod_" + \
                    self.annih_prod + "_arxiv_num_" + str(self.arxiv_num) + "/"
 
@@ -317,12 +317,12 @@ class model_plots(object):
             mass_list = np.logspace(dict_info['m_low'], dict_info['m_high'], dict_info['m_num'])
         c_list = np.logspace(dict_info['c_low'], dict_info['c_high'], dict_info['c_num'])
         if self.pointlike:
-            file_name = 'Dmax_POINTLIKE_' + str(Profile_names[self.profile]) + '_Truncate_' + \
+            file_name = 'Dmax_POINTLIKE_' + str(Profile_list[self.profile]) + '_Truncate_' + \
                         str(self.truncate) + '_Cparam_' + str(self.arxiv_num) + '_alpha_' + \
                         str(self.alpha) + '_mx_' + str(self.mx) + '_cross_sec_' + \
                         str(np.log10(self.cross_sec)) + '_annih_prod_' + self.annih_prod + '.dat'
         else:
-            file_name = 'Dmax_Extended' + str(Profile_names[self.profile]) + '_Truncate_' + \
+            file_name = 'Dmax_Extended' + str(Profile_list[self.profile]) + '_Truncate_' + \
                         str(self.truncate) + '_Cparam_' + str(self.arxiv_num) + '_alpha_' + \
                         str(self.alpha) + '_mx_' + str(self.mx) + '_cross_sec_' + \
                         str(np.log10(self.cross_sec)) + '_annih_prod_' + self.annih_prod + '.dat'
@@ -433,56 +433,48 @@ def plot_spectrum(mx=100., annih_prod='BB'):
     return
 
 
-def plot_profiles(m_sub=10.**7., arxiv_num=[13131729], density_sqr=False, M200=[False]):
-
-    if len(arxiv_num) == 1:
-        arxiv_num *= 4
-    elif len(arxiv_num) == 2:
-        arxiv_num *= 2
-    elif len(arxiv_num) == 3:
-        print 'I dont know what to do with arxiv num input...'
-        exit()
-    if len(M200) == 1:
-        M200 *= 4
-    elif len(M200) == 2:
-        M200 *= 2
-    elif len(M200) == 3:
-        print 'I dont know what to do with M200 num input...'
-        exit()
+def plot_profiles(m_sub=10.**7., density_sqr=False):
 
     minrad = -2.
-    e_tr = Einasto(m_sub / 0.005, .16, truncate=True, arxiv_num=arxiv_num[0], M200=M200[0])
-    n_tr = NFW(m_sub / 0.005, .16, truncate=True, arxiv_num=arxiv_num[1], M200=M200[1])
-    e_ntr = Einasto(m_sub, .16, truncate=False, arxiv_num=arxiv_num[2], M200=M200[2])
-    n_ntr = NFW(m_sub, .16, truncate=False, arxiv_num=arxiv_num[3], M200=M200[3])
+    e_tr = Einasto(m_sub / 0.005, .16, truncate=True, arxiv_num=13131729, M200=False)
+    n_ntr = NFW(m_sub, .16, truncate=False, arxiv_num=160106781, M200=True)
+    hw_fit = HW_Fit(m_sub, M200=True, gcd=8.5)
+    hw_fit_rbl = HW_Fit(m_sub, M200=True, gcd=8.5, optimistic=True)
+    hw_fit_rbh = HW_Fit(m_sub, M200=True, gcd=8.5, cons=True)
+    hw_fit_gl = HW_Fit(m_sub, gam=0.426, M200=True, gcd=8.5)
+    hw_fit_gh = HW_Fit(m_sub, gam=1.316, M200=True, gcd=8.5)
 
     r1_e_tr = np.logspace(minrad, np.log10(e_tr.max_radius), 100)
     r2_e_tr = np.logspace(np.log10(e_tr.max_radius), np.log10(e_tr.virial_radius), 100)
-    r1_n_tr = np.logspace(minrad, np.log10(n_tr.max_radius), 100)
-    r2_n_tr = np.logspace(np.log10(n_tr.max_radius), np.log10(n_tr.virial_radius), 100)
-    r_e_ntr = np.logspace(minrad, np.log10(e_ntr.max_radius), 200)
-    r2_e_ntr = np.logspace(np.log10(e_tr.max_radius), np.log10(e_ntr.virial_radius), 100)
-    r_n_ntr = np.logspace(minrad, np.log10(n_ntr.max_radius), 200)
-    r2_n_ntr = np.logspace(np.log10(e_tr.max_radius), np.log10(n_ntr.virial_radius), 100)
+    r_n_ntr = np.logspace(minrad, np.log10(n_ntr.max_radius), 100)
+    r2_n_ntr = np.logspace(np.log10(n_ntr.max_radius), np.log10(n_ntr.virial_radius), 20)
+    r_hw = np.logspace(minrad, np.log10(hw_fit.max_radius), 100)
+    r_hw_rbl = np.logspace(minrad, np.log10(hw_fit_rbl.max_radius), 100)
+    r_hw_rbh = np.logspace(minrad, np.log10(hw_fit_rbh.max_radius), 100)
+    r_hw_gl = np.logspace(minrad, np.log10(hw_fit_gl.max_radius), 100)
+    r_hw_gh = np.logspace(minrad, np.log10(hw_fit_gh.max_radius), 100)
 
     if not density_sqr:
         den_e_tr1 = e_tr.density(r1_e_tr) * GeVtoSolarM * kpctocm ** 3.
         den_e_tr2 = e_tr.density(r2_e_tr) * GeVtoSolarM * kpctocm ** 3.
-        den_n_tr1 = n_tr.density(r1_n_tr) * GeVtoSolarM * kpctocm ** 3.
-        den_n_tr2 = n_tr.density(r2_n_tr) * GeVtoSolarM * kpctocm ** 3.
-        den_e_ntr = e_ntr.density(r_e_ntr) * GeVtoSolarM * kpctocm ** 3.
         den_n_ntr = n_ntr.density(r_n_ntr) * GeVtoSolarM * kpctocm ** 3.
-        den_e_ntr2 = e_ntr.density(r2_e_ntr) * GeVtoSolarM * kpctocm ** 3.
         den_n_ntr2 = n_ntr.density(r2_n_ntr) * GeVtoSolarM * kpctocm ** 3.
+        den_hw = hw_fit.density(r_hw) * GeVtoSolarM * kpctocm ** 3.
+        den_hw_rbl = hw_fit_rbl.density(r_hw_rbl) * GeVtoSolarM * kpctocm ** 3.
+        den_hw_rbh = hw_fit_rbh.density(r_hw_rbh) * GeVtoSolarM * kpctocm ** 3.
+        den_hw_gl = hw_fit_gl.density(r_hw_gl) * GeVtoSolarM * kpctocm ** 3.
+        den_hw_gh = hw_fit_gh.density(r_hw_gh) * GeVtoSolarM * kpctocm ** 3.
     else:
         den_e_tr1 = e_tr.density(r1_e_tr) ** 2.
         den_e_tr2 = e_tr.density(r2_e_tr) ** 2.
-        den_n_tr1 = n_tr.density(r1_n_tr) ** 2.
-        den_n_tr2 = n_tr.density(r2_n_tr) ** 2.
-        den_e_ntr = e_ntr.density(r_e_ntr) ** 2.
         den_n_ntr = n_ntr.density(r_n_ntr) ** 2.
-        den_e_ntr2 = e_ntr.density(r2_e_ntr) ** 2.
         den_n_ntr2 = n_ntr.density(r2_n_ntr) ** 2.
+        den_hw = hw_fit.density(r_hw) ** 2.
+        den_hw_rbl = hw_fit.density(r_hw_rbl) ** 2.
+        den_hw_rbh = hw_fit.density(r_hw_rbh) ** 2.
+        den_hw_gl = hw_fit.density(r_hw_gl) ** 2.
+        den_hw_gh = hw_fit.density(r_hw_gh) ** 2.
+
 
     fig = plt.figure(figsize=(8., 6.))
     ax = plt.gca()
@@ -491,12 +483,24 @@ def plot_profiles(m_sub=10.**7., arxiv_num=[13131729], density_sqr=False, M200=[
     pl.xlim([10 ** minrad, 3. * 10. ** 1.])
     plt.plot(r1_e_tr, den_e_tr1, lw=1, color='Black', label='Einasto, T')
     plt.plot(r2_e_tr, den_e_tr2, '.', ms=1, color='Black')
-    plt.plot(r1_n_tr, den_n_tr1, lw=1, color='Blue', label='NFW, T')
-    plt.plot(r2_n_tr, den_n_tr2, '.', ms=1, color='Blue')
-    plt.plot(r_e_ntr, den_e_ntr, lw=1, color='Red', label='Einasto, NT')
-    plt.plot(r2_e_ntr, den_e_ntr2, '.', ms=1, lw=1, color='Red')
     plt.plot(r_n_ntr, den_n_ntr, lw=1, color='Magenta', label='NFW, NT')
     plt.plot(r2_n_ntr, den_n_ntr2, '.', ms=1, lw=1, color='Magenta')
+    plt.plot(r_hw, den_hw, lw=1, color='Blue', label=r'$<HW>$')
+
+    rb_max = np.zeros(len(r_hw_gh))
+    rb_min = np.zeros(len(r_hw_gh))
+    g_min = np.zeros(len(r_hw_gh))
+    g_max = np.zeros(len(r_hw_gh))
+    for i in range(r_hw_gh.size):
+        rb_min[i] = np.min([den_hw_rbl[i], den_hw_rbh[i]])
+        rb_max[i] = np.max([den_hw_rbl[i], den_hw_rbh[i]])
+        g_min[i] = np.min([den_hw_gl[i], den_hw_gh[i]])
+        g_max[i] = np.max([den_hw_gl[i], den_hw_gh[i]])
+    plt.plot(r_hw_gh, den_hw_rbh, '--', r_hw_gh, den_hw_rbl, '--', r_hw_gh,
+             den_hw_gl, '-.', r_hw_gh, den_hw_gh, '-.', color='k', alpha=0.5)
+    ax.fill_between(r_hw_gh, rb_min, rb_max, where=rb_max >= rb_min, facecolor='Blue', interpolate=True, alpha=0.3)
+    ax.fill_between(r_hw_gh, g_min, g_max, where=g_max >= g_min, facecolor='Blue', interpolate=True, alpha=0.3)
+
     plt.legend()
 
     pl.xlabel('Radius [kpc]', fontsize=20)
@@ -504,186 +508,222 @@ def plot_profiles(m_sub=10.**7., arxiv_num=[13131729], density_sqr=False, M200=[
     if not density_sqr:
         pl.ylabel(r'$\rho [M_\odot / kpc^3$]', fontsize=20)
         pl.ylim([10. ** 3., 10. ** 11.])
-        fig_name = folder + '../Plots/' + 'Density_Comparison_msubhalo_' + str(m_sub) + \
-            '_arxiv_nums_' + str(arxiv_num[0]) + '_' + str(arxiv_num[1]) + '_' + \
-            str(arxiv_num[2]) + '_' + str(arxiv_num[3]) + '.pdf'
+        fig_name = folder + '../Plots/' + 'Density_Comparison_msubhalo_{:.2e}'.format(m_sub) + \
+            '_BLH_Bertone_HW.pdf'
     else:
         pl.ylabel(r'$\rho^2$ [$GeV^2 / cm^6$]', fontsize=20)
         pl.ylim([10. ** -8., 10. ** 6.])
-        fig_name = folder + '../Plots/' + 'DensitySqr_Comparison_msubhalo_' + str(m_sub) + \
-            '_arxiv_nums_' + str(arxiv_num[0]) + '_' + str(arxiv_num[1]) + '_' + \
-            str(arxiv_num[2]) + '_' + str(arxiv_num[3]) + '.pdf'
+        fig_name = folder + '../Plots/' + 'DensitySqr_Comparison_msubhalo_{:.2e}'.format(m_sub) + \
+            '_BLH_Bertone_HW.pdf'
 
     fig.set_tight_layout(True)
     pl.savefig(fig_name)
     return
 
 
-def Jfactor_plots(m_sub=10.**7., arxiv_num=[13131729], M200=[False], mx=100.,
-                  cross_sec=3.*10**-26., annih_prod='BB'):
-
-    if len(arxiv_num) == 1:
-        arxiv_num *= 4
-    elif len(arxiv_num) == 2:
-        arxiv_num *= 2
-    elif len(arxiv_num) == 3:
-        print 'I dont know what to do with arxiv num input...'
-        exit()
-    if len(M200) == 1:
-        M200 *= 4
-    elif len(M200) == 2:
-        M200 *= 2
-    elif len(M200) == 3:
-        print 'I dont know what to do with M200 num input...'
-        exit()
-
-    e_tr = Einasto(m_sub / 0.005, .16, truncate=True, arxiv_num=arxiv_num[0], M200=M200[0])
-    mod_e_tr = Model(mx, cross_sec, annih_prod, m_sub / 0.005, 0.16,
-                     truncate=True, arxiv_num=arxiv_num[0], profile=0, m200=M200[0])
-    n_tr = NFW(m_sub / 0.005, .16, truncate=True, arxiv_num=arxiv_num[1], M200=M200[1])
-    mod_n_tr = Model(mx, cross_sec, annih_prod, m_sub / 0.005, 0.16,
-                     truncate=True, arxiv_num=arxiv_num[1], profile=1, m200=M200[0])
-    e_ntr = Einasto(m_sub, .16, truncate=False, arxiv_num=arxiv_num[2], M200=M200[2])
-    mod_e_ntr = Model(mx, cross_sec, annih_prod, m_sub, 0.16,
-                      truncate=False, arxiv_num=arxiv_num[2], profile=0, m200=M200[0])
-    n_ntr = NFW(m_sub, .16, truncate=False, arxiv_num=arxiv_num[3], M200=M200[3])
-    mod_n_ntr = Model(mx, cross_sec, annih_prod, m_sub, 0.16,
-                      truncate=False, arxiv_num=arxiv_num[3], profile=1, m200=M200[0])
-
-    def se_boundary(dist, prof, min_ext=0.1):
-        return np.abs(prof.Spatial_Extension(10. ** dist) - min_ext)
-
-    se_bound_e_tr = mod_e_tr.D_max_extend()
-    print 'Spatial Extension Boundary Einasto (Truncated): ', se_bound_e_tr
-    se_bound_n_tr = mod_n_tr.D_max_extend()
-    print 'Spatial Extension Boundary NFW (Truncated): ', se_bound_n_tr
-    se_bound_e_ntr = mod_e_ntr.D_max_extend()
-    print 'Spatial Extension Boundary Einasto (Not Truncated): ', se_bound_e_ntr
-    se_bound_n_ntr = mod_n_ntr.D_max_extend()
-    print 'Spatial Extension Boundary NFW (Not Truncated): ', se_bound_n_ntr
+def Jfactor_plots(m_sub=10.**7., dist=1.):
+    # J vs Dist
+    e_tr = Einasto(m_sub / 0.005, .16, truncate=True, arxiv_num=13131729, M200=False)
+    n_ntr = NFW(m_sub, .16, truncate=False, arxiv_num=160106781, M200=True)
+    hw_fit = HW_Fit(m_sub, M200=True, cons=False, stiff_rb=False)
+    hw_fit_c = HW_Fit(m_sub, M200=True, cons=True, stiff_rb=False)
+    hw_fit_o = HW_Fit(m_sub, M200=True, cons=True, stiff_rb=False, optimistic=True)
+    hw_fit_gl = HW_Fit(m_sub, gam=0.426, M200=True)
+    hw_fit_gh = HW_Fit(m_sub, gam=1.316, M200=True)
+    n_sc = NFW(m_sub, 1., truncate=False, arxiv_num=160304057, M200=True)
 
     num_dist_pts = 30
+    dist_tab = np.logspace(-3., 1., num_dist_pts)
     e_tr_j = np.zeros(num_dist_pts* 2).reshape((num_dist_pts, 2))
-    dist_tab1 = np.logspace(-3., se_bound_e_tr, num_dist_pts)
-    n_tr_j = np.zeros(num_dist_pts * 2).reshape((num_dist_pts, 2))
-    dist_tab2 = np.logspace(-3., se_bound_n_tr, num_dist_pts)
-    e_ntr_j = np.zeros(num_dist_pts * 2).reshape((num_dist_pts, 2))
-    dist_tab3 = np.logspace(-3., se_bound_e_ntr, num_dist_pts)
     n_ntr_j = np.zeros(num_dist_pts * 2).reshape((num_dist_pts, 2))
-    dist_tab4 = np.logspace(-3., se_bound_n_ntr, num_dist_pts)
+    hw_j = np.zeros(num_dist_pts * 2).reshape((num_dist_pts, 2))
+    hw_j_c = np.zeros(num_dist_pts * 2).reshape((num_dist_pts, 2))
+    hw_j_o = np.zeros(num_dist_pts * 2).reshape((num_dist_pts, 2))
+    hw_j_gl = np.zeros(num_dist_pts * 2).reshape((num_dist_pts, 2))
+    hw_j_gh = np.zeros(num_dist_pts * 2).reshape((num_dist_pts, 2))
+    n_sc_j = np.zeros(num_dist_pts)
+
     for i in range(num_dist_pts):
         print i+1, '/', num_dist_pts
-        e_tr_j[i] = [dist_tab1[i], np.power(10, e_tr.J_pointlike(dist_tab1[i]))]
-        n_tr_j[i] = [dist_tab2[i], np.power(10, n_tr.J_pointlike(dist_tab2[i]))]
-        e_ntr_j[i] = [dist_tab3[i], np.power(10, e_ntr.J_pointlike(dist_tab3[i]))]
-        n_ntr_j[i] = [dist_tab4[i], np.power(10, n_ntr.J_pointlike(dist_tab4[i]))]
+        e_tr_j[i] = [dist_tab[i], np.power(10, e_tr.J_pointlike(dist_tab[i]))]
+        n_ntr_j[i] = [dist_tab[i], np.power(10, n_ntr.J_pointlike(dist_tab[i]))]
+        hw_j[i] = [dist_tab[i], np.power(10, hw_fit.J_pointlike(dist_tab[i]))]
+        hw_j_c[i] = [dist_tab[i], np.power(10, hw_fit_c.J_pointlike(dist_tab[i]))]
+        hw_j_o[i] = [dist_tab[i], np.power(10, hw_fit_o.J_pointlike(dist_tab[i]))]
+        hw_j_gl[i] = [dist_tab[i], np.power(10, hw_fit_gl.J_pointlike(dist_tab[i]))]
+        hw_j_gh[i] = [dist_tab[i], np.power(10, hw_fit_gh.J_pointlike(dist_tab[i]))]
+        n_sc_j[i] = 10. ** n_sc.J_pointlike(dist_tab[i])
 
     fig = plt.figure(figsize=(8., 6.))
     ax = plt.gca()
     ax.set_xscale("log")
     ax.set_yscale('log')
 
-    pl.xlim([10 ** -4., 10. ** 1.])
-    pl.ylim([10 ** 20., np.max([e_tr_j[0], n_tr_j[0]])])
-    plt.plot(e_tr_j[:, 0], e_tr_j[:, 1], lw=1, color='Black', label='Einasto, T')
-    plt.plot(n_tr_j[:, 0], n_tr_j[:, 1], lw=1, color='Blue', label='NFW, T')
-    plt.plot(e_ntr_j[:, 0], e_ntr_j[:, 1], lw=1, color='Red', label='Einasto, NT')
-    plt.plot(n_ntr_j[:, 0], n_ntr_j[:, 1], lw=1, color='Magenta', label='NFW, NT')
+    pl.xlim([10 ** -3., 10. ** 1.])
+    pl.ylim([10 ** 20., np.max([e_tr_j[0], hw_j[0]])])
+    plt.plot(e_tr_j[:, 0], e_tr_j[:, 1], lw=1, color='Black', label='BLH')
+    plt.plot(n_ntr_j[:, 0], n_ntr_j[:, 1], lw=1, color='Magenta', label='Bertone')
+    plt.plot(hw_j[:, 0], hw_j[:, 1], lw=1, color='Blue', label='HW')
+    plt.plot(dist_tab, n_sc_j, lw=1, color='Aqua', label='SC')
 
-    plt.axvline(x=se_bound_e_tr, ymin=0., ymax=1., linewidth=1, color='Black', alpha=0.2)
-    plt.axvline(x=se_bound_n_tr,  ymin=0., ymax=1., linewidth=1, color='Blue', alpha=0.2)
-    plt.axvline(x=se_bound_e_ntr,  ymin=0., ymax=1., linewidth=1, color='Red', alpha=0.2)
-    plt.axvline(x=se_bound_n_ntr,  ymin=0., ymax=1., linewidth=1, color='Magenta', alpha=0.2)
-    plt.text(9., 1. * 10 ** 23., r'$\theta = 0.1^\circ$', fontsize=15, ha='right', va='center')
+    rb_max = np.zeros(len(dist_tab))
+    rb_min = np.zeros(len(dist_tab))
+    g_min = np.zeros(len(dist_tab))
+    g_max = np.zeros(len(dist_tab))
+    for i in range(dist_tab.size):
+        rb_min[i] = np.min([hw_j_c[i, 1], hw_j_o[i, 1]])
+        rb_max[i] = np.max([hw_j_c[i, 1], hw_j_o[i, 1]])
+        g_min[i] = np.min([hw_j_gh[i, 1], hw_j_gl[i, 1]])
+        g_max[i] = np.max([hw_j_gh[i, 1], hw_j_gl[i, 1]])
+    plt.plot(dist_tab, hw_j_c[:, 1], '--', dist_tab, hw_j_o[:, 1], '--', dist_tab,
+             hw_j_gl[:, 1], '-.', dist_tab, hw_j_gh[:, 1], '-.', color='k', alpha=0.5)
+    ax.fill_between(dist_tab, rb_min, rb_max, where=rb_max >= rb_min, facecolor='Blue', interpolate=True, alpha=0.3)
+    ax.fill_between(dist_tab, g_min, g_max, where=g_max >= g_min, facecolor='Blue', interpolate=True, alpha=0.3)
+
     plt.legend()
 
     pl.xlabel('Distance [kpc]', fontsize=20)
     pl.ylabel(r'J   [$GeV^2 / cm^5$]', fontsize=20)
     folder = MAIN_PATH + "/SubhaloDetection/Data/"
-    fig_name = folder + '../Plots/' + 'Jfactor_Comparison_msubhalo_' + str(m_sub) + \
-               '_arxiv_nums_' + str(arxiv_num[0]) + '_' + str(arxiv_num[1]) + '_' + \
-               str(arxiv_num[2]) + '_' + str(arxiv_num[3]) + '.pdf'
+    fig_name = folder + '../Plots/' + 'J_vs_Distance_Msubhalo_{:.2e}'.format(m_sub) + \
+        '_BLH_Bertone_HW.pdf'
     fig.set_tight_layout(True)
     pl.savefig(fig_name)
-    return
 
-
-def extension_vs_dist(m_sub=1.*10**7., arxiv_num=[13131729], M200=[False]):
-
-    #  NFW nontruncate having issues
-    if len(arxiv_num) == 1:
-        arxiv_num *= 4
-    elif len(arxiv_num) == 2:
-        arxiv_num *= 2
-    elif len(arxiv_num) == 3:
-        print 'I dont know what to do with arxiv num input...'
-        exit()
-    if len(M200) == 1:
-        M200 *= 4
-    elif len(M200) == 2:
-        M200 *= 2
-    elif len(M200) == 3:
-        print 'I dont know what to do with arxiv num input...'
-        exit()
-
-    mindist = -1.
-    e_tr = Einasto(m_sub / 0.005, .16, truncate=True, arxiv_num=arxiv_num[0], M200=M200[0])
-    n_tr = NFW(m_sub / 0.005, .16, truncate=True, arxiv_num=arxiv_num[1], M200=M200[1])
-    e_ntr = Einasto(m_sub, .16, truncate=False, arxiv_num=arxiv_num[2], M200=M200[2])
-    n_ntr = NFW(m_sub, .16, truncate=False, arxiv_num=arxiv_num[3], M200=M200[3])
-
-    num_dist_pts = 30
-    dist_tab = np.logspace(mindist, 1.5, num_dist_pts)
-
-    e_tr_se = np.zeros(dist_tab.size)
-    n_tr_se = np.zeros(dist_tab.size)
-    e_ntr_se = np.zeros(dist_tab.size)
-    n_ntr_se = np.zeros(dist_tab.size)
-    for i,d in enumerate(dist_tab):
-        print i+1, '/', num_dist_pts
-        e_tr_se[i] = e_tr.Spatial_Extension(d)
-        print d, e_tr_se[i]
-        n_tr_se[i] = n_tr.Spatial_Extension(d)
-        print d, n_tr_se[i]
-        e_ntr_se[i] = e_ntr.Spatial_Extension(d)
-        print d, e_ntr_se[i]
-        n_ntr_se[i] = n_ntr.Spatial_Extension(d)
-        print d, n_ntr_se[i]
+    # J vs Mass
+    mass_tab = np.logspace(0., 7., 150)
+    e_tr_j = np.zeros(mass_tab.size)
+    n_ntr_j = np.zeros(mass_tab.size)
+    hw_j = np.zeros(mass_tab.size)
+    hw_j_c = np.zeros(mass_tab.size)
+    hw_j_o = np.zeros(mass_tab.size)
+    hw_j_gl = np.zeros(mass_tab.size)
+    hw_j_gh = np.zeros(mass_tab.size)
+    sc_j = np.zeros(mass_tab.size)
+    for i, m_sub in enumerate(mass_tab):
+        print i + 1, '/', mass_tab.size
+        e_tr_j[i] = 10. ** Einasto(m_sub / 0.005, .16, truncate=True, arxiv_num=13131729, M200=False).J_pointlike(dist)
+        n_ntr_j[i] = 10. ** NFW(m_sub, .16, truncate=False, arxiv_num=160106781, M200=True).J_pointlike(dist)
+        hw_j[i] = 10. ** HW_Fit(m_sub, M200=True, cons=False, stiff_rb=False).J_pointlike(dist)
+        hw_j_c[i] = 10. ** HW_Fit(m_sub, M200=True, cons=True, stiff_rb=False).J_pointlike(dist)
+        hw_j_o[i] = 10. ** HW_Fit(m_sub, M200=True, cons=True, stiff_rb=False, optimistic=True).J_pointlike(dist)
+        hw_j_gl[i] = 10. ** HW_Fit(m_sub, gam=0.426, M200=True).J_pointlike(dist)
+        hw_j_gh[i] = 10. ** HW_Fit(m_sub, gam=1.316, M200=True).J_pointlike(dist)
+        sc_j[i] = 10. ** NFW(m_sub, 1., truncate=False, arxiv_num=160304057, M200=True).J_pointlike(dist)
 
     fig = plt.figure(figsize=(8., 6.))
     ax = plt.gca()
     ax.set_xscale("log")
     ax.set_yscale('log')
 
-    print 'Einasto Truncated: ', np.column_stack((dist_tab, e_tr_se))
-    print 'NFW Truncated: ', np.column_stack((dist_tab, n_tr_se))
-    print 'Einasto Not Truncated: ', np.column_stack((dist_tab, e_ntr_se))
-    print 'NFW Not Truncated: ', np.column_stack((dist_tab, n_ntr_se))
+    pl.xlim([10 ** 0., 10. ** 7.])
+    pl.ylim([np.min([hw_j_gl, n_ntr_j, hw_j_c]), np.max([e_tr_j, hw_j_o])])
+    plt.plot(mass_tab, e_tr_j, lw=1, color='Black', label='BLH')
+    plt.plot(mass_tab, n_ntr_j, lw=1, color='Magenta', label='Bertone')
+    plt.plot(mass_tab, hw_j, lw=1, color='Blue', label='HW')
+    plt.plot(mass_tab, sc_j, lw=1, color='Aqua', label='SC')
+
+    rb_max = np.zeros(len(mass_tab))
+    rb_min = np.zeros(len(mass_tab))
+    g_min = np.zeros(len(mass_tab))
+    g_max = np.zeros(len(mass_tab))
+    for i in range(mass_tab.size):
+        rb_min[i] = np.min([hw_j_c[i], hw_j_o[i]])
+        rb_max[i] = np.max([hw_j_c[i], hw_j_o[i]])
+        g_min[i] = np.min([hw_j_gh[i], hw_j_gl[i]])
+        g_max[i] = np.max([hw_j_gh[i], hw_j_gl[i]])
+    plt.plot(mass_tab, hw_j_c, '--', mass_tab, hw_j_o, '--', mass_tab,
+             hw_j_gl, '-.', mass_tab, hw_j_gh, '-.', color='k', alpha=0.5)
+    ax.fill_between(mass_tab, rb_min, rb_max, where=rb_max >= rb_min, facecolor='Blue', interpolate=True, alpha=0.3)
+    ax.fill_between(mass_tab, g_min, g_max, where=g_max >= g_min, facecolor='Blue', interpolate=True, alpha=0.3)
+
+    pl.xlabel(r'Mass [$M_\odot$]', fontsize=20)
+    pl.ylabel(r'J   [$GeV^2 / cm^5$]', fontsize=20)
+    folder = MAIN_PATH + "/SubhaloDetection/Data/"
+    fig_name = folder + '../Plots/' + 'Jfactor_vs_Mass_Distance_{:.2f}'.format(dist) + \
+               '_BLH_Bertone_HW.pdf'
+    fig.set_tight_layout(True)
+    pl.savefig(fig_name)
+
+    return
+
+
+def extension_vs_dist(m_sub=1.*10**7.):
+
+    mindist = -1.
+    e_tr = Einasto(m_sub / 0.005, .16, truncate=True, arxiv_num=13131729, M200=False)
+    n_ntr = NFW(m_sub, .16, truncate=False, arxiv_num=160106781, M200=True)
+    hw_fit = HW_Fit(m_sub, M200=True, gcd=8.5)
+    hw_fit_c = HW_Fit(m_sub, M200=True, gcd=8.5, cons=True)
+    hw_fit_o = HW_Fit(m_sub, M200=True, gcd=8.5, optimistic=True)
+    hw_fit_gl = HW_Fit(m_sub, M200=True, gcd=8.5, gam=0.426)
+
+    num_dist_pts = 30
+    dist_tab = np.logspace(mindist, 1.5, num_dist_pts)
+
+    e_tr_se = np.zeros(dist_tab.size)
+    n_ntr_se = np.zeros(dist_tab.size)
+    hw_se = np.zeros(dist_tab.size)
+    hw_c_se = np.zeros(dist_tab.size)
+    hw_o_se = np.zeros(dist_tab.size)
+    hw_gl = np.zeros(dist_tab.size)
+    for i,d in enumerate(dist_tab):
+        print i+1, '/', num_dist_pts
+        e_tr_se[i] = e_tr.Spatial_Extension(d)
+        print d, e_tr_se[i]
+        n_ntr_se[i] = n_ntr.Spatial_Extension(d)
+        print d, n_ntr_se[i]
+        hw_se[i] = hw_fit.Spatial_Extension(d)
+        print d, hw_se[i]
+        hw_c_se[i] = hw_fit_c.Spatial_Extension(d)
+        print d, hw_c_se[i]
+        hw_o_se[i] = hw_fit_o.Spatial_Extension(d)
+        print d, hw_o_se[i]
+        hw_gl[i] = hw_fit_gl.Spatial_Extension(d)
+        print d, hw_gl[i]
+
+    fig = plt.figure(figsize=(8., 6.))
+    ax = plt.gca()
+    ax.set_xscale("log")
+    ax.set_yscale('log')
+
+#    print 'Einasto Truncated: ', np.column_stack((dist_tab, e_tr_se))
+#    print 'NFW Not Truncated: ', np.column_stack((dist_tab, n_ntr_se))
+#    print 'HW: ', np.column_stack((dist_tab, hw_se))
+#    print 'HW: ', np.column_stack((dist_tab, hw_c_se))
 
     dist_plot = np.logspace(mindist, 1., 200)
     e_tr_plot = interpola(dist_plot, dist_tab, e_tr_se)
-    n_tr_plot = interpola(dist_plot, dist_tab, n_tr_se)
-    e_ntr_plot = interpola(dist_plot, dist_tab, e_ntr_se)
     n_ntr_plot = interpola(dist_plot, dist_tab, n_ntr_se)
+    hw_plot = interpola(dist_plot, dist_tab, hw_se)
+    hw_c_plot = interpola(dist_plot, dist_tab, hw_c_se)
+    hw_o_plot = interpola(dist_plot, dist_tab, hw_o_se)
+    hw_gl_plot = interpola(dist_plot, dist_tab, hw_gl)
 
     def rad_ext(dist, prof):
         return radtodeg * np.arctan(prof.max_radius / dist)
     rad_ex_e_tr = rad_ext(dist_plot, e_tr)
-    rad_ex_n_tr = rad_ext(dist_plot, n_tr)
-    rad_ex_e_ntr = rad_ext(dist_plot, e_ntr)
     rad_ex_n_ntr = rad_ext(dist_plot, n_ntr)
+    rad_ex_hw = rad_ext(dist_plot, hw_fit)
+    rad_ex_hw_c = rad_ext(dist_plot, hw_fit_c)
+    rad_ex_hw_o = rad_ext(dist_plot, hw_fit_o)
+    rad_ex_hw_gl = rad_ext(dist_plot, hw_fit_gl)
 
     pl.xlim([10 ** mindist, 8. * 10. ** 1.])
-    pl.ylim([np.min([e_tr_se[-1], n_tr_se[-1], e_ntr_se[-1], n_ntr_se[-1]]),
-             3.0 * np.max([e_tr_se[0], n_tr_se[0], e_ntr_se[0], n_ntr_se[0]])])
+    pl.ylim([10. ** -1., 90.])
     plt.plot(dist_plot, e_tr_plot, lw=1, color='Black', label='Einasto, T')
     plt.plot(dist_plot, rad_ex_e_tr, '--', ms=1, color='Black')
-    plt.plot(dist_plot, n_tr_plot, lw=1, color='Blue', label='NFW, T')
-    plt.plot(dist_plot, rad_ex_n_tr, '--', ms=1, color='Blue')
-    plt.plot(dist_plot, e_ntr_plot, lw=1, color='Red', label='Einasto, NT')
-    plt.plot(dist_plot, rad_ex_e_ntr, '--', ms=1, color='Red')
     plt.plot(dist_plot, n_ntr_plot, lw=1, color='Magenta', label='NFW, NT')
     plt.plot(dist_plot, rad_ex_n_ntr, '--', ms=1, color='Magenta')
+    plt.plot(dist_plot, hw_plot, lw=1, color='Blue', label='HW')
+    plt.plot(dist_plot, rad_ex_hw, '--', ms=1, color='Blue')
+
+    plt.plot(dist_plot, hw_c_plot, '-.', dist_plot, hw_o_plot, '-.', color='k', alpha=0.5)
+    ax.fill_between(dist_plot, hw_c_plot, hw_o_plot, where=hw_c_plot >= hw_o_plot, facecolor='Blue',
+                    interpolate=True, alpha=0.3)
+
+    plt.plot(dist_plot, hw_gl_plot, lw=1, color='Green', label=r'HW $\gamma^-$')
+    plt.plot(dist_plot, rad_ex_hw_gl, '--', ms=1, color='Green')
 
     plt.legend()
 
@@ -691,8 +731,7 @@ def extension_vs_dist(m_sub=1.*10**7., arxiv_num=[13131729], M200=[False]):
     pl.ylabel('Spatial Extension [degrees]', fontsize=20)
     folder = MAIN_PATH + "/SubhaloDetection/Data/"
     fig_name = folder + '../Plots/' + 'SpatialExt_Distance_msubhalo_' + str(m_sub) + \
-        '_arxiv_nums_' + str(arxiv_num[0]) + '_' + str(arxiv_num[1]) + '_' + \
-        str(arxiv_num[2]) + '_' + str(arxiv_num[3]) + '.pdf'
+        'BLH_Bertone_HW.pdf'
     fig.set_tight_layout(True)
     pl.savefig(fig_name)
     return
