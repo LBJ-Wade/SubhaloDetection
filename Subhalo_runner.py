@@ -33,6 +33,8 @@ parser.add_argument('--m_num', default=25, type=int)
 parser.add_argument('--c_num', default=15, type=int)
 parser.add_argument('--thresh', default=7 * 10.**-10., type=float)
 parser.add_argument('--M200', default=False)
+parser.add_argument('--gamma', default=0.945, type=float)
+parser.add_argument('--stiff_rb', default=False)
 parser.add_argument('--path', default=os.environ['SUBHALO_MAIN_PATH'] + '/SubhaloDetection/')
 
 args = parser.parse_args()
@@ -49,24 +51,32 @@ nobs = str2bool(args.nobs)
 pointlike = str2bool(args.pointlike)
 truncate = str2bool(args.truncate)
 m200 = str2bool(args.M200)
+stiff_rb = str2bool(args.stiff_rb)
 
-profile_list = ['Einasto', 'NFW']
-pf = profile_list[args.profile]
+Profile_list = ["Einasto", "NFW", "HW"]
+pf = Profile_list[args.profile]
 if pointlike:
     plike_tag = '_Pointlike'
 else:
     plike_tag = '_Extended'
 
-simga_n_file = pf + '_Truncate_' + str(args.truncate) + '_Cparam_' + str(args.arxiv_num) +\
-               '_alpha_' + str(args.alpha) + '_mx_' + str(args.mass) + '_annih_prod_' +\
-               args.annih_prod + '_bmin_' + str(args.b_min) + plike_tag + '.dat'
+if args.profile < 2:
+    extra_tag = '_Truncate_' + str(args.truncate) + '_Cparam_' + str(args.arxiv_num) +\
+               '_alpha_' + str(args.alpha)
+else:
+    extra_tag = '_Gamma_{:.3f}_Stiff_rb_'.format(args.gamma) + str(stiff_rb)
+
+simga_n_file = pf + '_mx_' + str(args.mass) + '_annih_prod_' + args.annih_prod + '_bmin_' +\
+               str(args.b_min) + plike_tag + extra_tag + '_Mlow_{:.3f}'.format(args.m_low) +\
+               '.dat'
 
 nobs_dir = "/Cross_v_Nobs/"
 
 Build_obs_class = Observable(args.mass, args.cross_sec, args.annih_prod, m_low=args.m_low, 
                              m_high=args.m_high, c_low=args.c_low,
                              c_high=args.c_high, alpha=args.alpha, profile=args.profile, truncate=truncate,
-                             arxiv_num=args.arxiv_num, point_like=args.pointlike)
+                             arxiv_num=args.arxiv_num, point_like=args.pointlike, gam=args.gamma,
+                             stiff_rb=stiff_rb)
 
 if dmax:
     if pointlike:

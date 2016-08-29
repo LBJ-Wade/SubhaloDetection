@@ -18,9 +18,9 @@ import glob
 from Via_LacteaII_Analysis import *
 from ELVIS_Analysis import *
 from scipy.optimize import curve_fit, minimize
-from scipy.special import beta, kv
+from scipy.special import beta, kv, erf
 
-warnings.filterwarnings('error')
+#warnings.filterwarnings('error')
 
 #  mpl.use('pdf')
 rc('font', **{'family': 'serif', 'serif': ['Times', 'Palatino']})
@@ -203,7 +203,7 @@ class Joint_Simulation_Comparison(object):
         return
 
     def fit_hisogram(self, mlow=10**4., mhigh=10.**7.):
-        gcd_range = np.linspace(0., 300., 100)
+        gcd_range = np.linspace(.1, 300., 100)
 
         for i in range(len(self.class_list)):
             print self.names[i]
@@ -218,13 +218,13 @@ class Joint_Simulation_Comparison(object):
 
         print 'Making Number Density Histogram...'
         plt.hist(subhalos[:, 1], bins=gcd_range, log=True, normed=False,
-                 weights=np.ones(subhalos[:, 1].size) / (subhalos[:, 1]**3. * 4. * np.pi / 3.),
+                 weights=1. / (subhalos[:, 1]**3. * 4. * np.pi / 3.),
                  alpha=0.3, color='Blue')
 
         pl.xlim([gcd_range[0], gcd_range[-1]])
         plt.xlabel(r'GC Distance (kpc)', fontsize=16)
         plt.ylabel(r'dN/dV', fontsize=16)
-
+        plt.xscale('log')
         plt.text(270, 10. ** -3.,
                  r'Mass Range: [{:.1e}, {:.1e}] $M_\odot$'.format(mlow, mhigh),
                  fontsize=10, ha='right', va='center', color='Black')
@@ -235,8 +235,7 @@ class Joint_Simulation_Comparison(object):
 
         print 'Making Mass Density Histogram...'
         plt.hist(subhalos[:, 1], bins=gcd_range, log=True, normed=False,
-                 weights=np.ones(subhalos[:, 1].size) * subhalos[:, 5] /
-                         (subhalos[:, 1] ** 3. * 4. * np.pi / 3.),
+                 weights= subhalos[:, 5] / (subhalos[:, 1] ** 3. * 4. * np.pi / 3.),
                  alpha=0.3, color='Blue')
 
         pl.xlim([gcd_range[0], gcd_range[-1]])
@@ -275,13 +274,14 @@ class Joint_Simulation_Comparison(object):
         print 'GCD Bounds: ', r_bounds
         r_diff_tab = np.diff(r_bounds) / 2. + r_bounds[:-1]
         fit_tabs_g = np.zeros(regions * 7).reshape((regions, 7))
-        fit_tabs_rb = np.zeros(regions * 7).reshape((regions, 7))
+        fit_tabs_rb = np.zeros(regions * 5).reshape((regions, 5))
 
         for i in range(regions):
             print 'Dist Range: ', r_bounds[i], r_bounds[i+1]
             args_o_int = (r_bounds[i] < gamma_plt[:, 0]) & (gamma_plt[:, 0] < r_bounds[i + 1])
             print 'Number Subhalos in Range: ', args_o_int.sum()
             print 'Mean Gamma of Subhalos in Range: ', np.mean(gamma_plt[args_o_int][:, 1])
+            r_diff = np.median(gamma_plt[args_o_int][:, 0])
 
             hist_g, bin_edges_g = np.histogram(gamma_plt[args_o_int][:, 1], bins='auto', normed=True)
             x_fit_g = np.diff(bin_edges_g) / 2. + bin_edges_g[:-1]
@@ -290,7 +290,7 @@ class Joint_Simulation_Comparison(object):
             median_g = mu_g
             std_dev_g_low = lower_sigma_gen_norm(mu_g, sig_g, k_g)
             std_dev_g_high = upper_sigma_gen_norm(mu_g, sig_g, k_g)
-            fit_tabs_g[i] = [r_diff_tab[i], mu_g, sig_g, k_g, median_g,
+            fit_tabs_g[i] = [r_diff, mu_g, sig_g, k_g, median_g,
                              std_dev_g_low, std_dev_g_high]
             # fig = plt.figure(figsize=(8., 6.))
             # ax = plt.gca()
@@ -305,20 +305,19 @@ class Joint_Simulation_Comparison(object):
 
             hist_rb, bin_edges_rb = np.histogram(rb_plt[args_o_int][:, 1], bins='auto', normed=True)
             x_fit_rb = np.diff(bin_edges_rb) / 2. + bin_edges_rb[:-1]
-            pars, cov = curve_fit(burr_dist, x_fit_rb, hist_rb,  bounds=(0., np.inf))
-            a, b, c = [pars[0], pars[1], pars[2]]
-            med_rb = a * (2. ** (1./ c) - 1.) ** (-1. / b)
-            std_dev_r_high = upper_sigma_burr(a, b, c, maxval=np.max(rb_plt[args_o_int][:, 1]))
-            std_dev_r_low = lower_sigma_burr(a, b, c, minval=np.min(rb_plt[args_o_int][:, 1]))
-            fit_tabs_rb[i] = [r_diff_tab[i], a, b, c, med_rb, std_dev_r_low, std_dev_r_high]
+            pars1, cov = curve_fit(lnnormal, x_fit_rb, hist_rb, bounds=(0., np.inf))
+            mu, sig = [pars1[0], pars1[1]]
+            std_dev_r_high = lower_sigma_lnnorm(mu, sig)
+            std_dev_r_low = upper_sigma_lnnorm(mu, sig)
+            fit_tabs_rb[i] = [r_diff, mu, sig, std_dev_r_low, std_dev_r_high]
             # fig = plt.figure(figsize=(8., 6.))
             # ax = plt.gca()
             # x_lin = np.linspace(rb_plt[args_o_int][:, 1].min(), rb_plt[args_o_int][:, 1].max(), 100)
-            # y_test = burr_dist(x_lin, pars[0], pars[1], pars[2])
+            # y_test = lnnormal(x_lin, mu, sig)
             # plt.hist(rb_plt[args_o_int][:, 1], bins='auto', normed=True, color='White')
             # plt.plot(x_lin, y_test)
-            # plt.axvline(x=fit_tabs_rb[i,4] - fit_tabs_rb[i,5], ymin=0, ymax=1, color='r')
-            # plt.axvline(x=fit_tabs_rb[i, 4] + fit_tabs_rb[i, 6], ymin=0, ymax=1, color='r')
+            # plt.axvline(x=fit_tabs_rb[i,1] - fit_tabs_rb[i,3], ymin=0, ymax=1, color='r')
+            # plt.axvline(x=fit_tabs_rb[i, 1] + fit_tabs_rb[i, 4], ymin=0, ymax=1, color='r')
             # name = '/Users/SamWitte/Desktop/Rb_Fit_Distribution_BURR_' + str(i) + '_.pdf'
             # pl.savefig(name)
 
@@ -361,19 +360,37 @@ class Joint_Simulation_Comparison(object):
         gam_local_err = 10. ** np.polyval(gam_err_fit, np.log10(8.5))
         gam_err_fit2 = np.polyfit(np.log10(fit_tabs_g[:, 0]), np.log10(fit_tabs_g[:, 4] - fit_tabs_g[:, 5]), 1)
         gam_local_err2 = 10. ** np.polyval(gam_err_fit2, np.log10(8.5))
+        std_tab = fit_tabs_g[:, 2] / fit_tabs_g[:, 3] * np.exp(fit_tabs_g[:, 3]) * \
+                  np.sqrt(np.exp(fit_tabs_g[:, 3] ** 2.) - 1.)
+        pars, cov = curve_fit(lin_fit, np.log10(fit_tabs_g[:, 0]), np.log10(fit_tabs_g[:, 4] + fit_tabs_g[:, 6]),
+                              bounds=([0., -np.inf], np.inf), sigma=std_tab)
+        pars2, cov2 = curve_fit(lin_fit, np.log10(fit_tabs_g[:, 0]), np.log10(fit_tabs_g[:, 4] - fit_tabs_g[:, 5]),
+                                bounds=([0., -np.inf], np.inf), sigma=std_tab)
+
+        gam_local_err = 10. ** lin_fit(np.log10(8.5), pars[0], pars[1])
+        gam_local_err2 = 10. ** lin_fit(np.log10(8.5), pars2[0], pars2[1])
 
         plt.plot(gcd_tab_plt, gam_fit_plt, 'k', ms=2)
-        plt.text(12., 1.6, r'$\gamma(R_\oplus)$ = {:.3f}'.format(10. ** np.polyval(gam_mean_fit,np.log10(8.5))),
+        plt.text(12., 10.**.05, r'$\gamma(R_\oplus)$ = {:.3f}'.format(10. ** np.polyval(gam_mean_fit,np.log10(8.5))),
                  fontsize=10, ha='left', va='center', color='Black')
-        plt.text(12., 1.3, r'$\gamma^+(R_\oplus)$ = {:.3f}'.format(gam_local_err),
+        plt.text(12., 10.**.1, r'$\gamma^+(R_\oplus)$ = {:.3f}'.format(gam_local_err),
                  fontsize=10, ha='left', va='center', color='Black')
-        plt.text(12., 1.1, r'$\gamma^-(R_\oplus)$ = {:.3f}'.format(gam_local_err2),
+        plt.text(12., 10**.05, r'$\gamma^-(R_\oplus)$ = {:.3f}'.format(gam_local_err2),
+                 fontsize=10, ha='left', va='center', color='Black')
+        plt.text(12., 10**0., r'$\mu$ = {:.2f} {:.2f} {:.2f} {:.2f}'.format(fit_tabs_g[0, 1], fit_tabs_g[1, 1],
+                                                                        fit_tabs_g[2, 1], fit_tabs_g[3, 1]),
+                 fontsize=10, ha='left', va='center', color='Black')
+        plt.text(12., 10.**-.05, r'$\sigma$ = {:.2f} {:.2f} {:.2f} {:.2f}'.format(fit_tabs_g[0, 2], fit_tabs_g[1, 2],
+                                                                         fit_tabs_g[2, 2], fit_tabs_g[3, 2]),
+                 fontsize=10, ha='left', va='center', color='Black')
+        plt.text(12., 10.**-.1, r'$k$ = {:.2f} {:.2f} {:.2f} {:.2f}'.format(fit_tabs_g[0, 3], fit_tabs_g[1, 3],
+                                                                         fit_tabs_g[2, 3], fit_tabs_g[3, 3]),
                  fontsize=10, ha='left', va='center', color='Black')
 
         pl.savefig(self.dir + '/Joint_Sim_plots/' + fname)
 
         print 'Making Rb vs GCD scatter...'
-        rb_mean_fit = np.polyfit(np.log10(fit_tabs_rb[:, 0]), np.log10(fit_tabs_rb[:, 4]), 1)
+        rb_mean_fit = np.polyfit(np.log10(fit_tabs_rb[:, 0]), np.log10(fit_tabs_rb[:, 1]), 1)
         rb_fit_plt = 10. ** np.polyval(rb_mean_fit, np.log10(gcd_tab_plt))
 
         fig = plt.figure(figsize=(8., 6.))
@@ -389,47 +406,54 @@ class Joint_Simulation_Comparison(object):
         fname = 'Rb_vs_GCD_Scatter__Mass_Range_{:.1e}_{:.1e}'.format(mlow, mhigh) + \
                 '.pdf'
         plt.plot(rb_plt[:, 0], rb_plt[:, 1], 'ro', alpha=0.3)
-        plt.plot(fit_tabs_rb[:, 0], fit_tabs_rb[:, 4], 'kx', ms=6, mew=3)
+        plt.plot(fit_tabs_rb[:, 0], fit_tabs_rb[:, 1], 'kx', ms=6, mew=3)
         plt.plot(gcd_tab_plt, rb_fit_plt, 'k', ms=2)
 
         for x in range(fit_tabs_rb[:, 0].size):
-            if (fit_tabs_rb[x, 4] - fit_tabs_rb[x, 5]) > 0.:
-                yerr_l = (np.log10(fit_tabs_rb[x, 4] - fit_tabs_rb[x, 5]) -
+            if (fit_tabs_rb[x, 1] - fit_tabs_rb[x, 3]) > 0.:
+                yerr_l = (np.log10(fit_tabs_rb[x, 1] - fit_tabs_rb[x, 3]) -
                           np.log10(ymin)) / (np.log10(ymax) - np.log10(ymin))
             else:
                 yerr_l = 0.
-            yerr_h = (np.log10(fit_tabs_rb[x, 4] + fit_tabs_rb[x, 6]) -
+            yerr_h = (np.log10(fit_tabs_rb[x, 1] + fit_tabs_rb[x, 4]) -
                       np.log10(ymin)) / (np.log10(ymax) - np.log10(ymin))
             plt.axvline(x=fit_tabs_rb[x, 0], ymin=yerr_l, ymax=yerr_h,
                         linewidth=2, color='Black')
 
-        rb_err_fit = np.polyfit(np.log10(fit_tabs_rb[:, 0]), np.log10(fit_tabs_rb[:, 4] + fit_tabs_rb[:, 6]), 1)
-        rb_err_fit2 = np.polyfit(np.log10(fit_tabs_rb[:, 0]), np.log10(fit_tabs_rb[:, 4] - fit_tabs_rb[:, 5]), 1)
-        rb_local_err = 10. ** np.polyval(rb_err_fit, np.log10(8.5))
-        rb_local_err2 = 10. ** np.polyval(rb_err_fit2, np.log10(8.5))
+        pars, cov = curve_fit(lin_fit, np.log10(fit_tabs_rb[:, 0]), np.log10(fit_tabs_rb[:, 1] + fit_tabs_rb[:, 4]),
+                              bounds=([0., -np.inf], np.inf), sigma=fit_tabs_rb[:, 2])
+        pars2, cov2 = curve_fit(lin_fit, np.log10(fit_tabs_rb[:, 0]), np.log10(fit_tabs_rb[:, 1] - fit_tabs_rb[:, 4]),
+                                bounds=([0., -np.inf], np.inf), sigma=fit_tabs_rb[:, 2])
+
+        rb_local_err = 10. ** lin_fit(np.log10(8.5), pars[0], pars[1])
+        rb_local_err2 = 10. ** lin_fit(np.log10(8.5), pars2[0], pars2[1])
 
         legtot = ymax - ymin
         legtop = .8 * (ymax - ymin)
-        down = legtot / 10
+        down = legtot / 8
         plt.text(12., legtop, r'$R_b(R_\oplus)$ = {:.3f}'.format(10. ** np.polyval(rb_mean_fit, np.log10(8.5))),
                  fontsize=10, ha='left', va='center', color='Black')
         plt.text(12., legtop - down, r'$R_b^+(R_\oplus)$ = {:.3f}'.format(rb_local_err),
                  fontsize=10, ha='left', va='center', color='Black')
         plt.text(12., legtop - 2. * down, r'$R_b^-(R_\oplus)$ = {:.3f}'.format(rb_local_err2),
                  fontsize=10, ha='left', va='center', color='Black')
+        plt.text(12., legtop - 3. * down, r'$\sigma$ = {:.2f} {:.2f} {:.2f} {:.2f}'.format(fit_tabs_rb[0, 2],
+                                                                                           fit_tabs_rb[1, 2],
+                                                                                           fit_tabs_rb[2, 2],
+                                                                                           fit_tabs_rb[3, 2]),
+                 fontsize=10, ha='left', va='center', color='Black')
         pl.savefig(self.dir + '/Joint_Sim_plots/' + fname)
-
         return
 
     def fit_params(self):
         mass_list = np.array([4.10e+05, 5.35e+06, 1.70e+07, 3.16e+07, 5.52e+07, 1.18e+08, 1.e+10])
         mass_plt = np.diff(mass_list) / 2. + mass_list[:-1]
-        med_gamma = np.array([0.896, 0.815, 0.828, 0.941, 1.017, 1.173])
-        high_gamma = np.array([1.245, 1.234, 1.270, 1.258, 1.396, 1.494])
-        low_gamma = np.array([0.453, 0.224, 0.202, 0.347, 0.481, 0.851])
-        med_rb = np.array([ 0.050, 0.118, 0.228, 0.287, 0.317, 0.614])
-        high_rb = np.array([ 0.091, 0.170, 0.366, 0.485, 0.526, 1.291])
-        low_rb = np.array([ 0.025, 0.093, 0.160, 0.174, 0.207, 0.361])
+        med_gamma = np.array([0.827, 0.745, 0.754, 0.847, 0.898, 1.030])
+        high_gamma = np.array([1.228, 1.183, 1.236, 1.133, 1.343, 1.426])
+        low_gamma = np.array([0.392, 0.207, 0.159, 0.548, 0.465, 0.691])
+        med_rb = np.array([0.039, 0.093, 0.189, 0.223, 0.211, 0.332])
+        high_rb = np.array([0.058, 0.115, 0.245, 0.305, 0.286, 0.469])
+        low_rb = np.array([0.020, 0.072, 0.133, 0.141, 0.135, 0.192])
 
         fig = plt.figure(figsize=(8., 6.))
         ax = plt.gca()
@@ -463,14 +487,27 @@ class Joint_Simulation_Comparison(object):
         g_fit = np.mean(med_gamma)
         g_fit_up = np.mean(high_gamma)
         g_fit_down = np.mean(low_gamma)
+        bnds = ((0.01, np.inf), (0., np.inf))
+        fit_pts = np.array([[0.16, g_fit_down], [0.5, g_fit], [0.84, g_fit_up]])
+
+        g_pars = minimize(gen_norm_cdf, [0.4, 0.1], args=(g_fit), bounds=bnds, method='SLSQP')
+
+        twosig_low = g_fit - lower_sigma_gen_norm(g_fit, g_pars.x[0], g_pars.x[1], const=0.475)
+        twosig_up = g_fit + upper_sigma_gen_norm(g_fit, g_pars.x[0], g_pars.x[1], const=0.475)
 
         plt.axhline(y=g_fit, linewidth=1, color='Black')
-        plt.axhline(y=g_fit_up, linewidth=1, color='Blue', ls='-.')
-        plt.axhline(y=g_fit_down, linewidth=1, color='Blue', ls='-.')
+        plt.axhline(y=g_fit_up, linewidth=1, color='k', ls='--')
+        plt.axhline(y=g_fit_down, linewidth=1, color='k', ls='--')
+        plt.axhline(y=twosig_low, linewidth=1, color='k', ls='--')
+        plt.axhline(y=twosig_up, linewidth=1, color='k', ls='--')
+        ax.axhspan(g_fit_up, g_fit_down, alpha=0.2, color='blue')
+        ax.axhspan(twosig_up, twosig_low, alpha=0.2, color='blue')
         plt.text(5. * 10 ** 9., 10**-.45, r'$<\gamma> = {:.3f}$'.format(g_fit), fontsize=12, ha='right')
-        plt.text(5. * 10 ** 9., 10**-.53, r'$\gamma^+ = {:.3f}$'.format(g_fit_up), fontsize=12, ha='right')
-        plt.text(5. * 10 ** 9., 10**-.61, r'$\gamma^- = {:.3f}$'.format(g_fit_down), fontsize=12, ha='right')
-
+        #plt.text(5. * 10 ** 9., 10**-.53, r'$\gamma^+ = {:.3f}$'.format(g_fit_up), fontsize=12, ha='right')
+        #plt.text(5. * 10 ** 9., 10**-.61, r'$\gamma^- = {:.3f}$'.format(g_fit_down), fontsize=12, ha='right')
+        plt.text(5. * 10 ** 9., 10 ** -.53, r'$\sigma = {:.3f}$'.format(g_pars.x[0]), fontsize=12, ha='right')
+        plt.text(5. * 10 ** 9., 10 ** -.61, r'$k = {:.3f}$'.format(g_pars.x[1]), fontsize=12, ha='right')
+        plt.text(5. * 10 ** 9., 10 ** -.69, 'Gen. Normal Dist.', fontsize=12, ha='right')
         fig.set_tight_layout(True)
         pl.savefig(self.dir + '/Joint_Sim_plots/' + fname)
 
@@ -489,28 +526,38 @@ class Joint_Simulation_Comparison(object):
         fname = 'Fit_Parameters_Rb_@Earth_With_Mass.pdf'
 
         rb_fit = np.polyfit(np.log10(median_mass), np.log10(med_rb), 1)
-        rb_fit_up = np.polyfit(np.log10(median_mass), np.log10(high_rb), 1)
-        rb_fit_down = np.polyfit(np.log10(median_mass), np.log10(low_rb), 1)
+        #rb_fit_up = np.polyfit(np.log10(median_mass), np.log10(high_rb), 1)
+        #rb_fit_down = np.polyfit(np.log10(median_mass), np.log10(low_rb), 1)
         mtab = np.logspace(4, 10, 100)
         rb_fit_plot = 10. ** np.polyval(rb_fit, np.log10(mtab))
-        rb_fit_up_plot = 10. ** np.polyval(rb_fit_up, np.log10(mtab))
-        rb_fit_low_plot = 10. ** np.polyval(rb_fit_down, np.log10(mtab))
+        #rb_fit_up_plot = 10. ** np.polyval(rb_fit_up, np.log10(mtab))
+        #rb_fit_low_plot = 10. ** np.polyval(rb_fit_down, np.log10(mtab))
         plt.plot(mtab, rb_fit_plot, linewidth=1, color='Black')
-        plt.plot(mtab, rb_fit_up_plot, '-.', linewidth=1, color='Blue')
-        plt.plot(mtab, rb_fit_low_plot, '-.', linewidth=1, color='Blue')
+        usig = np.zeros(mtab.size)
+        lsig = np.zeros(mtab.size)
+        dusig = np.zeros(mtab.size)
+        dlsig = np.zeros(mtab.size)
+        for i, rb in enumerate(rb_fit_plot):
+            usig[i] = upper_sigma_lnnorm(rb, 0.47)
+            lsig[i] = lower_sigma_lnnorm(rb, 0.47)
+            dusig[i] = upper_sigma_lnnorm(rb, 0.47, dsig=.975)
+            dlsig[i] = lower_sigma_lnnorm(rb, 0.47, dsig=.025)
+        upper = rb_fit_plot + usig
+        lower = rb_fit_plot - lsig
+        upper2 = rb_fit_plot + dusig
+        lower2 = rb_fit_plot - dlsig
+        plt.plot(mtab, upper, '--', mtab, upper2, '--', linewidth=1, color='k')
+        plt.plot(mtab, lower, '--', mtab, lower2, '--', linewidth=1, color='k')
+        ax.fill_between(mtab, upper, lower, where=upper >= lower, facecolor='Green', interpolate=True, alpha=0.2)
+        ax.fill_between(mtab, upper2, lower2, where=upper2 >= lower2, facecolor='Green', interpolate=True, alpha=0.2)
+        # plt.plot(mtab, rb_fit_up_plot, '-.', linewidth=1, color='Blue')
+        # plt.plot(mtab, rb_fit_low_plot, '-.', linewidth=1, color='Blue')
         plt.text(6 * 10 ** 5., 10 ** 0.,
                  r'$R_b(M) = 10^{{{:.3f}}} \times \left(\frac{{M}}{{M_\odot}}\right)^{{{:.3f}}}$'.format(rb_fit[1],
                                                                                                          rb_fit[0]),
                  fontsize=12)
-        plt.text(6 * 10 ** 5., 10. ** -0.2,
-                 r'$R_b^{{cons}}(M) = 10^{{{:.3f}}} \times \left(\frac{{M}}{{M_\odot}}\right)^{{{:.3f}}}$'.format(rb_fit_up[1],
-                                                                                                                  rb_fit_up[0]),
-                 fontsize=12, color='Blue')
-        plt.text(6 * 10 ** 5., 10. ** -0.4,
-                 r'$R_b^{{opt}}(M) = 10^{{{:.3f}}} \times \left(\frac{{M}}{{M_\odot}}\right)^{{{:.3f}}}$'.format(
-                     rb_fit_down[1],
-                     rb_fit_down[0]),
-                 fontsize=12, color='Blue')
+        plt.text(6 * 10 ** 5., 10. ** -0.4, r'$\sigma = 0.47$', fontsize=12, color='k')
+        plt.text(6 * 10 ** 5., 10. ** -0.3, 'Log-normal Dist.', fontsize=12, color='k')
 
         for i, m in enumerate(median_mass):
             yerr_l = np.log10(low_rb[i] / ymin) / np.log10(ymax / ymin)
@@ -521,11 +568,10 @@ class Joint_Simulation_Comparison(object):
             plt.axhline(y=med_rb[i], xmin=xerr_l, xmax=xerr_h, linewidth=1.5, color='Red')
         fig.set_tight_layout(True)
         pl.savefig(self.dir + '/Joint_Sim_plots/' + fname)
-
         return
 
     def obtain_number_density(self, min_mass=4.10e+05, max_mass=1.e+10):
-        gcd_range = np.array([0., 30.])
+        gcd_range = np.array([0., 300.])
         for i in range(len(self.class_list)):
             print self.names[i]
             sub_o_int = self.class_list[i].find_subhalos(min_mass=min_mass, max_mass=max_mass,
@@ -537,15 +583,34 @@ class Joint_Simulation_Comparison(object):
             else:
                 subhalos = np.vstack((subhalos, self.subhalos[i][sub_o_int][:, :6]))
 
-        mass_bins = np.logspace(np.log10(min_mass), np.log10(max_mass), 20)
+        mass_bins = np.linspace(np.log10(min_mass), np.log10(max_mass), 20)
+        dist_bins = np.linspace(1., 300., 20)
         print 'Making Subhalo Number Density Histogram...'
-        plt.hist(subhalos[:, 5], bins=mass_bins, log=True, normed=False,
+        plt.hist(subhalos[:, 1], bins=dist_bins, log=True, normed=False,
                  weights=1. / (4. / 3. * np.pi * subhalos[:, 1] ** 3.),
                  color='White')
         pl.gca().set_xscale("log")
-        pl.xlim([min_mass, max_mass])
-        plt.xlabel(r'Subhalo Mass [$M_\odot$]', fontsize=16)
-        plt.ylabel(r'$\frac{dN}{dM dV}$', fontsize=16)
+        pl.xlim([10., 300])
+        plt.xlabel(r'Distance', fontsize=16)
+        plt.ylabel(r'$\frac{dN}{dV}$', fontsize=16)
+
+        #TODO: Fit Einasto Curve to Estimate Local coeffiecient in dN/ dM dV
+        fit_ein, bine = np.histogram(subhalos[:, 1], bins=dist_bins, normed=False,
+                                weights=1. / (4. / 3. * np.pi * subhalos[:, 1] ** 3.))
+        d_ein = np.zeros(len(dist_bins) - 1)
+        for i in range(len(dist_bins) - 1):
+            d_ein[i] = np.median(subhalos[(subhalos[:, 1] < dist_bins[i + 1]) &
+                                          (subhalos[:, 1] > dist_bins[i])][:, 1])
+        parms, cov = curve_fit(einasto_fit, d_ein, fit_ein, bounds=(0, np.inf), sigma=fit_ein)
+        print parms
+        plot_ein = einasto_fit(dist_bins, parms[0], parms[1], parms[2])
+        plt.plot(dist_bins, plot_ein, '--', color='blue')
+        plt.text(20., 10. ** -1.4, 'Mass Range: [{:.2e}, {:.2e}]'.format(min_mass, max_mass),
+                 fontsize=10, color='k')
+        plt.text(100., 10.**-2., 'Einasto Fit', fontsize=10, color='b')
+        plt.text(100., 10. ** -2.2, r'$\alpha = {:.2f}$'.format(parms[1]), fontsize=10, color='b')
+        plt.text(100., 10. ** -2.4, r'$\rho_s = {:.2e}$'.format(parms[2]), fontsize=10, color='b')
+        plt.text(100., 10. ** -2.6, r'$r_s = {:.2f}$'.format(parms[0]), fontsize=10, color='b')
 
         fname = 'Subhalo_Number_Density_Mass_Range_{:.1e}_{:.1e}'.format(min_mass, max_mass) + \
                 'GCD_range_{:.1f}_{:.1f}'.format(gcd_range[0], gcd_range[1]) + '.pdf'
@@ -572,32 +637,42 @@ def gen_norm_dist(x, mu, sigma, k):
             ret_arr[i] = np.inf
     return ret_arr
 
-def lower_sigma_gen_norm(mu, sigma, k):
+
+def gen_norm_cdf(x, mu, num=0.34):
+    sigma = x[0]
+    k = x[1]
+    lower = quad(gen_norm_dist, 0.41, 0.85, args=(mu, sigma, k))[0]
+    upper = quad(gen_norm_dist, 0.85, 1.258, args=(mu, sigma, k))[0]
+    return np.abs(lower + upper - 2. * num)
+
+
+def lower_sigma_gen_norm(mu, sigma, k, const=0.34):
     if k < 0.:
         bndlow = mu + sigma / k
     else:
         bndlow = 10 ** -3.
     bounds = [(bndlow, mu)]
-    test_list = np.linspace(bndlow, mu - 0.001, 50)
+    test_list = np.linspace(bndlow, mu - 0.001, 200)
     int_list = np.zeros(len(test_list))
     for i, t in enumerate(test_list):
-        int_list[i] = np.abs(quad(gen_norm_dist, t, mu, args=(mu, sigma, k))[0] - 0.34)
+        int_list[i] = np.abs(quad(gen_norm_dist, t, mu, args=(mu, sigma, k))[0] - const)
     lsig = test_list[np.argmin(int_list)]
     #lsig = minimize(lambda y: np.abs(quad(gen_norm_dist, y, mu, args=(mu, sigma, k))[0] - 0.34),
     #                np.array([mu - .1]), method='SLSQP', bounds=bounds, tol=10**-3.)
     print 'Lower Sigma [check]', quad(gen_norm_dist, lsig, mu, args=(mu, sigma, k))[0]
     return mu - lsig
 
-def upper_sigma_gen_norm(mu, sigma, k):
+
+def upper_sigma_gen_norm(mu, sigma, k, const=0.34):
     if k > 0.:
         bndup = mu + sigma / k
     else:
         bndup = np.inf
     bounds = [(mu, bndup)]
-    test_list = np.logspace(np.log10(mu + 0.001), np.log10(bndup), 50)
+    test_list = np.logspace(np.log10(mu + 0.001), np.log10(bndup), 200)
     int_list = np.zeros(len(test_list))
     for i, t in enumerate(test_list):
-        int_list[i] = np.abs(quad(gen_norm_dist, mu, t, args=(mu, sigma, k))[0] - 0.34)
+        int_list[i] = np.abs(quad(gen_norm_dist, mu, t, args=(mu, sigma, k))[0] - const)
     usig = test_list[np.argmin(int_list)]
     #usig = minimize(lambda y: np.abs(quad(gen_norm_dist, mu, y, args=(mu, sigma, k))[0] - 0.34),
     #                np.array([mu + .1]), method='SLSQP', bounds=bounds, tol=10**-3.)
@@ -716,4 +791,61 @@ def upper_sigma_burr(a, b, c, maxval=10.):
 
     print 'Upper Sigma [check]', quad(burr_dist, med, usig, args=(a, b, c))[0]
     return usig - med
+
+
+def lnnormal(x, mu, sigma):
+    try:
+        dist = np.zeros(len(x))
+    except TypeError:
+        x = np.array([x])
+        dist = np.zeros(len(x))
+    valid_arg = x > 0.
+    dist[valid_arg] = np.exp(-((np.log(x[valid_arg] / mu)) / sigma) ** 2. / 2.) / \
+                      np.sqrt(2. * np.pi * sigma ** 2. * x ** 2.)
+    return dist
+
+def cdf_lnnormal_diff(x, mu, sigma, num):
+    try:
+        dist = np.zeros(len(x))
+    except TypeError:
+        x = np.array([x])
+        dist = np.zeros(len(x))
+    valid_arg = x > 0.
+    dist[valid_arg] = 0.5 * (1. + erf((np.log(x[valid_arg] / mu)) / (sigma * np.sqrt(2.))))
+    return np.abs(dist - num)
+
+
+def lower_sigma_lnnorm(mu, sigma, minval=10**-3., dsig=0.16):
+    med = mu
+    bounds = [(minval, med)]
+    test_list = np.logspace(np.log10(minval), np.log10(med - 0.001), 400)
+    int_list = np.zeros(len(test_list))
+    for i, t in enumerate(test_list):
+        int_list[i] = cdf_lnnormal_diff(t, mu, sigma, dsig)
+    lsig = test_list[np.argmin(int_list)]
+    # print 'Lower Sigma [check]', quad(lnnormal, lsig, med, args=(mu, sigma))[0]
+    return med - lsig
+
+
+def upper_sigma_lnnorm(mu, sigma, maxval=10., dsig=0.84):
+    med = mu
+    bounds = [(med, maxval)]
+    test_list = np.logspace(np.log10(med + 0.001), np.log10(maxval), 400)
+    int_list = np.zeros(len(test_list))
+    for i, t in enumerate(test_list):
+        int_list[i] = cdf_lnnormal_diff(t, mu, sigma, dsig)
+    usig = test_list[np.argmin(int_list)]
+    # print 'Upper Sigma [check]', quad(lnnormal, med, usig, args=(mu, sigma))[0]
+    return usig - med
+
+
+def einasto_fit(r, rs, alpha, density):
+    if alpha < 0:
+        return 0.
+    else:
+        return density * np.exp(-2. / alpha * (((r / rs) ** alpha) - 1.))
+
+
+def lin_fit(x, m, b):
+    return m * x + b
 

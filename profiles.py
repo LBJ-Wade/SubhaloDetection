@@ -13,6 +13,9 @@ import scipy.integrate as integrate
 import scipy.special as special
 from scipy.optimize import fminbound, minimize_scalar, minimize, brentq
 from scipy.interpolate import interp1d, interpn
+import warnings
+
+warnings.filterwarnings('error')
 
 Profile_list = ["Einasto", "NFW", "HW"]
 
@@ -29,24 +32,42 @@ class Subhalo(object):
         :param theta: Upper bound on anuglar integration (in degrees)
         :return: returns log10 of J factor
         """
-        max_theta = radtodeg * np.arctan(self.max_radius / dist)
+        max_theta = radtodeg * np.arctan(self.max_int_radius / dist)
         if theta > max_theta:
             theta = max_theta
         theta = theta * np.pi / 180.
+        eps = 10. ** -3.
+        try:
+            jfact1 = integrate.dblquad(lambda x, t: 2. * np.pi * kpctocm * np.sin(t) *
+                                                    self.density(np.sqrt(dist ** 2. + x ** 2. -
+                                                                         2.0 * dist * x * np.cos(t)))
+                                                    ** 2.0,
+                                       0., theta, lambda th: self.los_min(th, dist),
+                                       lambda th: self.los_max(th, dist), epsabs=10 ** -4,
+                                       epsrel=10 ** -4)
+            return np.log10(jfact1[0])
+        except Warning:
+            print 'Initial Attempt at J factor integration failed...'
 
-        #if theta > 0.005 * 180. / np.pi:
-        jfact = integrate.dblquad(lambda x, t:
-                                  2. * np.pi * kpctocm * np.sin(t) *
-                                  self.density(np.sqrt(dist ** 2. + x ** 2. -
-                                                       2.0 * dist * x * np.cos(t))
-                                               ) ** 2.0,
-                                  0., theta, lambda th: self.los_min(th, dist),
-                                  lambda th: self.los_max(th, dist), epsabs=10 ** -4,
-                                  epsrel=10 ** -4)
+            jfact1 = integrate.dblquad(lambda x, t: 2. * np.pi * kpctocm * np.sin(t) *
+                                                    self.density(np.sqrt(dist ** 2. + x ** 2. -
+                                                                         2.0 * dist * x * np.cos(t)))
+                                                    ** 2.0,
+                                      0., theta, lambda th: self.los_min(th, dist),
+                                      lambda th: self.d_halo_cent(th, dist, front=True, eps=eps), epsabs=10 ** -4,
+                                      epsrel=10 ** -4)
 
-        return np.log10(jfact[0])
-        #else:
-        #    return self.J_pointlike(dist)
+            jfact2 = integrate.dblquad(lambda x, t:
+                                       2. * np.pi * kpctocm * np.sin(t) *
+                                       self.density(np.sqrt(dist ** 2. + x ** 2. -
+                                                            2.0 * dist * x * np.cos(t))
+                                                    ) ** 2.0,
+                                       0., theta, lambda th: self.d_halo_cent(th, dist, front=False, eps=eps),
+                                       lambda th: self.los_max(th, dist), epsabs=10 ** -4,
+                                       epsrel=10 ** -4)
+            jfact = jfact1[0] + jfact2[0] + (4. * np.pi * eps ** 3. * self.density(eps) / 3.)
+            return np.log10(jfact)
+
 
     def J_pointlike(self, dist):
         """
@@ -65,7 +86,7 @@ class Subhalo(object):
         :return: min bound of los integration
         """
         return dist * np.cos(theta) - np.sqrt(dist ** 2. * (np.cos(theta) ** 2. - 1.)
-                                              + self.max_radius ** 2.)
+                                              + self.max_int_radius ** 2.)
 
     def los_max(self, theta, dist):
         """
@@ -75,7 +96,20 @@ class Subhalo(object):
         :return: max bound of los integration
         """
         return dist * np.cos(theta) + np.sqrt(dist ** 2. * (np.cos(theta) ** 2. - 1.)
-                                              + self.max_radius ** 2.)
+                                              + self.max_int_radius ** 2.)
+
+    def d_halo_cent(self, theta, dist, front=True, eps=10.**-4.):
+        """
+
+        """
+        if dist * np.tan(theta) > eps:
+            midline = dist * np.cos(theta)
+        else:
+            if front:
+                midline = dist - eps
+            else:
+                midline = dist + eps
+        return midline
 
     def Mass_in_R(self, r):
         """
@@ -250,6 +284,7 @@ class Einasto(Subhalo):
                 self.max_radius = self.virial_radius
         else:
             self.max_radius = self.Truncated_radius()
+        self.max_int_radius = self.max_radius
 
     def density(self, r):
         return self.scale_density * np.exp(-2. / self.alpha * (((r / self.scale_radius) **
@@ -400,6 +435,8 @@ class NFW(Subhalo):
         else:
             self.max_radius = self.Truncated_radius()
 
+        self.max_int_radius = self.max_radius
+
     def density(self, r):
         try:
             den_array = np.zeros(len(r))
@@ -459,6 +496,7 @@ class Over_Gen_NFW(Subhalo):
         m200 = rmax * vmax ** 2. / newton_G * self.func_f(c_Delta) / self.func_f(xmax)
         self.virial_radius = Virial_radius(m200, m200=True)
         self.max_radius = self.virial_radius
+        self.max_int_radius = self.max_radius
 
     def density(self, r):
         if r > 0:
@@ -525,26 +563,24 @@ def find_r1_r2(mass, vmax, rmax):
 
 class HW_Fit(Subhalo):
 
-    def __init__(self, halo_mass, gam=0.945, M200=True, gcd=8.5, cons=False,
-                 stiff_rb=False, optimistic=False):
+    def __init__(self, halo_mass, gam=0.85, rb=None, M200=True, gcd=8.5, stiff_rb=False):
         self.halo_mass = halo_mass
         self.gam = gam
-        self.optimistic = optimistic
         m = self.halo_mass
         if stiff_rb and self.halo_mass < 4. * 10 ** 5.:
             m = 4. * 10 ** 5.
-        if cons:
-            self.rb = 10. ** (-4.664) * m ** 0.566
-        if optimistic:
-            self.rb = 10. ** (-4.976) * m ** 0.550
-        if not cons and not optimistic:
-            self.rb = 10. ** (-4.653) * m ** 0.533
+        if rb is None:
+            self.rb = 10. ** (-4.240) * m ** 0.459
+        else:
+            self.rb = rb
 
         self.virial_radius = Virial_radius(self.halo_mass, m200=M200)
         self.scale_density = self.halo_mass / (4. * np.pi * self.rb ** (3. - self.gam) *
             special.gamma(3. - self.gam) * (1. - special.gammaincc(3. - self.gam, self.virial_radius / self.rb))
             * kpctocm ** 3. * GeVtoSolarM)
         self.max_radius = self.virial_radius
+
+        self.max_int_radius = self.rb
 
     def density(self, r):
         try:
@@ -601,7 +637,7 @@ class KMMDSM(Subhalo):
             m200 = self.int_over_density(30.)
             self.virial_radius = Virial_radius(m200, m200=True)
             self.max_radius = self.virial_radius
-
+            self.max_int_radius = self.max_radius
 
     def density(self, r):
         if r > 0:

@@ -55,3 +55,5 @@ from Via_LacteaII_Analysis import *
 #Preferred_Density_Slopes_VL(mass_low=1*10.** 4, mass_high = 1*10.**10., gcd_min=0., gcd_max=20., tag='0to20kpc')
 
 Via_Lactea_II().obtain_number_density()
+
+#Via_Lactea_II().einasto_density_fit()

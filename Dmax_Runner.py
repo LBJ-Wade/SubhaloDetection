@@ -16,20 +16,22 @@ parser.add_argument('--pointlike', default=True)
 parser.add_argument('--cross_sec_low', default=-27., type=float)  # In log10
 parser.add_argument('--cross_sec_high', default=-23., type=float)  # In log10
 parser.add_argument('--annih_prod', default='BB')  # TODO: add more than b-bbar
-parser.add_argument('--m_low', default=np.log10(3.24 * 10.**4.), type=float)  # In log10
+parser.add_argument('--m_low', default=np.log10(1 * 10.**0.), type=float)  # In log10  [3.24 * 10.**4.]
 parser.add_argument('--m_high', default=np.log10(1.0 * 10.**7.), type=float)  # In log10
 parser.add_argument('--c_low', default=np.log10(2.5), type=float)  # In log10
 parser.add_argument('--c_high', default=2.4, type=float)  # In log10
 parser.add_argument('--alpha', default=0.16, type=float)  # For Einasto
-parser.add_argument('--profile', default=1, type=int)  # [Einasto, NFW] 0 -- 1
+parser.add_argument('--profile', default=2, type=int)  # [Einasto, NFW, HW] 0 -- 2
 parser.add_argument('--truncate', default=False)
-parser.add_argument('--arxiv_num', default=160106781, type=int) # [10070438, 13131729, 160106781]
-parser.add_argument('--b_min', default=10., type=float)
+parser.add_argument('--arxiv_num', default=13131729, type=int) # [10070438, 13131729, 160106781]
+parser.add_argument('--b_min', default=20., type=float)
 parser.add_argument('--m_num', default=20, type=int)
 parser.add_argument('--c_num', default=20, type=int)
 parser.add_argument('--n_runs', type=int, default=30)
 parser.add_argument('--thresh', default=7. * 10.**-10., type=float)
 parser.add_argument('--M200', default=False)
+parser.add_argument('--gamma', default=0.85, type=float)
+parser.add_argument('--stiff_rb', default=False)
 parser.add_argument('--path', default=os.environ['SUBHALO_MAIN_PATH'] + '/SubhaloDetection/')
 
 args = parser.parse_args()
@@ -59,6 +61,8 @@ dmax = args.dmax
 nobs = args.nobs
 thresh = args.thresh
 m200 = args.M200
+stiff_rb = args.stiff_rb
+gamma = args.gamma
 
 cross_sec_list = np.logspace(cross_sec_low, cross_sec_high, n_runs)
 
@@ -68,11 +72,13 @@ count = 0
 for i,sv in enumerate(cross_sec_list):
     simname='sim%d' % i
     cmd = 'cd '+ path + '\n' + 'python Subhalo_runner.py --simname {} --pointlike {} '.format(simname, plike) +\
-                               '--mass {} --cross_sec {:.8e} --annih_prod {} '.format(mass, sv, annih_prod) +\
-                               '--m_low {:.16f} --m_high {:.16f} --c_low {} '.format(m_low, m_high, c_low) +\
+                               '--mass {} --cross_sec {:.3e} --annih_prod {} '.format(mass, sv, annih_prod) +\
+                               '--m_low {:.3f} --m_high {:.3f} --c_low {} '.format(m_low, m_high, c_low) +\
                                '--c_high {} --alpha {} --profile {} '.format(c_high, alpha, profile) +\
                                '--arxiv_num {} --m_num {} --c_num {} '.format(arxiv_num, m_num, c_num) +\
-                               '--truncate {} --dmax {} --M200 {}'.format(truncate, dmax, m200)
+                               '--truncate {} --dmax {} --M200 {} --gamma {} '.format(truncate, dmax, m200, gamma) +\
+                               '--stiff_rb {}'.format(stiff_rb)
+
     if plike:
         cmd += ' --thresh {}'.format(thresh)
     cmds.append(cmd)
@@ -99,11 +105,12 @@ count = 0
 for i,sv in enumerate(cross_sec_list):
     simname='sim%d' % i
     cmd = 'cd '+ path + '\n' + 'python Subhalo_runner.py --simname {} --pointlike {} '.format(simname, plike) +\
-                               '--mass {} --cross_sec {:.8e} --annih_prod {} '.format(mass, sv, annih_prod) +\
-                               '--m_low {:.16f} --m_high {:.16f} --c_low {} '.format(m_low, m_high, c_low) +\
+                               '--mass {} --cross_sec {:.3e} --annih_prod {} '.format(mass, sv, annih_prod) +\
+                               '--m_low {:.3f} --m_high {:.3f} --c_low {} '.format(m_low, m_high, c_low) +\
                                '--c_high {} --alpha {} --profile {} '.format(c_high, alpha, profile) +\
                                '--arxiv_num {} --m_num {} --c_num {} '.format(arxiv_num, m_num, c_num) +\
-                               '--truncate {} --b_min {} --nobs {} --M200 {}'.format(truncate, b_min, nobs, m200)
+                               '--truncate {} --b_min {} --nobs {} --M200 {} '.format(truncate, b_min, nobs, m200) +\
+                               '--gamma {} --stiff_rb {}'.format(gamma, stiff_rb)
     cmds.append(cmd)
     count += 1
     

@@ -13,6 +13,7 @@ import matplotlib as mpl
 import pylab as pl
 import matplotlib.pyplot as plt
 from matplotlib import rc
+from scipy.optimize import curve_fit
 import warnings
 
 warnings.filterwarnings('error')
@@ -36,8 +37,8 @@ class Via_Lactea_II(object):
 
     def __init__(self, profile=0, alpha=0.16, c=None, truncate=False, arxiv_num=13131729):
         self.dir = MAIN_PATH + '/SubhaloDetection/Data/Misc_Items/'
-        #self.f_name = 'ViaLacteaII_Info.dat'
-        self.f_name = 'ViaLacteaII_Useable_Subhalos.dat'
+        self.f_name = 'ViaLacteaII_Info.dat'
+        #self.f_name = 'ViaLacteaII_Useable_Subhalos.dat'
         self.profile = profile
         self.truncate = truncate
         self.alpha = alpha
@@ -298,27 +299,67 @@ class Via_Lactea_II(object):
         print gam_rb_array
         return
 
-    def obtain_number_density(self, min_mass=4.10e+05, max_mass=1.e+8):
-        gcd_range = np.array([0., 50.])
-
+    def obtain_number_density(self, min_mass=4.0e+5, max_mass=1.e+8):
+        gcd_range = np.array([0., 300.])
         sub_o_int = self.find_subhalos(min_mass=min_mass, max_mass=max_mass,
                                        gcd_min=gcd_range[0], gcd_max=gcd_range[-1],
                                        print_info=False)
-        via_lac_file = np.loadtxt(self.dir + self.f_name)
-        subhalos = via_lac_file[sub_o_int]
+        via_lactea = np.loadtxt(self.dir + self.f_name)
+        subhalos = via_lactea[sub_o_int]
         print 'Num Subhalos: ', len(subhalos)
         mass_bins = np.logspace(np.log10(min_mass), np.log10(max_mass), 20)
+        full_subhalos = np.loadtxt(self.dir + 'ViaLacteaII_Info.dat')
+        full_subhalos = full_subhalos[full_subhalos > min_mass]
         print 'Making Subhalo Number Density Histogram...'
-        plt.hist(subhalos[:, 5], bins=mass_bins, log=True, normed=False,
-                 weights=np.ones(subhalos[:, 5].size),
-                 color='White')
+        gcd_range = np.array([0., 300.])
+        dist_bins = np.linspace(1., 300., 20)
+        plt.hist(subhalos[:, 1], bins=dist_bins, log=True, normed=False,
+                 weights=1. / (4. / 3. * np.pi * subhalos[:, 1] ** 3.),
+                 color='White', alpha=1.)
+
         pl.gca().set_xscale("log")
-        pl.xlim([min_mass, max_mass])
-        plt.xlabel(r'Subhalo Mass [$M_\odot$]', fontsize=16)
-        plt.ylabel(r'$\frac{dN}{dM}$', fontsize=16)
+        pl.xlim([10., 300])
+        plt.xlabel(r'Distance', fontsize=16)
+        plt.ylabel(r'$\frac{dN}{dV}$', fontsize=16)
+
+        fit_ein, bine = np.histogram(subhalos[:, 1], bins=dist_bins, normed=False,
+                                     weights=1. / (4. / 3. * np.pi * subhalos[:, 1] ** 3.))
+        d_ein = np.zeros(len(dist_bins) - 1)
+        for i in range(len(dist_bins) - 1):
+            d_ein[i] = np.median(subhalos[(subhalos[:, 1] < dist_bins[i + 1]) &
+                                          (subhalos[:, 1] > dist_bins[i])][:, 1])
+        parms, cov = curve_fit(einasto_fit, d_ein, fit_ein, bounds=(0, np.inf), sigma=fit_ein)
+        print parms
+        plot_ein = einasto_fit(dist_bins, parms[0], parms[1], parms[2])
+        plt.plot(dist_bins, plot_ein, '--', color='blue')
+        plt.text(20., 10. ** -1.4, 'Mass Range: [{:.2e}, {:.2e}]'.format(min_mass, max_mass),
+                 fontsize=10, color='k')
+        plt.text(100., 10. ** -2., 'Einasto Fit', fontsize=10, color='b')
+        plt.text(100., 10. ** -2.2, r'$\alpha = {:.2f}$'.format(parms[1]), fontsize=10, color='b')
+        plt.text(100., 10. ** -2.4, r'$\rho_s = {:.2e}$'.format(parms[2]), fontsize=10, color='b')
+        plt.text(100., 10. ** -2.6, r'$r_s = {:.2f}$'.format(parms[0]), fontsize=10, color='b')
 
         fname = 'VLII_Subhalo_Number_Density_Mass_Range_{:.1e}_{:.1e}'.format(min_mass, max_mass) + \
                 'GCD_range_{:.1f}_{:.1f}'.format(gcd_range[0], gcd_range[1]) + '.pdf'
+        pl.savefig(self.dir + '/Via_Lac_plots/' + fname)
+        return
+
+
+    def einasto_density_fit(self, min_mass=4.**5, max_mass=10.**6):
+
+        via = np.loadtxt(self.dir + 'ViaLacteaII_Info.dat')
+        subhalos = via[(via[:, 5] > min_mass) & (via[:, 5] < max_mass)]
+        print 'Number of Subhalos considered: ', len(subhalos)
+        bins = np.linspace(10., 300., 30)
+        plt.hist(subhalos[:, 1], bins=bins, log=True, normed=False, color='White', alpha=1.,
+                 weights= 1. / (4. * np.pi * subhalos[:, 1] * 3. / 3.))
+        pl.gca().set_xscale("log")
+        pl.gca().set_yscale("log")
+        plt.xlabel(r'Distance', fontsize=16)
+        plt.ylabel(r'n(r)', fontsize=16)
+
+        fname = 'VLII_Histogram_EinastoFit_Mass_Range_{:.1e}_{:.1e}'.format(min_mass, max_mass) + \
+            '.pdf'
         pl.savefig(self.dir + '/Via_Lac_plots/' + fname)
         return
 

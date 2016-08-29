@@ -29,24 +29,14 @@ b = Model(dm_mass, c_sec, annih_prod, subhalo_mass, .16,
           pointlike=False)
 
 hw = Model(dm_mass, c_sec, annih_prod, subhalo_mass, profile=2,
-           gam=0.88, conservative=False, stiff_rb=False,
-           optimistic=False)
+           gam=0.945)
 
-hw_c = Model(dm_mass, c_sec, annih_prod, subhalo_mass, profile=2,
-           gam=0.88, conservative=True, stiff_rb=False,
-           optimistic=False)
-
-hw_o = Model(dm_mass, c_sec, annih_prod, subhalo_mass, profile=2,
-           gam=0.88, conservative=False, stiff_rb=False,
-           optimistic=True)
 
 hw_gh = Model(dm_mass, c_sec, annih_prod, subhalo_mass, profile=2,
-           gam=1.316, conservative=False, stiff_rb=False,
-           optimistic=False)
+           gam=1.316)
 
 hw_gl = Model(dm_mass, c_sec, annih_prod, subhalo_mass, profile=2,
-           gam=0.426, conservative=False, stiff_rb=False,
-           optimistic=False)
+           gam=0.426)
 
 print 'Parameters: '
 print 'Dark Matter Mass: ', dm_mass
@@ -84,25 +74,6 @@ print 'Spectral Index: ', hw.Determine_Gamma()
 print 'Minimum Flux (Extended): ', hw.min_Flux(dist)
 print 'D_max Extended: ', hw.D_max_extend()
 
-
-print '\n'
-
-print 'Profile: HW \n Conservative'
-print 'Total Flux: ', hw_c.Total_Flux(dist)
-print 'D_max Pointlike: ', hw_c.d_max_point()
-print 'Spectral Index: ', hw_c.Determine_Gamma()
-print 'Minimum Flux (Extended): ', hw_c.min_Flux(dist)
-print 'D_max Extended: ', hw_c.D_max_extend()
-
-
-print '\n'
-
-print 'Profile: HW \n Optimistic'
-print 'Total Flux: ', hw_o.Total_Flux(dist)
-print 'D_max Pointlike: ', hw_o.d_max_point()
-print 'Spectral Index: ', hw_o.Determine_Gamma()
-print 'Minimum Flux (Extended): ', hw_o.min_Flux(dist)
-print 'D_max Extended: ', hw_o.D_max_extend()
 
 
 print '\n'

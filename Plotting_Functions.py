@@ -198,7 +198,7 @@ class LimitPlotter(object):
 class model_plots(object):
     def __init__(self, cross_sec=3. * 10 ** -26., mx=100., annih_prod='BB', pointlike=True, alpha=0.16, profile=0,
                  truncate=True, arxiv_num=10070438, mass_low=-5., mass_high=7., fs=20, b_min=20.,
-                 gam=0.88, conservative=False, stiff_rb=False, optimistic=False):
+                 gam=0.88, stiff_rb=False):
 
         self.cross_sec = cross_sec
         self.mx = mx
@@ -214,8 +214,6 @@ class model_plots(object):
         self.fs = fs
         self.b_min = b_min
         self.gam = gam
-        self.cons = conservative
-        self.optim = optimistic
         self.stiff_rb = stiff_rb
         self.folder = MAIN_PATH + "/SubhaloDetection/Data/"
 
@@ -439,8 +437,7 @@ def plot_profiles(m_sub=10.**7., density_sqr=False):
     e_tr = Einasto(m_sub / 0.005, .16, truncate=True, arxiv_num=13131729, M200=False)
     n_ntr = NFW(m_sub, .16, truncate=False, arxiv_num=160106781, M200=True)
     hw_fit = HW_Fit(m_sub, M200=True, gcd=8.5)
-    hw_fit_rbl = HW_Fit(m_sub, M200=True, gcd=8.5, optimistic=True)
-    hw_fit_rbh = HW_Fit(m_sub, M200=True, gcd=8.5, cons=True)
+
     hw_fit_gl = HW_Fit(m_sub, gam=0.426, M200=True, gcd=8.5)
     hw_fit_gh = HW_Fit(m_sub, gam=1.316, M200=True, gcd=8.5)
 
@@ -449,8 +446,6 @@ def plot_profiles(m_sub=10.**7., density_sqr=False):
     r_n_ntr = np.logspace(minrad, np.log10(n_ntr.max_radius), 100)
     r2_n_ntr = np.logspace(np.log10(n_ntr.max_radius), np.log10(n_ntr.virial_radius), 20)
     r_hw = np.logspace(minrad, np.log10(hw_fit.max_radius), 100)
-    r_hw_rbl = np.logspace(minrad, np.log10(hw_fit_rbl.max_radius), 100)
-    r_hw_rbh = np.logspace(minrad, np.log10(hw_fit_rbh.max_radius), 100)
     r_hw_gl = np.logspace(minrad, np.log10(hw_fit_gl.max_radius), 100)
     r_hw_gh = np.logspace(minrad, np.log10(hw_fit_gh.max_radius), 100)
 
@@ -460,8 +455,6 @@ def plot_profiles(m_sub=10.**7., density_sqr=False):
         den_n_ntr = n_ntr.density(r_n_ntr) * GeVtoSolarM * kpctocm ** 3.
         den_n_ntr2 = n_ntr.density(r2_n_ntr) * GeVtoSolarM * kpctocm ** 3.
         den_hw = hw_fit.density(r_hw) * GeVtoSolarM * kpctocm ** 3.
-        den_hw_rbl = hw_fit_rbl.density(r_hw_rbl) * GeVtoSolarM * kpctocm ** 3.
-        den_hw_rbh = hw_fit_rbh.density(r_hw_rbh) * GeVtoSolarM * kpctocm ** 3.
         den_hw_gl = hw_fit_gl.density(r_hw_gl) * GeVtoSolarM * kpctocm ** 3.
         den_hw_gh = hw_fit_gh.density(r_hw_gh) * GeVtoSolarM * kpctocm ** 3.
     else:
@@ -470,8 +463,6 @@ def plot_profiles(m_sub=10.**7., density_sqr=False):
         den_n_ntr = n_ntr.density(r_n_ntr) ** 2.
         den_n_ntr2 = n_ntr.density(r2_n_ntr) ** 2.
         den_hw = hw_fit.density(r_hw) ** 2.
-        den_hw_rbl = hw_fit.density(r_hw_rbl) ** 2.
-        den_hw_rbh = hw_fit.density(r_hw_rbh) ** 2.
         den_hw_gl = hw_fit.density(r_hw_gl) ** 2.
         den_hw_gh = hw_fit.density(r_hw_gh) ** 2.
 
@@ -492,13 +483,9 @@ def plot_profiles(m_sub=10.**7., density_sqr=False):
     g_min = np.zeros(len(r_hw_gh))
     g_max = np.zeros(len(r_hw_gh))
     for i in range(r_hw_gh.size):
-        rb_min[i] = np.min([den_hw_rbl[i], den_hw_rbh[i]])
-        rb_max[i] = np.max([den_hw_rbl[i], den_hw_rbh[i]])
         g_min[i] = np.min([den_hw_gl[i], den_hw_gh[i]])
         g_max[i] = np.max([den_hw_gl[i], den_hw_gh[i]])
-    plt.plot(r_hw_gh, den_hw_rbh, '--', r_hw_gh, den_hw_rbl, '--', r_hw_gh,
-             den_hw_gl, '-.', r_hw_gh, den_hw_gh, '-.', color='k', alpha=0.5)
-    ax.fill_between(r_hw_gh, rb_min, rb_max, where=rb_max >= rb_min, facecolor='Blue', interpolate=True, alpha=0.3)
+    plt.plot(r_hw_gh, den_hw_gl, '-.', r_hw_gh, den_hw_gh, '-.', color='k', alpha=0.5)
     ax.fill_between(r_hw_gh, g_min, g_max, where=g_max >= g_min, facecolor='Blue', interpolate=True, alpha=0.3)
 
     plt.legend()
@@ -526,8 +513,6 @@ def Jfactor_plots(m_sub=10.**7., dist=1.):
     e_tr = Einasto(m_sub / 0.005, .16, truncate=True, arxiv_num=13131729, M200=False)
     n_ntr = NFW(m_sub, .16, truncate=False, arxiv_num=160106781, M200=True)
     hw_fit = HW_Fit(m_sub, M200=True, cons=False, stiff_rb=False)
-    hw_fit_c = HW_Fit(m_sub, M200=True, cons=True, stiff_rb=False)
-    hw_fit_o = HW_Fit(m_sub, M200=True, cons=True, stiff_rb=False, optimistic=True)
     hw_fit_gl = HW_Fit(m_sub, gam=0.426, M200=True)
     hw_fit_gh = HW_Fit(m_sub, gam=1.316, M200=True)
     n_sc = NFW(m_sub, 1., truncate=False, arxiv_num=160304057, M200=True)
@@ -537,8 +522,6 @@ def Jfactor_plots(m_sub=10.**7., dist=1.):
     e_tr_j = np.zeros(num_dist_pts* 2).reshape((num_dist_pts, 2))
     n_ntr_j = np.zeros(num_dist_pts * 2).reshape((num_dist_pts, 2))
     hw_j = np.zeros(num_dist_pts * 2).reshape((num_dist_pts, 2))
-    hw_j_c = np.zeros(num_dist_pts * 2).reshape((num_dist_pts, 2))
-    hw_j_o = np.zeros(num_dist_pts * 2).reshape((num_dist_pts, 2))
     hw_j_gl = np.zeros(num_dist_pts * 2).reshape((num_dist_pts, 2))
     hw_j_gh = np.zeros(num_dist_pts * 2).reshape((num_dist_pts, 2))
     n_sc_j = np.zeros(num_dist_pts)
@@ -548,8 +531,6 @@ def Jfactor_plots(m_sub=10.**7., dist=1.):
         e_tr_j[i] = [dist_tab[i], np.power(10, e_tr.J_pointlike(dist_tab[i]))]
         n_ntr_j[i] = [dist_tab[i], np.power(10, n_ntr.J_pointlike(dist_tab[i]))]
         hw_j[i] = [dist_tab[i], np.power(10, hw_fit.J_pointlike(dist_tab[i]))]
-        hw_j_c[i] = [dist_tab[i], np.power(10, hw_fit_c.J_pointlike(dist_tab[i]))]
-        hw_j_o[i] = [dist_tab[i], np.power(10, hw_fit_o.J_pointlike(dist_tab[i]))]
         hw_j_gl[i] = [dist_tab[i], np.power(10, hw_fit_gl.J_pointlike(dist_tab[i]))]
         hw_j_gh[i] = [dist_tab[i], np.power(10, hw_fit_gh.J_pointlike(dist_tab[i]))]
         n_sc_j[i] = 10. ** n_sc.J_pointlike(dist_tab[i])
@@ -571,13 +552,9 @@ def Jfactor_plots(m_sub=10.**7., dist=1.):
     g_min = np.zeros(len(dist_tab))
     g_max = np.zeros(len(dist_tab))
     for i in range(dist_tab.size):
-        rb_min[i] = np.min([hw_j_c[i, 1], hw_j_o[i, 1]])
-        rb_max[i] = np.max([hw_j_c[i, 1], hw_j_o[i, 1]])
         g_min[i] = np.min([hw_j_gh[i, 1], hw_j_gl[i, 1]])
         g_max[i] = np.max([hw_j_gh[i, 1], hw_j_gl[i, 1]])
-    plt.plot(dist_tab, hw_j_c[:, 1], '--', dist_tab, hw_j_o[:, 1], '--', dist_tab,
-             hw_j_gl[:, 1], '-.', dist_tab, hw_j_gh[:, 1], '-.', color='k', alpha=0.5)
-    ax.fill_between(dist_tab, rb_min, rb_max, where=rb_max >= rb_min, facecolor='Blue', interpolate=True, alpha=0.3)
+    plt.plot(dist_tab, hw_j_gl[:, 1], '-.', dist_tab, hw_j_gh[:, 1], '-.', color='k')
     ax.fill_between(dist_tab, g_min, g_max, where=g_max >= g_min, facecolor='Blue', interpolate=True, alpha=0.3)
 
     plt.legend()
@@ -605,8 +582,6 @@ def Jfactor_plots(m_sub=10.**7., dist=1.):
         e_tr_j[i] = 10. ** Einasto(m_sub / 0.005, .16, truncate=True, arxiv_num=13131729, M200=False).J_pointlike(dist)
         n_ntr_j[i] = 10. ** NFW(m_sub, .16, truncate=False, arxiv_num=160106781, M200=True).J_pointlike(dist)
         hw_j[i] = 10. ** HW_Fit(m_sub, M200=True, cons=False, stiff_rb=False).J_pointlike(dist)
-        hw_j_c[i] = 10. ** HW_Fit(m_sub, M200=True, cons=True, stiff_rb=False).J_pointlike(dist)
-        hw_j_o[i] = 10. ** HW_Fit(m_sub, M200=True, cons=True, stiff_rb=False, optimistic=True).J_pointlike(dist)
         hw_j_gl[i] = 10. ** HW_Fit(m_sub, gam=0.426, M200=True).J_pointlike(dist)
         hw_j_gh[i] = 10. ** HW_Fit(m_sub, gam=1.316, M200=True).J_pointlike(dist)
         sc_j[i] = 10. ** NFW(m_sub, 1., truncate=False, arxiv_num=160304057, M200=True).J_pointlike(dist)
@@ -632,9 +607,7 @@ def Jfactor_plots(m_sub=10.**7., dist=1.):
         rb_max[i] = np.max([hw_j_c[i], hw_j_o[i]])
         g_min[i] = np.min([hw_j_gh[i], hw_j_gl[i]])
         g_max[i] = np.max([hw_j_gh[i], hw_j_gl[i]])
-    plt.plot(mass_tab, hw_j_c, '--', mass_tab, hw_j_o, '--', mass_tab,
-             hw_j_gl, '-.', mass_tab, hw_j_gh, '-.', color='k', alpha=0.5)
-    ax.fill_between(mass_tab, rb_min, rb_max, where=rb_max >= rb_min, facecolor='Blue', interpolate=True, alpha=0.3)
+    plt.plot(mass_tab, hw_j_gl, '-.', mass_tab, hw_j_gh, '-.', color='k')
     ax.fill_between(mass_tab, g_min, g_max, where=g_max >= g_min, facecolor='Blue', interpolate=True, alpha=0.3)
 
     pl.xlabel(r'Mass [$M_\odot$]', fontsize=20)
@@ -654,18 +627,14 @@ def extension_vs_dist(m_sub=1.*10**7.):
     e_tr = Einasto(m_sub / 0.005, .16, truncate=True, arxiv_num=13131729, M200=False)
     n_ntr = NFW(m_sub, .16, truncate=False, arxiv_num=160106781, M200=True)
     hw_fit = HW_Fit(m_sub, M200=True, gcd=8.5)
-    hw_fit_c = HW_Fit(m_sub, M200=True, gcd=8.5, cons=True)
-    hw_fit_o = HW_Fit(m_sub, M200=True, gcd=8.5, optimistic=True)
     hw_fit_gl = HW_Fit(m_sub, M200=True, gcd=8.5, gam=0.426)
 
-    num_dist_pts = 30
+    num_dist_pts = 15
     dist_tab = np.logspace(mindist, 1.5, num_dist_pts)
 
     e_tr_se = np.zeros(dist_tab.size)
     n_ntr_se = np.zeros(dist_tab.size)
     hw_se = np.zeros(dist_tab.size)
-    hw_c_se = np.zeros(dist_tab.size)
-    hw_o_se = np.zeros(dist_tab.size)
     hw_gl = np.zeros(dist_tab.size)
     for i,d in enumerate(dist_tab):
         print i+1, '/', num_dist_pts
@@ -675,10 +644,6 @@ def extension_vs_dist(m_sub=1.*10**7.):
         print d, n_ntr_se[i]
         hw_se[i] = hw_fit.Spatial_Extension(d)
         print d, hw_se[i]
-        hw_c_se[i] = hw_fit_c.Spatial_Extension(d)
-        print d, hw_c_se[i]
-        hw_o_se[i] = hw_fit_o.Spatial_Extension(d)
-        print d, hw_o_se[i]
         hw_gl[i] = hw_fit_gl.Spatial_Extension(d)
         print d, hw_gl[i]
 
@@ -687,17 +652,10 @@ def extension_vs_dist(m_sub=1.*10**7.):
     ax.set_xscale("log")
     ax.set_yscale('log')
 
-#    print 'Einasto Truncated: ', np.column_stack((dist_tab, e_tr_se))
-#    print 'NFW Not Truncated: ', np.column_stack((dist_tab, n_ntr_se))
-#    print 'HW: ', np.column_stack((dist_tab, hw_se))
-#    print 'HW: ', np.column_stack((dist_tab, hw_c_se))
-
     dist_plot = np.logspace(mindist, 1., 200)
     e_tr_plot = interpola(dist_plot, dist_tab, e_tr_se)
     n_ntr_plot = interpola(dist_plot, dist_tab, n_ntr_se)
     hw_plot = interpola(dist_plot, dist_tab, hw_se)
-    hw_c_plot = interpola(dist_plot, dist_tab, hw_c_se)
-    hw_o_plot = interpola(dist_plot, dist_tab, hw_o_se)
     hw_gl_plot = interpola(dist_plot, dist_tab, hw_gl)
 
     def rad_ext(dist, prof):
@@ -705,11 +663,9 @@ def extension_vs_dist(m_sub=1.*10**7.):
     rad_ex_e_tr = rad_ext(dist_plot, e_tr)
     rad_ex_n_ntr = rad_ext(dist_plot, n_ntr)
     rad_ex_hw = rad_ext(dist_plot, hw_fit)
-    rad_ex_hw_c = rad_ext(dist_plot, hw_fit_c)
-    rad_ex_hw_o = rad_ext(dist_plot, hw_fit_o)
     rad_ex_hw_gl = rad_ext(dist_plot, hw_fit_gl)
 
-    pl.xlim([10 ** mindist, 8. * 10. ** 1.])
+    pl.xlim([10 ** mindist, 1. * 10. ** 1.])
     pl.ylim([10. ** -1., 90.])
     plt.plot(dist_plot, e_tr_plot, lw=1, color='Black', label='Einasto, T')
     plt.plot(dist_plot, rad_ex_e_tr, '--', ms=1, color='Black')
@@ -718,19 +674,15 @@ def extension_vs_dist(m_sub=1.*10**7.):
     plt.plot(dist_plot, hw_plot, lw=1, color='Blue', label='HW')
     plt.plot(dist_plot, rad_ex_hw, '--', ms=1, color='Blue')
 
-    plt.plot(dist_plot, hw_c_plot, '-.', dist_plot, hw_o_plot, '-.', color='k', alpha=0.5)
-    ax.fill_between(dist_plot, hw_c_plot, hw_o_plot, where=hw_c_plot >= hw_o_plot, facecolor='Blue',
-                    interpolate=True, alpha=0.3)
-
-    plt.plot(dist_plot, hw_gl_plot, lw=1, color='Green', label=r'HW $\gamma^-$')
-    plt.plot(dist_plot, rad_ex_hw_gl, '--', ms=1, color='Green')
+    plt.plot(dist_plot, hw_gl_plot, '-.', lw=1, color='Blue', alpha=0.5, label=r'HW $\gamma = 0.426$')
+    plt.plot(dist_plot, rad_ex_hw_gl, '.', ms=1, color='Blue', alpha = 0.5)
 
     plt.legend()
 
     pl.xlabel('Distance [kpc]', fontsize=20)
     pl.ylabel('Spatial Extension [degrees]', fontsize=20)
     folder = MAIN_PATH + "/SubhaloDetection/Data/"
-    fig_name = folder + '../Plots/' + 'SpatialExt_Distance_msubhalo_' + str(m_sub) + \
+    fig_name = folder + '../Plots/' + 'SpatialExt_Distance_msubhalo_{:.2e}'.format(m_sub) + \
         'BLH_Bertone_HW.pdf'
     fig.set_tight_layout(True)
     pl.savefig(fig_name)

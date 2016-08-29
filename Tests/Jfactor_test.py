@@ -15,9 +15,7 @@ cc = Einasto(mass, .16, truncate=False, arxiv_num=160106781, M200=True)
 dd = NFW(mass, .16, truncate=False, arxiv_num=160106781, M200=True)
 
 HW = HW_Fit(mass)
-HW2 = HW_Fit(mass, cons=True)
-HW3 = HW_Fit(mass, optimistic=True)
-HW_gu = HW_Fit(mass, gam=1.316)
+HW_gu = HW_Fit(mass, gam=1.25)
 HW_gd = HW_Fit(mass, gam=0.426)
 
 print 'Mass: ', mass
@@ -78,29 +76,6 @@ print '     Full Extension: ', HW.Full_Extension(dist)
 
 print '\n'
 
-print 'HW Fit Conservative: \n'
-print '     Gamma, Rb: ', HW2.gam, HW2.rb
-print '     Max Radius: ', HW2.max_radius
-print '     Mass in max radius: ', HW2.Mass_in_R(HW2.max_radius)
-print '     J pointlike: ',10. ** HW2.J_pointlike(dist)
-ext = HW2.Spatial_Extension(dist)
-print '     Spatial Extension: ', ext
-print '     J_ext(se)/J_point: ', 10. ** HW2.J(dist, ext) / 10. ** HW2.J_pointlike(dist)
-print '     Full Extension: ', HW2.Full_Extension(dist)
-
-print '\n'
-
-print 'HW Fit Optimistic: \n'
-print '     Gamma, Rb: ', HW3.gam, HW3.rb
-print '     Max Radius: ', HW3.max_radius
-print '     Mass in max radius: ', HW3.Mass_in_R(HW3.max_radius)
-print '     J pointlike: ',10. ** HW3.J_pointlike(dist)
-ext = HW3.Spatial_Extension(dist)
-print '     Spatial Extension: ', ext
-print '     J_ext(se)/J_point: ', 10. ** HW3.J(dist, ext) / 10. ** HW3.J_pointlike(dist)
-print '     Full Extension: ', HW3.Full_Extension(dist)
-
-print '\n'
 
 # print 'HW Fit High Gamma: \n'
 # print '     Gamma, Rb: ', HW_gu.gam, HW_gu.rb
@@ -117,7 +92,7 @@ print '\n'
 print 'HW Fit Low Gamma: \n'
 print '     Gamma, Rb: ', HW_gd.gam, HW_gd.rb
 print '     Max Radius: ', HW_gd.max_radius
-print '     Mass in max radius: ', HW_gd.Mass_in_R(HW3.max_radius)
+print '     Mass in max radius: ', HW_gd.Mass_in_R(HW_gd.max_radius)
 print '     J pointlike: ',10. ** HW_gd.J_pointlike(dist)
 ext = HW_gd.Spatial_Extension(dist)
 print '     Spatial Extension: ', ext

@@ -15,8 +15,7 @@ from Joint_Sim_Comparison import *
 # LIST: [4.10e+05, 5.35e+06, 1.70e+07, 3.16e+07, 5.52e+07, 1.18e+08, 10.**10.]
 #Joint_Simulation_Comparison().fit_hisogram(mlow=4.10e+05, mhigh=5.35e+06)
 
-
 #Joint_Simulation_Comparison().fit_params()
 
 
-Joint_Simulation_Comparison().obtain_number_density(min_mass=10.**7.)
+Joint_Simulation_Comparison().obtain_number_density(min_mass=4. * 10**5., max_mass=10**7.)
