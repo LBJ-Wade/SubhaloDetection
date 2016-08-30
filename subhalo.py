@@ -75,7 +75,13 @@ class Model(object):
         flux threshold for spatially extended sources
         :param dist: distance kpc
         """
-        extension = self.subhalo.Spatial_Extension(dist)
+        file_name = file_name = 'SpatialExtension_' + str(Profile_list[self.profile]) + '.dat'
+        dir = MAIN_PATH + '/SubhaloDetection/Data/'
+        try:
+            se_file = np.loadtxt(dir + file_name)
+
+        except:
+            extension = self.subhalo.Spatial_Extension(dist)
         return self.Threshold(self.gamma, extension)
 
     def Total_Flux(self, dist):
@@ -231,7 +237,7 @@ class Observable(object):
         default_dict = {'profile': 'Einasto', 'truncate': False, 'mx': 100., 'alpha': 0.16,
                         'annih_prod': 'BB', 'arxiv_num': 10070438, 'c_low': np.log10(20.),
                         'c_high': 2.1, 'c_num': 15, 'm_low': np.log10(3.24 * 10 ** 4.),
-                        'm_high': np.log10(1.0 * 10 ** 7), 'm_num': 30, 'gamma': 0.945,
+                        'm_high': np.log10(1.0 * 10 ** 7), 'm_num': 30, 'gamma': 0.85,
                         'stiff_rb': False}
 
         self.param_list = default_dict
@@ -316,7 +322,6 @@ class Observable(object):
                         else:
                             np.savetxt(self.folder + file_name, tab)
             else:
-
                 rb_list = np.logspace(-3, np.log10(0.5), 20)
                 gamma_list = np.linspace(0.2, 0.85 + 0.351 / 0.861 - 0.1, 20)
                 for rb in rb_list:
@@ -331,7 +336,7 @@ class Observable(object):
 
                         temp_arry[j] = [gam, dm_model.d_max_point(threshold=threshold)]
                     dmax = UnivariateSpline(temp_arry[:, 0], temp_arry[:, 1] *
-                                            self.hw_prob_gamma(gam)).integral(0., 0.85 + 0.351 / 0.861)
+                                            self.hw_prob_gamma(temp_arry[:, 0])).integral(0., 0.85 + 0.351 / 0.861)
 
                     tab = np.array([m, rb, dmax]).transpose()
                     if os.path.isfile(self.folder+file_name):
@@ -368,46 +373,83 @@ class Observable(object):
 
         mass_list = np.logspace(self.m_low, self.m_high, (self.m_high - self.m_low) * 6)
 
-        c_list = np.logspace(self.c_low, self.c_high, c_num)
         print 'Cross Section: ', self.cross_sec, '\n'
         for m in mass_list:
             print 'Subhalo mass: ', m
-            for c in c_list:
-                print '    Concentration parameter: ', c
-                try:
-                    look_array = np.loadtxt(self.folder + file_name)
-                    if self.truncate:
-                        mm = 0.005 * m
-                    else:
-                        mm = m
-                    if any((np.round([mm, c], 4) == x).all() for x in np.round(look_array[:, 0:2], 4)):
-                        exists = True
-                    else:
+
+            if self.profile < 2:
+                c_list = np.logspace(self.c_low, self.c_high, c_num)
+                for c in c_list:
+                    print '    Concentration parameter: ', c
+                    try:
+                        look_array = np.loadtxt(self.folder + file_name)
+                        if self.truncate:
+                            mm = 0.005 * m
+                        else:
+                            mm = m
+                        if any((np.round([mm, c], 4) == x).all() for x in np.round(look_array[:, 0:2], 4)):
+                            exists = True
+                        else:
+                            exists = False
+                    except:
                         exists = False
-                except:
-                    exists = False
 
-                if not exists:
-                    dm_model = Model(self.mx, self.cross_sec, self.annih_prod,
-                                     m, self.alpha, concentration_param=c,
-                                     truncate=self.truncate,
-                                     arxiv_num=self.arxiv_num,
-                                     profile=self.profile, pointlike=self.point_like,
-                                     m200=self.m200)
+                    if not exists:
+                        dm_model = Model(self.mx, self.cross_sec, self.annih_prod,
+                                         m, self.alpha, concentration_param=c,
+                                         truncate=self.truncate,
+                                         arxiv_num=self.arxiv_num,
+                                         profile=self.profile, pointlike=self.point_like,
+                                         m200=self.m200)
 
-                    dmax = dm_model.D_max_extend()
-                    if self.truncate:
-                        mm = 0.005 * m
-                    else:
-                        mm = m
-                    tab = np.array([mm, c, dmax]).transpose()
+                        dmax = dm_model.D_max_extend()
+                        if self.truncate:
+                            mm = 0.005 * m
+                        else:
+                            mm = m
+                        tab = np.array([mm, c, dmax]).transpose()
 
-                    if os.path.isfile(self.folder + file_name):
-                        load_info = np.loadtxt(self.folder + file_name)
-                        add_to_table = np.vstack((load_info, tab))
-                        np.savetxt(self.folder + file_name, add_to_table)
-                    else:
-                        np.savetxt(self.folder + file_name, tab)
+                        if os.path.isfile(self.folder + file_name):
+                            load_info = np.loadtxt(self.folder + file_name)
+                            add_to_table = np.vstack((load_info, tab))
+                            np.savetxt(self.folder + file_name, add_to_table)
+                        else:
+                            np.savetxt(self.folder + file_name, tab)
+            else:
+                rb_list = np.logspace(-3, np.log10(0.5), 20)
+                gamma_list = np.linspace(0.2, 0.85 + 0.351 / 0.861 - 0.1, 20)
+                temp_arry = np.zeros(gamma_list.size * 2.).reshape((gamma_list.size, 2))
+                for rb in rb_list:
+                    print '     Rb: ', rb
+                    try:
+                        look_array = np.loadtxt(self.folder + file_name)
+
+                        if any((np.round([m, c], 4) == x).all() for x in np.round(look_array[:, 0:2], 4)):
+                            exists = True
+                        else:
+                            exists = False
+                    except:
+                        exists = False
+                    if not exists:
+                        for j, gam in enumerate(gamma_list):
+                            print '         Gamma: ', gam
+                            dm_model = Model(self.mx, self.cross_sec, self.annih_prod,
+                                             m, self.alpha,
+                                             truncate=self.truncate,
+                                             arxiv_num=self.arxiv_num,
+                                             profile=self.profile, pointlike=self.point_like,
+                                             m200=self.m200)
+                            temp_arry[j] = [gam, dm_model.D_max_extend()]
+                        dmax = UnivariateSpline(temp_arry[:, 0], temp_arry[:, 1] *
+                                                self.hw_prob_gamma(temp_arry[:, 0])).integral(0., 0.85 + 0.351 / 0.861)
+                        tab = np.array([m, rb, dmax]).transpose()
+
+                        if os.path.isfile(self.folder + file_name):
+                            load_info = np.loadtxt(self.folder + file_name)
+                            add_to_table = np.vstack((load_info, tab))
+                            np.savetxt(self.folder + file_name, add_to_table)
+                        else:
+                            np.savetxt(self.folder + file_name, tab)
         return
 
     def Table_Dmax_Extended_Constrained(self, min_extension=0.3):

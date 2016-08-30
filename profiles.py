@@ -49,21 +49,30 @@ class Subhalo(object):
                                        epsrel=10 ** -4)
             return np.log10(jfact1[0])
         except Warning:
-            print 'Initial Attempt at J factor integration failed...'
+            def careful_fuc(x, th):
+                if (dist ** 2. + x ** 2. - 2.0 * dist * x * np.cos(th)) < 0:
+                    return 0
+                return 2. * np.pi * kpctocm * np.sin(th) * \
+                       self.density(np.sqrt(dist ** 2. + x ** 2. - 2.0 * dist * x * np.cos(th))) ** 2.0
 
             jfact = 0
-            theta_list = np.logspace(-5., theta, 50)
+            theta_list = np.logspace(-5., np.log10(theta), 50)
             theta_list = np.insert(theta_list, 0, np.array([0.]))
             jfac_list = np.zeros(theta_list.size)
             for i, th in enumerate(theta_list):
-                hold = integrate.quad(lambda x: 2. * np.pi * kpctocm * np.sin(th) *
-                                        self.density(np.sqrt(dist ** 2. + x ** 2. -
-                                                             2.0 * dist * x * np.cos(th)))
-                                                     ** 2.0,
-                                        self.los_min(th, dist), self.los_max(th, dist),
-                                        epsabs=10 ** -4, epsrel=10 ** -4, points=[dist * np.cos(th)])
+                try:
+                    hold = integrate.quad(careful_fuc,
+                                          self.los_min(th, dist), self.los_max(th, dist), args=(th),
+                                          epsabs=10 ** -4, epsrel=10 ** -4,
+                                          points=[dist * np.cos(th)])
+                    hold = hold[0]
+                except Warning:
+                    dist_tab = np.logspace(-5., np.log10(self.los_max(th, dist) - dist * np.cos(th)), 50)
+                    dist_tab = np.concatenate((dist * np.cos(th) - dist_tab, dist * np.cos(th) + dist_tab))
+                    tab_d = 2. * np.pi * kpctocm * np.sin(th) * self.density(dist_tab) ** 2.0
+                    hold = np.trapz(tab_d, dist_tab)
 
-                jfac_list[i] = hold[0]
+                jfac_list[i] = hold
             jfact = np.trapz(jfac_list, theta_list)
             check = 10. ** self.J_pointlike(dist)
             if jfact > check:
