@@ -73,11 +73,17 @@ def table_spatial_extension(profile=0, truncate=False, arxiv_num=10070438,
                     for ind, d in enumerate(dist_list):
                         print '           Distance', d
                         value = '{:.4e}     {:.3e}      {:2f}      {:.4f}'.format(m, rb, gam, d)
-                        with open(dir + file_name, 'a+') as f:
-                            if not any(value == x.rstrip('\r\n') for x in f):
-                                if subhalo.Full_Extension(d) > 0.1:
-                                    ext = subhalo.Spatial_Extension(d)
-                                    value += '      {:.4f} \n'.format(ext)
-                                    f.write(value)
+                        f = np.loadtxt(dir + file_name)
+                        m_check = float('{:.4e}'.format(m))
+                        rb_check = float('{:.3e}'.format(rb))
+                        gam_check = float('{:.2f}'.format(gam))
+                        d_check = float('{:.4f}'.format(d))
+                        if np.sum((f[:, 0] == m_check) & (f[:, 1] == rb_check) &
+                                          (f[:, 2] == gam_check) & (f[:, 3] == d_check)) < 1:
+                            if subhalo.Full_Extension(d) > 0.1:
+                                ext = subhalo.Spatial_Extension(d)
+                                print '             Extension: ',ext
+                                value += '      {:.4f} \n'.format(ext)
+                                f.write(value)
 
     return

@@ -11,7 +11,7 @@ from Limits import *
 from profiles import *
 import scipy.integrate as integrate
 import scipy.special as special
-from scipy.interpolate import RectBivariateSpline,interp1d,interp2d,RegularGridInterpolator
+from scipy.interpolate import RectBivariateSpline,interp1d,interp2d,LinearNDInterpolator
 from scipy.optimize import fminbound
 import os
 import pickle
@@ -83,18 +83,33 @@ class Model(object):
         try:
             se_file = np.loadtxt(dir + file_name)
             m_comp = float('{:.4e}'.format(self.halo_mass))
+            se_file = se_file[se_file[:, 0] == m_comp]
             if self.profile == 0:
                 c_comp = float('{:.3e}'.format(self.c))
-                halo_of_int = se_file[(se_file[:, 0] == m_comp) & (se_file[:, 1] == c_comp)]
+                if np.sum(se_file[:, 1] == c_comp) > 0.:
+                    halo_of_int = se_file[se_file[:, 1] == c_comp]
+                    find_ext = interp1d(halo_of_int[:, -2], halo_of_int[:, -1], kind='linear', bounds_error=False,
+                                        fill_value='extrapolate')
+                    extension = find_ext(dist)
+                else:
+                    find_ext = interp2d(se_file[:, -3], se_file[:, -2], se_file[:, -1], kind='linear',
+                                        bounds_error=False)
+                    extension = find_ext(dist)
             elif self.profile == 1:
-                halo_of_int = se_file[(se_file[:, 0] == m_comp)]
+                find_ext = interp1d(se_file[:, -2], se_file[:, -1], kind='linear', bounds_error=False,
+                                    fill_value='extrapolate')
+                extension = find_ext(dist)
             else:
                 rb_comp = float('{:.3e}'.format(self.rb))
                 g_comp = float('{:.2f}'.format(self.gam))
-                halo_of_int = se_file[(se_file[:, 0] == m_comp) & (se_file[:, 1] == rb_comp) & (se_file[:, 2] == g_comp)]
-            find_ext = interp1d(halo_of_int[:, -2], halo_of_int[:, -1], kind='linear', bounds_error=False,
-                                fill_value='extrapolate')
-            extension = find_ext(dist)
+                if np.sum((se_file[:, 1] == rb_comp) & (se_file[:, 2] == g_comp)) > 0:
+                    halo_of_int = se_file[(se_file[:, 1] == rb_comp) & (se_file[:, 2] == g_comp)]
+                    find_ext = interp1d(halo_of_int[:, -2], halo_of_int[:, -1], kind='linear', bounds_error=False,
+                                        fill_value='extrapolate')
+                    extension = find_ext(dist)
+                else:
+                    find_ext = LinearNDInterpolator(se_file[:, 1:-1], se_file[:, -1], fill_value=0.05, rescale=True)
+                    extension = find_ext(self.rb, self.gam, dist)
         except:
             extension = self.subhalo.Spatial_Extension(dist)
         return self.Threshold(self.gamma, extension)
@@ -152,6 +167,13 @@ class Model(object):
         Calculates the maximum distance a spatially extended subhalo can be to still be observable
         :return: distance in kpc
         """
+        #dist_tab = np.logspace(-3, 1.4, 100)
+        #flux_diff_tab = np.zeros(dist_tab.size)
+        #for i, d in enumerate(dist_tab):
+        #    flux_diff_tab[i] = np.abs(self.Total_Flux(d) - self.min_Flux(d))
+        #    print d, flux_diff_tab[i]
+        #dmax = dist_tab[np.argmin(flux_diff_tab)]
+
         def flux_diff_lten(x):
             return np.abs(self.Total_Flux(10. ** x) - self.min_Flux(10. ** x))
         d_max = fminbound(flux_diff_lten, -4., 2., xtol= 10**-4.)
