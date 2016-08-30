@@ -32,16 +32,18 @@ class Subhalo(object):
         :param theta: Upper bound on anuglar integration (in degrees)
         :return: returns log10 of J factor
         """
+
         max_theta = radtodeg * np.arctan(self.max_int_radius / dist)
         if theta > max_theta:
             theta = max_theta
         theta = theta * np.pi / 180.
         eps = 10. ** -3.
+
         try:
             jfact1 = integrate.dblquad(lambda x, t: 2. * np.pi * kpctocm * np.sin(t) *
-                                                    self.density(np.sqrt(dist ** 2. + x ** 2. -
-                                                                         2.0 * dist * x * np.cos(t)))
-                                                    ** 2.0,
+                                        self.density(np.sqrt(dist ** 2. + x ** 2. -
+                                                             2.0 * dist * x * np.cos(t)))
+                                                     ** 2.0,
                                        0., theta, lambda th: self.los_min(th, dist),
                                        lambda th: self.los_max(th, dist), epsabs=10 ** -4,
                                        epsrel=10 ** -4)
@@ -49,23 +51,23 @@ class Subhalo(object):
         except Warning:
             print 'Initial Attempt at J factor integration failed...'
 
-            jfact1 = integrate.dblquad(lambda x, t: 2. * np.pi * kpctocm * np.sin(t) *
-                                                    self.density(np.sqrt(dist ** 2. + x ** 2. -
-                                                                         2.0 * dist * x * np.cos(t)))
-                                                    ** 2.0,
-                                      0., theta, lambda th: self.los_min(th, dist),
-                                      lambda th: self.d_halo_cent(th, dist, front=True, eps=eps), epsabs=10 ** -4,
-                                      epsrel=10 ** -4)
+            jfact = 0
+            theta_list = np.logspace(-5., theta, 50)
+            theta_list = np.insert(theta_list, 0, np.array([0.]))
+            jfac_list = np.zeros(theta_list.size)
+            for i, th in enumerate(theta_list):
+                hold = integrate.quad(lambda x: 2. * np.pi * kpctocm * np.sin(th) *
+                                        self.density(np.sqrt(dist ** 2. + x ** 2. -
+                                                             2.0 * dist * x * np.cos(th)))
+                                                     ** 2.0,
+                                        self.los_min(th, dist), self.los_max(th, dist),
+                                        epsabs=10 ** -4, epsrel=10 ** -4, points=[dist * np.cos(th)])
 
-            jfact2 = integrate.dblquad(lambda x, t:
-                                       2. * np.pi * kpctocm * np.sin(t) *
-                                       self.density(np.sqrt(dist ** 2. + x ** 2. -
-                                                            2.0 * dist * x * np.cos(t))
-                                                    ) ** 2.0,
-                                       0., theta, lambda th: self.d_halo_cent(th, dist, front=False, eps=eps),
-                                       lambda th: self.los_max(th, dist), epsabs=10 ** -4,
-                                       epsrel=10 ** -4)
-            jfact = jfact1[0] + jfact2[0] + (4. * np.pi * eps ** 3. * self.density(eps) / 3.)
+                jfac_list[i] = hold[0]
+            jfact = np.trapz(jfac_list, theta_list)
+            check = 10. ** self.J_pointlike(dist)
+            if jfact > check:
+                jfact = check
             return np.log10(jfact)
 
 
@@ -85,8 +87,11 @@ class Subhalo(object):
         :param dist: Distance to subhalo in kpc
         :return: min bound of los integration
         """
-        return dist * np.cos(theta) - np.sqrt(dist ** 2. * (np.cos(theta) ** 2. - 1.)
-                                              + self.max_int_radius ** 2.)
+        if (dist ** 2. * (np.cos(theta) ** 2. - 1.) + self.max_int_radius ** 2.) < 0:
+            return dist * np.cos(theta)
+        else:
+            return dist * np.cos(theta) - \
+                   np.sqrt(dist ** 2. * (np.cos(theta) ** 2. - 1.) + self.max_int_radius ** 2.)
 
     def los_max(self, theta, dist):
         """
@@ -95,8 +100,11 @@ class Subhalo(object):
         :param dist: Distance to subhalo in kpc
         :return: max bound of los integration
         """
-        return dist * np.cos(theta) + np.sqrt(dist ** 2. * (np.cos(theta) ** 2. - 1.)
-                                              + self.max_int_radius ** 2.)
+        if (dist ** 2. * (np.cos(theta) ** 2. - 1.) + self.max_int_radius ** 2.) < 0:
+            return dist * np.cos(theta)
+        else:
+            return dist * np.cos(theta) + \
+                   np.sqrt(dist ** 2. * (np.cos(theta) ** 2. - 1.) + self.max_int_radius ** 2.)
 
     def d_halo_cent(self, theta, dist, front=True, eps=10.**-4.):
         """
@@ -149,7 +157,7 @@ class Subhalo(object):
         """
         return np.abs(10. ** self.J(dist, theta) / 10. ** self.J_pointlike(dist) - 0.68)
 
-    def Spatial_Extension(self, dist):
+    def Spatial_Extension(self, dist, thresh_calc=True):
         """
         Function that minimizes AngRad68
         :param dist: Distance of subhalo in kpc
@@ -174,15 +182,21 @@ class Subhalo(object):
         # except:
         #     extension = fminbound(self.AngRad68, 0.01, 90., args=[dist], xtol=10**-3.)
 
+        if thresh_calc:
+            if 10. ** (self.J(dist, 2.) - self.J_pointlike(dist)) < 0.68:
+                return 2.
+            if 10. ** (self.J(dist, .05) - self.J_pointlike(dist)) > 0.68:
+                return 0.05
         try:
-            extension = fminbound(self.AngRad68, 0.01, self.Full_Extension(dist), args=[dist], xtol=10 ** -2.)
-            if np.abs(10. ** (self.J(dist, extension) - self.J_pointlike(dist)) - 0.68) < 0.02:
+            extension = fminbound(self.AngRad68, 0.01, 2., args=[dist], xtol=10 ** -2.)
+            if np.abs(10. ** (self.J(dist, extension) - self.J_pointlike(dist)) - 0.68) < 0.03:
                 extension = extension
             else:
                 raise ValueError
         except:
-            theta_tab = np.logspace(-1.3, np.log10(self.Full_Extension(dist)), 40)
-            full_tab = np.logspace(-1.3, np.log10(self.Full_Extension(dist)), 200)
+
+            theta_tab = np.logspace(np.log10(0.05), np.log10(2), 40)
+            full_tab = np.logspace(np.log10(0.05), np.log10(2), 200)
             ang68 = np.zeros(theta_tab.size)
             for i, theta in enumerate(theta_tab):
                 ang68[i] = self.AngRad68(theta, dist)
@@ -580,7 +594,7 @@ class HW_Fit(Subhalo):
             * kpctocm ** 3. * GeVtoSolarM)
         self.max_radius = self.virial_radius
 
-        self.max_int_radius = self.rb
+        self.max_int_radius = self.max_radius
 
     def density(self, r):
         try:

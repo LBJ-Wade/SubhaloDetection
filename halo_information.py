@@ -39,9 +39,6 @@ def table_spatial_extension(profile=0, truncate=False, arxiv_num=10070438,
     for m in mass_list:
         print 'Subhalo mass: ', m
         if profile == 0:
-            if not os.path.isfile(dir + file_name):
-                file = open('myfile.dat', 'w+')
-                file.close()
             for c in c_list:
                 print '     Concentration parameter: ', c
                 extension_tab = np.zeros(len(dist_list))
@@ -52,14 +49,11 @@ def table_spatial_extension(profile=0, truncate=False, arxiv_num=10070438,
                     value = '{:.4e}     {:.3e}      {:.4f}'.format(m, c, d)
                     with open(dir + file_name, 'a+') as f:
                         if not any(value == x.rstrip('\r\n') for x in f):
-                            if subhalo.Full_Extension(d) > 1:
+                            if subhalo.Full_Extension(d) > .1:
                                 ext = subhalo.Spatial_Extension(d)
                                 value += '      {:.4f} \n'.format(ext)
                                 f.write(value)
         elif profile == 1:
-            if not os.path.isfile(dir + file_name):
-                file = open('myfile.dat', 'w+')
-                file.close()
             subhalo = NFW(m, 1., truncate=False,
                           arxiv_num=160106781, M200=True)
             for ind, d in enumerate(dist_list):
@@ -72,9 +66,6 @@ def table_spatial_extension(profile=0, truncate=False, arxiv_num=10070438,
                             value += '      {:.4f} \n'.format(ext)
                             f.write(value)
         else:
-            if not os.path.isfile(dir + file_name):
-                file = open('myfile.dat', 'w+')
-                file.close()
             for rb in rb_list:
                 print '     Rb: ', rb
                 for gam in gamma_list:

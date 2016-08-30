@@ -363,10 +363,11 @@ class Observable(object):
         else:
             pickle.dump(self.param_list, open(self.folder + "param_list.pkl", "wb"))
 
-        file_name = 'Dmax_' + str(Profile_list[self.profile]) + '_mx_' + str(self.mx) +\
+        file_name = 'Dmax_EXTENDED_' + str(Profile_list[self.profile]) + '_mx_' + str(self.mx) +\
                     '_cross_sec_{:.3e}'.format(self.cross_sec) + '_annih_prod_' + self.annih_prod + '.dat'
 
-        mass_list = np.logspace(self.m_low, self.m_high, m_num)
+        mass_list = np.logspace(self.m_low, self.m_high, (self.m_high - self.m_low) * 6)
+
         c_list = np.logspace(self.c_low, self.c_high, c_num)
         print 'Cross Section: ', self.cross_sec, '\n'
         for m in mass_list:
@@ -497,37 +498,50 @@ class Observable(object):
                 str(self.alpha) + '_mx_' + str(self.mx) + '_cross_sec_' +\
                 str(np.log10(self.cross_sec)) + '_annih_prod_' + self.annih_prod + '.dat'
         else:
-            file_name = 'Dmax_' + str(Profile_list[self.profile]) + '_Truncate_' +\
-                str(self.truncate) + '_Cparam_' + str(self.arxiv_num) + '_alpha_' +\
-                str(self.alpha) + '_mx_' + str(self.mx) + '_cross_sec_' +\
-                str(np.log10(self.cross_sec)) + '_annih_prod_' + self.annih_prod + '.dat'
+            file_name ='Dmax_EXTENDED_' + str(Profile_list[self.profile]) + '_mx_' + str(self.mx) + \
+                       '_cross_sec_{:.3e}'.format(self.cross_sec) + '_annih_prod_' + self.annih_prod + '.dat'
 
-        integrand_table = np.loadtxt(self.folder+file_name)
-        if self.truncate:
+        if self.profile == 0:
+            integrand_table = np.loadtxt(self.folder + file_name)
+            mass_list = np.unique(integrand_table[:, 0])
+            c_list = np.unique(integrand_table[:, 1])
+            if self.truncate:
+                divis = 0.005
+            else:
+                divis = 1.
             integrand_table[:, 2] = (260. * (integrand_table[:, 0]) ** (-1.9) *
-                                     prob_c(integrand_table[:, 1], integrand_table[:, 0] / 0.005) *
+                                     prob_c(integrand_table[:, 1], integrand_table[:, 0] / divis) *
                                      integrand_table[:, 2] ** 3. / 3.0)
-        else:
-            integrand_table[:, 2] = (260. * (integrand_table[:, 0]) ** (-1.9) *
-                                     prob_c(integrand_table[:, 1], integrand_table[:, 0]) *
+            m_num = mass_list.size
+            c_num = c_list.size
+            int_prep_spline = np.reshape(integrand_table[:, 2], (m_num, c_num))
+            integrand = RectBivariateSpline(mass_list, c_list, int_prep_spline)
+            integr = integrand.integral(np.min(mass_list), np.max(mass_list),
+                                        10. ** -4., 1.)
+            print self.cross_sec, (4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr)
+            return 4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr
+        elif self.profile == 2:
+            integrand_table = np.loadtxt(self.folder + file_name)
+
+            mass_list = np.unique(integrand_table[:, 0])
+            rb_list = np.unique(integrand_table[:, 1])
+
+            integrand_table[:, 2] = (110. * (integrand_table[:, 0]) ** (-1.9) *
+                                     self.hw_prob_rb(integrand_table[:, 1], integrand_table[:, 0]) *
                                      integrand_table[:, 2] ** 3. / 3.0)
+
+            m_num = mass_list.size
+            rb_num = rb_list.size
+
+            int_prep_spline = np.reshape(integrand_table[:, 2], (m_num, rb_num))
+
+            integrand = RectBivariateSpline(mass_list, rb_list, int_prep_spline)
+            integr = integrand.integral(np.min(mass_list), np.max(mass_list),
+                                        10. ** -4., 1.)
+            print self.cross_sec, (4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr)
+            return 4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr
                                 
-        mass_list = np.array([round(integrand_table[0,0],5)])
-        c_list = np.array([round(integrand_table[0,1],5)])
-        for i in range(integrand_table[:,0].size):
-            if not np.any([np.in1d(mass_list, [round(integrand_table[i, 0], 5)])]):
-                mass_list = np.append(mass_list, [round(integrand_table[i,0], 5)])
-            if not np.any([np.in1d(c_list, [round(integrand_table[i, 1], 5)])]):
-                c_list = np.append(c_list, [round(integrand_table[i, 1], 5)])
-            
-        m_num = mass_list.size
-        c_num = c_list.size
-        int_prep_spline = np.reshape(integrand_table[:,2], (m_num, c_num))
-        integrand = RectBivariateSpline(mass_list, c_list, int_prep_spline)
-        integr = integrand.integral(3.24 * 10**4., 1.0 * 10**7., 0., 300.)
 
-        print self.cross_sec, (4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr)
-        return 4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr
 
     def N_Pointlike(self, bmin):
         """
@@ -545,7 +559,6 @@ class Observable(object):
             sigma_c = 0.24
             return (np.exp(- (np.log(c / cm) / (np.sqrt(2.0) * sigma_c)) ** 2.0) /
                     (np.sqrt(2. * np.pi) * sigma_c * c))
-
 
         file_name = 'Dmax_POINTLIKE_' + str(Profile_list[self.profile]) + self.tr_tag + \
                     '_mx_' + str(self.mx) + '_cross_sec_{:.3e}'.format(self.cross_sec) + \
@@ -570,6 +583,7 @@ class Observable(object):
                                         10. ** -4., 1.)
             print self.cross_sec, (4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr)
             return 4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr
+
         else:
             integrand_table = np.loadtxt(self.folder + file_name)
 
