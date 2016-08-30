@@ -242,6 +242,7 @@ class Observable(object):
         self.m200 = m200
         self.gam = gam
         self.stiff_rb =stiff_rb
+        self.arxiv_num = arxiv_num
 
         if self.truncate:
             self.m_low = np.log10(10. ** m_low / 0.005)
@@ -270,7 +271,7 @@ class Observable(object):
         
         self.folder += info_str
         ensure_dir(self.folder)
-                   
+        # TODO: Decide if dictionary is useless or needs an upgrade...
         default_dict = {'profile': 'Einasto', 'truncate': False, 'mx': 100., 'alpha': 0.16,
                         'annih_prod': 'BB', 'arxiv_num': 10070438, 'c_low': np.log10(20.),
                         'c_high': 2.1, 'c_num': 15, 'm_low': np.log10(3.24 * 10 ** 4.),
@@ -320,7 +321,7 @@ class Observable(object):
         print 'Cross Section: ', self.cross_sec, '\n'
         for m in mass_list:
             print 'Subhalo mass: ', m
-            if self.profile < 2:
+            if self.profile == 0:
                 c_list = np.logspace(self.c_low, self.c_high, c_num)
                 for c in c_list:
                     print '    Concentration parameter: ', c
@@ -358,6 +359,32 @@ class Observable(object):
                             np.savetxt(self.folder + file_name, add_to_table)
                         else:
                             np.savetxt(self.folder + file_name, tab)
+            elif self.profile == 1:
+                try:
+                    look_array = np.loadtxt(self.folder + file_name)
+                    mlook = float('{:.3e}'.format(m))
+                    if mlook in look_array[:, 0]:
+                        exists = True
+                    else:
+                        exists = False
+                except:
+                    exists = False
+                if not exists:
+                    dm_model = Model(self.mx, self.cross_sec, self.annih_prod,
+                                     m, self.alpha,
+                                     truncate=self.truncate,
+                                     arxiv_num=self.arxiv_num,
+                                     profile=self.profile, pointlike=self.point_like,
+                                     m200=self.m200)
+
+                    dmax = dm_model.d_max_point()
+                    tab = np.array([m, dmax]).transpose()
+                    if os.path.isfile(self.folder + file_name):
+                        load_info = np.loadtxt(self.folder + file_name)
+                        add_to_table = np.vstack((load_info, tab))
+                        np.savetxt(self.folder + file_name, add_to_table, fmt='%.3e')
+                    else:
+                        np.savetxt(self.folder + file_name, tab, fmt='%.3e')
             else:
                 rb_list = np.logspace(-3, np.log10(1.), 20)
                 gamma_list = np.linspace(0.2, 0.85 + 0.351 / 0.861 - 0.1, 20)
@@ -392,29 +419,14 @@ class Observable(object):
         self.param_list['m_num'] = m_num
         self.param_list['c_num'] = c_num
 
-        if os.path.isfile(self.folder + "param_list.pkl"):
-            openfile = open(self.folder + "param_list.pkl", 'rb')
-            old_dict = pickle.load(openfile)
-            openfile.close()
-            check_diff = DictDiffer(self.param_list, old_dict)
-            if bool(check_diff.changed()):
-                files = glob.glob(self.folder + '/*')
-                for f in files:
-                    os.remove(f)
-                pickle.dump(self.param_list, open(self.folder + "param_list.pkl", "wb"))
-        else:
-            pickle.dump(self.param_list, open(self.folder + "param_list.pkl", "wb"))
-
         file_name = 'Dmax_EXTENDED_' + str(Profile_list[self.profile]) + '_mx_' + str(self.mx) +\
                     '_cross_sec_{:.3e}'.format(self.cross_sec) + '_annih_prod_' + self.annih_prod + '.dat'
-
         mass_list = np.logspace(self.m_low, self.m_high, (self.m_high - self.m_low) * 6)
 
         print 'Cross Section: ', self.cross_sec, '\n'
         for m in mass_list:
             print 'Subhalo mass: ', m
-
-            if self.profile < 2:
+            if self.profile == 0:
                 c_list = np.logspace(self.c_low, self.c_high, c_num)
                 for c in c_list:
                     print '    Concentration parameter: ', c
@@ -424,7 +436,9 @@ class Observable(object):
                             mm = 0.005 * m
                         else:
                             mm = m
-                        if any((np.round([mm, c], 4) == x).all() for x in np.round(look_array[:, 0:2], 4)):
+                        mlook = float('{:.3e}'.format(mm))
+                        clook = float('{:.3e}'.format(c))
+                        if [mlook, clook] in look_array[:, 0:2]:
                             exists = True
                         else:
                             exists = False
@@ -449,19 +463,46 @@ class Observable(object):
                         if os.path.isfile(self.folder + file_name):
                             load_info = np.loadtxt(self.folder + file_name)
                             add_to_table = np.vstack((load_info, tab))
-                            np.savetxt(self.folder + file_name, add_to_table)
+                            np.savetxt(self.folder + file_name, add_to_table, fmt='%.3e')
                         else:
-                            np.savetxt(self.folder + file_name, tab)
+                            np.savetxt(self.folder + file_name, tab, fmt='%.3e')
+            elif self.profile == 1:
+                try:
+                    look_array = np.loadtxt(self.folder + file_name)
+                    mlook = float('{:.3e}'.format(m))
+                    if mlook in look_array[:, 0]:
+                        exists = True
+                    else:
+                        exists = False
+                except:
+                    exists = False
+                if not exists:
+                    dm_model = Model(self.mx, self.cross_sec, self.annih_prod,
+                                     m, self.alpha,
+                                     truncate=self.truncate,
+                                     arxiv_num=self.arxiv_num,
+                                     profile=self.profile, pointlike=self.point_like,
+                                     m200=self.m200)
+
+                    dmax = dm_model.D_max_extend()
+                    tab = np.array([m, dmax]).transpose()
+                    if os.path.isfile(self.folder + file_name):
+                        load_info = np.loadtxt(self.folder + file_name)
+                        add_to_table = np.vstack((load_info, tab))
+                        np.savetxt(self.folder + file_name, add_to_table, fmt='%.3e')
+                    else:
+                        np.savetxt(self.folder + file_name, tab, fmt='%.3e')
             else:
                 rb_list = np.logspace(-3, np.log10(0.5), 20)
                 gamma_list = np.linspace(0.2, 0.85 + 0.351 / 0.861 - 0.1, 20)
-                temp_arry = np.zeros(gamma_list.size * 2.).reshape((gamma_list.size, 2))
+                temp_arry = np.zeros(gamma_list.size * 2).reshape((gamma_list.size, 2))
                 for rb in rb_list:
                     print '     Rb: ', rb
                     try:
                         look_array = np.loadtxt(self.folder + file_name)
-
-                        if any((np.round([m, c], 4) == x).all() for x in np.round(look_array[:, 0:2], 4)):
+                        mlook = float('{:.3e}'.format(m))
+                        rblook = float('{:.3e}'.format(rb))
+                        if [mlook, rblook] in look_array[:, 0:2]:
                             exists = True
                         else:
                             exists = False
@@ -484,9 +525,9 @@ class Observable(object):
                         if os.path.isfile(self.folder + file_name):
                             load_info = np.loadtxt(self.folder + file_name)
                             add_to_table = np.vstack((load_info, tab))
-                            np.savetxt(self.folder + file_name, add_to_table)
+                            np.savetxt(self.folder + file_name, add_to_table, fmt='%.3e')
                         else:
-                            np.savetxt(self.folder + file_name, tab)
+                            np.savetxt(self.folder + file_name, tab, fmt='%.3e')
         return
 
     def Table_Dmax_Extended_Constrained(self, min_extension=0.3):
@@ -593,6 +634,17 @@ class Observable(object):
                                         10. ** -4., 1.)
             print self.cross_sec, (4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr)
             return 4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr
+        if self.profile == 1:
+            integrand_table = np.loadtxt(self.folder + file_name)
+            mass_list = np.unique(integrand_table[:, 0])
+
+            integrand_table[:, 1] = (260. * (integrand_table[:, 0]) ** (-1.9) *
+                                     integrand_table[:, 1] ** 3. / 3.0)
+
+            integrand = UnivariateSpline(mass_list, integrand_table[:, 1])
+            integr = integrand.integral(np.min(mass_list), np.max(mass_list))
+            print self.cross_sec, (4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr)
+            return 4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr
         elif self.profile == 2:
             integrand_table = np.loadtxt(self.folder + file_name)
 
@@ -637,7 +689,7 @@ class Observable(object):
                     '_mx_' + str(self.mx) + '_cross_sec_{:.3e}'.format(self.cross_sec) + \
                     '_annih_prod_' + self.annih_prod + self.extra_tag + '.dat'
 
-        if self.profile < 2:
+        if self.profile == 0:
             integrand_table = np.loadtxt(self.folder + file_name)
             mass_list = np.unique(integrand_table[:, 0])
             c_list = np.unique(integrand_table[:, 1])
@@ -647,16 +699,25 @@ class Observable(object):
                 divis = 1.
             integrand_table[:, 2] = (260. * (integrand_table[:, 0])**(-1.9) *
                                      prob_c(integrand_table[:, 1], integrand_table[:, 0] / divis) *
-                                     integrand_table[:, 2]**3. / 3.0)
+                                     integrand_table[:, 2] ** 3. / 3.0)
             m_num = mass_list.size
             c_num = c_list.size
             int_prep_spline = np.reshape(integrand_table[:, 2], (m_num, c_num))
             integrand = RectBivariateSpline(mass_list, c_list, int_prep_spline)
-            integr = integrand.integral(np.min(mass_list), np.max(mass_list),
-                                        10. ** -4., 1.)
+            integr = integrand.integral(np.min(mass_list), np.max(mass_list), np.min(c_list), np.max(c_list))
             print self.cross_sec, (4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr)
             return 4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr
+        elif self.profile == 1:
+            integrand_table = np.loadtxt(self.folder + file_name)
+            mass_list = np.unique(integrand_table[:, 0])
 
+            integrand_table[:, 1] = (260. * (integrand_table[:, 0]) ** (-1.9) *
+                                     integrand_table[:, 1] ** 3. / 3.0)
+
+            integrand = UnivariateSpline(mass_list, integrand_table[:, 1])
+            integr = integrand.integral(np.min(mass_list), np.max(mass_list))
+            print self.cross_sec, (4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr)
+            return 4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr
         else:
             integrand_table = np.loadtxt(self.folder + file_name)
 

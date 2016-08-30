@@ -30,15 +30,11 @@ def table_spatial_extension(profile=0, truncate=False, arxiv_num=10070438,
     else:
         mass_list = np.logspace(np.log10(m_low), np.log10(m_high),  (np.log10(m_high) - np.log10(m_low)) * 6)
     dist_list = np.logspace(d_low, d_high, d_num)
-    if profile == 0:
-        c_list = np.logspace(np.log10(2.5), 2.4, c_num)
-    if profile == 2:
-        rb_list = np.logspace(-3, np.log10(0.5), 20)
-        gamma_list = np.linspace(0.2, 0.85 + 0.351 / 0.861 - 0.1, 20)
 
     for m in mass_list:
         print 'Subhalo mass: ', m
         if profile == 0:
+            c_list = np.logspace(np.log10(2.5), 2.4, c_num)
             for c in c_list:
                 print '     Concentration parameter: ', c
                 subhalo = Einasto(m, alpha, c, truncate=True,
@@ -46,25 +42,39 @@ def table_spatial_extension(profile=0, truncate=False, arxiv_num=10070438,
                 for ind, d in enumerate(dist_list):
                     print '         Distance', d
                     value = '{:.4e}     {:.3e}      {:.4f}'.format(m, c, d)
-                    with open(dir + file_name, 'a+') as f:
-                        if not any(value == x.rstrip('\r\n') for x in f):
-                            if subhalo.Full_Extension(d) > 0.1:
-                                ext = subhalo.Spatial_Extension(d)
-                                value += '      {:.4f} \n'.format(float(ext))
-                                f.write(value)
+                    f = np.loadtxt(dir + file_name)
+                    m_check = float('{:.4e}'.format(m))
+                    c_check = float('{:.3e}'.format(c))
+                    d_check = float('{:.4f}'.format(d))
+                    if np.sum((f[:, 0] == m_check) & (f[:, 1] == c_check) &
+                                      (f[:, 3] == d_check)) < 1:
+                        if subhalo.Full_Extension(d) > 0.1:
+                            ext = subhalo.Spatial_Extension(d)
+                            print '             Extension: ', ext
+                            value += '      {:.4f} \n'.format(float(ext))
+                            ff = open(dir + file_name, 'a+')
+                            ff.write(value)
+                            ff.close()
         elif profile == 1:
             subhalo = NFW(m, 1., truncate=False,
                           arxiv_num=160106781, M200=True)
             for ind, d in enumerate(dist_list):
                 print '         Distance', d
                 value = '{:.4e}     {:.4f}'.format(m, d)
-                with open(dir + file_name, 'a+') as f:
-                    if not any(value == x.rstrip('\r\n') for x in f):
-                        if subhalo.Full_Extension(d) > 0.1:
-                            ext = subhalo.Spatial_Extension(d)
-                            value += '      {:.4f} \n'.format(float(ext))
-                            f.write(value)
+                f = np.loadtxt(dir + file_name)
+                m_check = float('{:.4e}'.format(m))
+                d_check = float('{:.4f}'.format(d))
+                if np.sum((f[:, 0] == m_check) & (f[:, 3] == d_check)) < 1:
+                    if subhalo.Full_Extension(d) > 0.1:
+                        ext = subhalo.Spatial_Extension(d)
+                        print '             Extension: ', ext
+                        value += '      {:.4f} \n'.format(float(ext))
+                        ff = open(dir + file_name, 'a+')
+                        ff.write(value)
+                        ff.close()
         else:
+            rb_list = np.logspace(-3, np.log10(0.5), 20)
+            gamma_list = np.linspace(0.2, 0.85 + 0.351 / 0.861 - 0.1, 20)
             for rb in rb_list:
                 print '     Rb: ', rb
                 for gam in gamma_list:
@@ -86,6 +96,6 @@ def table_spatial_extension(profile=0, truncate=False, arxiv_num=10070438,
                                 value += '      {:.4f} \n'.format(float(ext))
                                 ff = open(dir + file_name, 'a+')
                                 ff.write(value)
-                                ff.close
+                                ff.close()
 
     return
