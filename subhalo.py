@@ -322,7 +322,7 @@ class Observable(object):
                         else:
                             np.savetxt(self.folder + file_name, tab)
             else:
-                rb_list = np.logspace(-3, np.log10(0.5), 20)
+                rb_list = np.logspace(-3, np.log10(1.), 20)
                 gamma_list = np.linspace(0.2, 0.85 + 0.351 / 0.861 - 0.1, 20)
                 for rb in rb_list:
                     print '    Rb Parameter: ', rb
@@ -459,20 +459,14 @@ class Observable(object):
 
         Note: Table_Dmax_Extended should have already been run!
         """
-        # TODO: Test. Also think about whether min_ext should be compared to full extension or that calulated from 68% containment
-        Profile_names = ['Einasto', 'NFW']
 
-        load_file_name = 'Dmax_' + str(Profile_names[self.profile]) + '_Truncate_' + \
-            str(self.truncate) + '_Cparam_' + str(self.arxiv_num) + '_alpha_' + \
-            str(self.alpha) + '_mx_' + str(self.mx) + '_cross_sec_' + \
-            str(np.log10(self.cross_sec)) + '_annih_prod_' + self.annih_prod + '.dat'
+        load_file_name = 'Dmax_EXTENDED_' + str(Profile_list[self.profile]) + '_mx_' + str(self.mx) +\
+                         '_cross_sec_{:.3e}'.format(self.cross_sec) + '_annih_prod_' + self.annih_prod + '.dat'
 
-        save_file_name = 'Dmax_Constrained_MinExtension_' + str(min_extension) +\
-            str(Profile_names[self.profile]) + '_Truncate_' + \
-            str(self.truncate) + '_Cparam_' + str(self.arxiv_num) + '_alpha_' + \
-            str(self.alpha) + '_mx_' + str(self.mx) + '_cross_sec_' + \
-            str(np.log10(self.cross_sec)) + '_annih_prod_' + self.annih_prod + '.dat'
-
+        save_file_name = 'Dmax_EXTENDED_MinExt_{:.2f}'.format(min_extension) +\
+                         str(Profile_list[self.profile]) + '_mx_' +\
+                         str(self.mx) + '_cross_sec_{:.3e}'.format(self.cross_sec) +\
+                         '_annih_prod_' + self.annih_prod + '.dat'
         try:
             load_dmax = np.loadtxt(self.folder + load_file_name)
         except:

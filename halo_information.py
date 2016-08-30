@@ -41,7 +41,6 @@ def table_spatial_extension(profile=0, truncate=False, arxiv_num=10070438,
         if profile == 0:
             for c in c_list:
                 print '     Concentration parameter: ', c
-                extension_tab = np.zeros(len(dist_list))
                 subhalo = Einasto(m, alpha, c, truncate=True,
                                   arxiv_num=13131729, M200=False)
                 for ind, d in enumerate(dist_list):
@@ -70,7 +69,6 @@ def table_spatial_extension(profile=0, truncate=False, arxiv_num=10070438,
                 print '     Rb: ', rb
                 for gam in gamma_list:
                     print '         Gamma: ', gam
-                    extension_tab = np.zeros(len(dist_list))
                     subhalo = HW_Fit(m, gam=gam, rb=rb, M200=True, gcd=8.5, stiff_rb=False)
                     for ind, d in enumerate(dist_list):
                         print '           Distance', d
