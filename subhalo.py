@@ -321,11 +321,9 @@ class Observable(object):
                 gamma_list = np.linspace(0.2, 0.85 + 0.351 / 0.861 - 0.1, 20)
                 for rb in rb_list:
                     print '    Rb Parameter: ', rb
-
                     temp_arry = np.zeros(len(gamma_list) * 2).reshape(len(gamma_list), 2)
                     for j, gam in enumerate(gamma_list):
                         print '         Gamma: ', gam
-
                         dm_model = Model(self.mx, self.cross_sec, self.annih_prod,
                                          m, profile=self.profile, pointlike=self.point_like,
                                          m200=self.m200, stiff_rb=self.stiff_rb, gam=gam,
@@ -578,7 +576,7 @@ class Observable(object):
             mass_list = np.unique(integrand_table[:, 0])
             rb_list = np.unique(integrand_table[:, 1])
 
-            integrand_table[:, 2] = (93. * (integrand_table[:, 0]) ** (-1.9) *
+            integrand_table[:, 2] = (110. * (integrand_table[:, 0]) ** (-1.9) *
                                      self.hw_prob_rb(integrand_table[:, 1], integrand_table[:, 0]) *
                                      integrand_table[:, 2] ** 3. / 3.0)
 
@@ -592,18 +590,6 @@ class Observable(object):
                                         10.**-4., 1.)
             print self.cross_sec, (4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr)
             return 4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr
-
-
-    def hw_integrd(self, rb, mass):
-        #return (self.hw_prob_gamma(gamma) * self.hw_prob_rb(rb, mass) *
-        #        Model(self.mx, self.cross_sec, self.annih_prod, mass, profile=2,
-        #              pointlike=True, m200=True, gam=gamma, stiff_rb=False, rb=rb).d_max_point() ** 3. *
-        #        260. * mass ** (-1.9))
-        gamma = 0.85
-        return (self.hw_prob_rb(rb, mass) *
-                Model(self.mx, self.cross_sec, self.annih_prod, mass, profile=2,
-                      pointlike=True, m200=True, gam=gamma, stiff_rb=False, rb=rb).d_max_point() ** 3. *
-                93. * mass ** (-1.9))
 
     def hw_prob_rb(self, rb, mass):
         rb_norm = 10. ** (-4.24) * mass ** 0.459
