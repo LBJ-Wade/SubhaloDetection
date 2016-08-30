@@ -84,6 +84,8 @@ def table_spatial_extension(profile=0, truncate=False, arxiv_num=10070438,
                                 ext = subhalo.Spatial_Extension(d)
                                 print '             Extension: ', ext
                                 value += '      {:.4f} \n'.format(float(ext))
-                                f.write(value)
+                                ff = open(dir + file_name, 'a+')
+                                ff.write(value)
+                                ff.close
 
     return
