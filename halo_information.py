@@ -49,13 +49,13 @@ def table_spatial_extension(profile=0, truncate=False, arxiv_num=10070438,
                                   arxiv_num=13131729, M200=False)
                 for ind, d in enumerate(dist_list):
                     print '         Distance', d
-                    value = ['{:.4e}'.format(m), '{:.3e}'.format(c)]
+                    value = '{:.4e}     {:.3e}      {:.4f}'.format(m, c, d)
                     with open(dir + file_name, 'a+') as f:
                         if not any(value == x.rstrip('\r\n') for x in f):
                             if subhalo.Full_Extension(d) > 1:
                                 ext = subhalo.Spatial_Extension(d)
-                                value.append('{:.4f}'.format(ext))
-                                f.write(value + '\n')
+                                value += '      {:.4f} \n'.format(ext)
+                                f.write(value)
         elif profile == 1:
             if not os.path.isfile(dir + file_name):
                 file = open('myfile.dat', 'w+')
@@ -64,13 +64,13 @@ def table_spatial_extension(profile=0, truncate=False, arxiv_num=10070438,
                           arxiv_num=160106781, M200=True)
             for ind, d in enumerate(dist_list):
                 print '         Distance', d
-                value = ['{:.4e}'.format(m)]
+                value = '{:.4e}     {:.4f}'.format(m, d)
                 with open(dir + file_name, 'a+') as f:
                     if not any(value == x.rstrip('\r\n') for x in f):
                         if subhalo.Full_Extension(d) > 1:
                             ext = subhalo.Spatial_Extension(d)
-                            value.append('{:.4f}'.format(ext))
-                            f.write(value + '\n')
+                            value += '      {:.4f} \n'.format(ext)
+                            f.write(value)
         else:
             if not os.path.isfile(dir + file_name):
                 file = open('myfile.dat', 'w+')
@@ -83,12 +83,12 @@ def table_spatial_extension(profile=0, truncate=False, arxiv_num=10070438,
                     subhalo = HW_Fit(m, gam=gam, rb=rb, M200=True, gcd=8.5, stiff_rb=False)
                     for ind, d in enumerate(dist_list):
                         print '           Distance', d
-                        value = ['{:.4e}'.format(m), '{:.3e}'.format(rb), '{:2f}'.format(gam)]
+                        value = '{:.4e}     {:.3e}      {:2f}      {:.4f}'.format(m, rb, gam, d)
                         with open(dir + file_name, 'a+') as f:
                             if not any(value == x.rstrip('\r\n') for x in f):
                                 if subhalo.Full_Extension(d) > 1:
                                     ext = subhalo.Spatial_Extension(d)
-                                    value.append('{:.2f}'.format(ext))
+                                    value += '      {:.2f} \n'.format(ext)
                                     f.write(value + '\n')
 
     return
