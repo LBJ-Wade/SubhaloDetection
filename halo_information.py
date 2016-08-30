@@ -50,7 +50,7 @@ def table_spatial_extension(profile=0, truncate=False, arxiv_num=10070438,
                         if not any(value == x.rstrip('\r\n') for x in f):
                             if subhalo.Full_Extension(d) > 0.1:
                                 ext = subhalo.Spatial_Extension(d)
-                                value += '      {:.4f} \n'.format(ext)
+                                value += '      {:.4f} \n'.format(float(ext))
                                 f.write(value)
         elif profile == 1:
             subhalo = NFW(m, 1., truncate=False,
@@ -62,7 +62,7 @@ def table_spatial_extension(profile=0, truncate=False, arxiv_num=10070438,
                     if not any(value == x.rstrip('\r\n') for x in f):
                         if subhalo.Full_Extension(d) > 0.1:
                             ext = subhalo.Spatial_Extension(d)
-                            value += '      {:.4f} \n'.format(ext)
+                            value += '      {:.4f} \n'.format(float(ext))
                             f.write(value)
         else:
             for rb in rb_list:
@@ -82,8 +82,8 @@ def table_spatial_extension(profile=0, truncate=False, arxiv_num=10070438,
                                           (f[:, 2] == gam_check) & (f[:, 3] == d_check)) < 1:
                             if subhalo.Full_Extension(d) > 0.1:
                                 ext = subhalo.Spatial_Extension(d)
-                                print '             Extension: ',ext
-                                value += '      {:.4f} \n'.format(ext)
+                                print '             Extension: ', ext
+                                value += '      {:.4f} \n'.format(float(ext))
                                 f.write(value)
 
     return
