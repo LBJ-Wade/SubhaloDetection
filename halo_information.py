@@ -25,12 +25,12 @@ def table_spatial_extension(profile=0, truncate=False, arxiv_num=10070438,
     dir = MAIN_PATH + '/SubhaloDetection/Data/'
 
     if truncate:
-        mass_list = np.logspace(np.log10(m_low / 0.005),
-                                np.log10(m_high / 0.005), m_num)
+        mass_list = np.logspace(np.log10(m_low / 0.005), np.log10(m_high / 0.005),
+                                (np.log10(m_high) - np.log10(m_low)) * 6)
     else:
-        mass_list = np.logspace(np.log10(m_low), np.log10(m_high), m_num)
+        mass_list = np.logspace(np.log10(m_low), np.log10(m_high),  (np.log10(m_high) - np.log10(m_low)) * 6)
     dist_list = np.logspace(d_low, d_high, d_num)
-    if profile < 2:
+    if profile == 0:
         c_list = np.logspace(np.log10(2.5), 2.4, c_num)
     if profile == 2:
         rb_list = np.logspace(-3, np.log10(0.5), 20)
@@ -71,7 +71,6 @@ def table_spatial_extension(profile=0, truncate=False, arxiv_num=10070438,
                             ext = subhalo.Spatial_Extension(d)
                             value.append('{:.4f}'.format(ext))
                             f.write(value + '\n')
-
         else:
             if not os.path.isfile(dir + file_name):
                 file = open('myfile.dat', 'w+')
@@ -84,7 +83,7 @@ def table_spatial_extension(profile=0, truncate=False, arxiv_num=10070438,
                     subhalo = HW_Fit(m, gam=gam, rb=rb, M200=True, gcd=8.5, stiff_rb=False)
                     for ind, d in enumerate(dist_list):
                         print '           Distance', d
-                        value = ['{:.4e}'.format(m), '{:.3e}'.format(rb), '{:2f}'.format(gam), '{:.3f}'.format(d)]
+                        value = ['{:.4e}'.format(m), '{:.3e}'.format(rb), '{:2f}'.format(gam)]
                         with open(dir + file_name, 'a+') as f:
                             if not any(value == x.rstrip('\r\n') for x in f):
                                 if subhalo.Full_Extension(d) > 1:
