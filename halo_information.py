@@ -38,32 +38,39 @@ def table_spatial_extension(profile=0, truncate=False, arxiv_num=10070438,
 
     for m in mass_list:
         print 'Subhalo mass: ', m
-        if profile < 2:
+        if profile == 0:
             if not os.path.isfile(dir + file_name):
                 file = open('myfile.dat', 'w+')
                 file.close()
             for c in c_list:
                 print '     Concentration parameter: ', c
-
                 extension_tab = np.zeros(len(dist_list))
-                if profile == 0:
-                    subhalo = Einasto(m, alpha, c, truncate=truncate,
-                                      arxiv_num=arxiv_num, M200=M200)
-                elif profile == 1:
-                    subhalo = NFW(m, alpha, c, truncate=truncate,
-                                  arxiv_num=arxiv_num, M200=M200)
-                else:
-                    'Profile not implemented yet'
-
+                subhalo = Einasto(m, alpha, c, truncate=True,
+                                  arxiv_num=13131729, M200=False)
                 for ind, d in enumerate(dist_list):
                     print '         Distance', d
-
+                    value = ['{:.4e}'.format(m), '{:.3e}'.format(c)]
                     with open(dir + file_name, 'a+') as f:
                         if not any(value == x.rstrip('\r\n') for x in f):
                             if subhalo.Full_Extension(d) > 1:
                                 ext = subhalo.Spatial_Extension(d)
-                                value += '      {:.2f}'.format(ext)
+                                value.append('{:.4f}'.format(ext))
                                 f.write(value + '\n')
+        elif profile == 1:
+            if not os.path.isfile(dir + file_name):
+                file = open('myfile.dat', 'w+')
+                file.close()
+            subhalo = NFW(m, 1., truncate=False,
+                          arxiv_num=160106781, M200=True)
+            for ind, d in enumerate(dist_list):
+                print '         Distance', d
+                value = ['{:.4e}'.format(m)]
+                with open(dir + file_name, 'a+') as f:
+                    if not any(value == x.rstrip('\r\n') for x in f):
+                        if subhalo.Full_Extension(d) > 1:
+                            ext = subhalo.Spatial_Extension(d)
+                            value.append('{:.4f}'.format(ext))
+                            f.write(value + '\n')
 
         else:
             if not os.path.isfile(dir + file_name):
