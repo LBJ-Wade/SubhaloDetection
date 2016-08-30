@@ -76,7 +76,7 @@ class Subhalo(object):
             jfact = np.trapz(jfac_list, theta_list)
             check = 10. ** self.J_pointlike(dist)
             if jfact > check:
-                jfact = check
+                jfact = check[0]
             return np.log10(jfact)
 
 
