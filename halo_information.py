@@ -48,7 +48,7 @@ def table_spatial_extension(profile=0, truncate=False, arxiv_num=10070438,
                     value = '{:.4e}     {:.3e}      {:.4f}'.format(m, c, d)
                     with open(dir + file_name, 'a+') as f:
                         if not any(value == x.rstrip('\r\n') for x in f):
-                            if subhalo.Full_Extension(d) > .1:
+                            if subhalo.Full_Extension(d) > 0.1:
                                 ext = subhalo.Spatial_Extension(d)
                                 value += '      {:.4f} \n'.format(ext)
                                 f.write(value)
@@ -60,7 +60,7 @@ def table_spatial_extension(profile=0, truncate=False, arxiv_num=10070438,
                 value = '{:.4e}     {:.4f}'.format(m, d)
                 with open(dir + file_name, 'a+') as f:
                     if not any(value == x.rstrip('\r\n') for x in f):
-                        if subhalo.Full_Extension(d) > 1:
+                        if subhalo.Full_Extension(d) > 0.1:
                             ext = subhalo.Spatial_Extension(d)
                             value += '      {:.4f} \n'.format(ext)
                             f.write(value)
@@ -75,9 +75,9 @@ def table_spatial_extension(profile=0, truncate=False, arxiv_num=10070438,
                         value = '{:.4e}     {:.3e}      {:2f}      {:.4f}'.format(m, rb, gam, d)
                         with open(dir + file_name, 'a+') as f:
                             if not any(value == x.rstrip('\r\n') for x in f):
-                                if subhalo.Full_Extension(d) > 1:
+                                if subhalo.Full_Extension(d) > 0.1:
                                     ext = subhalo.Spatial_Extension(d)
-                                    value += '      {:.2f} \n'.format(ext)
-                                    f.write(value + '\n')
+                                    value += '      {:.4f} \n'.format(ext)
+                                    f.write(value)
 
     return

@@ -11,7 +11,7 @@ from Limits import *
 from profiles import *
 import scipy.integrate as integrate
 import scipy.special as special
-from scipy.interpolate import RectBivariateSpline,interp1d,interp2d
+from scipy.interpolate import RectBivariateSpline,interp1d,interp2d,RegularGridInterpolator
 from scipy.optimize import fminbound
 import os
 import pickle
@@ -50,6 +50,9 @@ class Model(object):
         self.m200 = m200
         self.stiff_rb = stiff_rb
         self.rb = rb
+        self.gam = gam
+        self.halo_mass = halo_mass
+        self.c = concentration_param
 
         if profile == 0:
             self.subhalo = Einasto(halo_mass, alpha, 
@@ -79,7 +82,19 @@ class Model(object):
         dir = MAIN_PATH + '/SubhaloDetection/Data/'
         try:
             se_file = np.loadtxt(dir + file_name)
-
+            m_comp = float('{:.4e}'.format(self.halo_mass))
+            if self.profile == 0:
+                c_comp = float('{:.3e}'.format(self.c))
+                halo_of_int = se_file[(se_file[:, 0] == m_comp) & (se_file[:, 1] == c_comp)]
+            elif self.profile == 1:
+                halo_of_int = se_file[(se_file[:, 0] == m_comp)]
+            else:
+                rb_comp = float('{:.3e}'.format(self.rb))
+                g_comp = float('{:.2f}'.format(self.gam))
+                halo_of_int = se_file[(se_file[:, 0] == m_comp) & (se_file[:, 1] == rb_comp) & (se_file[:, 2] == g_comp)]
+            find_ext = interp1d(halo_of_int[:, -2], halo_of_int[:, -1], kind='linear', bounds_error=False,
+                                fill_value='extrapolate')
+            extension = find_ext(dist)
         except:
             extension = self.subhalo.Spatial_Extension(dist)
         return self.Threshold(self.gamma, extension)
