@@ -42,12 +42,15 @@ def table_spatial_extension(profile=0, truncate=False, arxiv_num=10070438,
                 for ind, d in enumerate(dist_list):
                     print '         Distance', d
                     value = '{:.4e}     {:.3e}      {:.4f}'.format(m, c, d)
-                    f = np.loadtxt(dir + file_name)
-                    m_check = float('{:.4e}'.format(m))
-                    c_check = float('{:.3e}'.format(c))
-                    d_check = float('{:.4f}'.format(d))
-                    if np.sum((f[:, 0] == m_check) & (f[:, 1] == c_check) &
-                                      (f[:, 3] == d_check)) < 1:
+                    try:
+                        f = np.loadtxt(dir + file_name)
+                        m_check = float('{:.4e}'.format(m))
+                        c_check = float('{:.3e}'.format(c))
+                        d_check = float('{:.4f}'.format(d))
+                        if np.sum((f[:, 0] == m_check) & (f[:, 1] == c_check) &
+                                          (f[:, 3] == d_check)) < 1:
+                            raise ValueError
+                    except:
                         if subhalo.Full_Extension(d) > 0.1:
                             ext = subhalo.Spatial_Extension(d)
                             print '             Extension: ', ext
@@ -61,10 +64,13 @@ def table_spatial_extension(profile=0, truncate=False, arxiv_num=10070438,
             for ind, d in enumerate(dist_list):
                 print '         Distance', d
                 value = '{:.4e}     {:.4f}'.format(m, d)
-                f = np.loadtxt(dir + file_name)
-                m_check = float('{:.4e}'.format(m))
-                d_check = float('{:.4f}'.format(d))
-                if np.sum((f[:, 0] == m_check) & (f[:, 3] == d_check)) < 1:
+                try:
+                    f = np.loadtxt(dir + file_name)
+                    m_check = float('{:.4e}'.format(m))
+                    d_check = float('{:.4f}'.format(d))
+                    if np.sum((f[:, 0] == m_check) & (f[:, 3] == d_check)) < 1:
+                        raise ValueError
+                except:
                     if subhalo.Full_Extension(d) > 0.1:
                         ext = subhalo.Spatial_Extension(d)
                         print '             Extension: ', ext
@@ -83,13 +89,16 @@ def table_spatial_extension(profile=0, truncate=False, arxiv_num=10070438,
                     for ind, d in enumerate(dist_list):
                         print '           Distance', d
                         value = '{:.4e}     {:.3e}      {:2f}      {:.4f}'.format(m, rb, gam, d)
-                        f = np.loadtxt(dir + file_name)
-                        m_check = float('{:.4e}'.format(m))
-                        rb_check = float('{:.3e}'.format(rb))
-                        gam_check = float('{:.2f}'.format(gam))
-                        d_check = float('{:.4f}'.format(d))
-                        if np.sum((f[:, 0] == m_check) & (f[:, 1] == rb_check) &
-                                          (f[:, 2] == gam_check) & (f[:, 3] == d_check)) < 1:
+                        try:
+                            f = np.loadtxt(dir + file_name)
+                            m_check = float('{:.4e}'.format(m))
+                            rb_check = float('{:.3e}'.format(rb))
+                            gam_check = float('{:.2f}'.format(gam))
+                            d_check = float('{:.4f}'.format(d))
+                            if np.sum((f[:, 0] == m_check) & (f[:, 1] == rb_check) &
+                                              (f[:, 2] == gam_check) & (f[:, 3] == d_check)) < 1:
+                                raise ValueError
+                        except:
                             if subhalo.Full_Extension(d) > 0.1:
                                 ext = subhalo.Spatial_Extension(d)
                                 print '             Extension: ', ext
