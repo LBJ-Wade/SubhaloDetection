@@ -23,7 +23,7 @@ def table_spatial_extension(profile=0, truncate=False, arxiv_num=10070438,
     file_name = 'SpatialExtension_' + str(Profile_list[profile]) + '.dat'
 
     dir = MAIN_PATH + '/SubhaloDetection/Data/'
-
+    open(dir + file_name, "a")
     if truncate:
         mass_list = np.logspace(np.log10(m_low / 0.005), np.log10(m_high / 0.005),
                                 (np.log10(m_high) - np.log10(m_low)) * 6)
