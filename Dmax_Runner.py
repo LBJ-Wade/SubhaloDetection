@@ -84,18 +84,18 @@ for i,sv in enumerate(cross_sec_list):
     count += 1
     
 for i in range(count_initial, count_initial + count):
-    fout=open('runs_dmax/calc_Dmax_{}_{}.sh'.format(tag, i+1), 'w')
+    fout=open('runs_dmax/calc_Dmax__{}.sh'.format(i+1), 'w')
     for cmd in cmds[i - count_initial::count]:
         fout.write('{}\n'.format(cmd))
     fout.close()
 
-fout = open('runs_dmax/Calc_Dmax_commandrunner_{}.sh'.format(tag), 'w')
+fout = open('runs_dmax/Calc_Dmax_commandrunner_.sh', 'w')
 fout.write('#! /bin/bash\n')
 fout.write('#$ -l h_rt=24:00:00,h_data=2G\n')
 fout.write('#$ -cwd\n')
 fout.write('#$ -t 1-{}\n'.format(count + count_initial))
 fout.write('#$ -V\n')
-fout.write('bash calc_Dmax_{}_$SGE_TASK_ID.sh\n'.format(tag))
+fout.write('bash calc_Dmax__$SGE_TASK_ID.sh\n')
 fout.close()
 
 cmds = []
@@ -114,17 +114,17 @@ for i,sv in enumerate(cross_sec_list):
     count += 1
     
 for i in range(count_initial, count_initial + count):
-    fout=open('runs_dmax/calc_Nobs_{}_{}.sh'.format(tag, i+1), 'w')
+    fout=open('runs_dmax/calc_Nobs__{}.sh'.format(i+1), 'w')
     for cmd in cmds[i - count_initial::count]:
         fout.write('{}\n'.format(cmd))
     fout.close()
 
-fout = open('runs_dmax/Nobs_commandrunner_{}.sh'.format(tag), 'w')
+fout = open('runs_dmax/Nobs_commandrunner_.sh', 'w')
 fout.write('#! /bin/bash\n')
 fout.write('#$ -l h_rt=24:00:00,h_data=2G\n')
 fout.write('#$ -cwd\n')
 fout.write('#$ -t 1-{}\n'.format(count + count_initial))
 fout.write('#$ -V\n')
-fout.write('bash calc_Nobs_{}_$SGE_TASK_ID.sh\n'.format(tag))
+fout.write('bash calc_Nobs__$SGE_TASK_ID.sh\n')
 fout.close()
 
