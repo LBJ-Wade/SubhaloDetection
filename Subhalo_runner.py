@@ -16,6 +16,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--dmax', default=False)
 parser.add_argument('--nobs', default=False)
 parser.add_argument('--simname', default='sim1')
+parser.add_argument('--tag', default='')
 parser.add_argument('--pointlike', default=False)
 parser.add_argument('--mass', default=40, type=float)
 parser.add_argument('--cross_sec', default=np.log10(3.*10**-26.), type=float)
@@ -68,7 +69,7 @@ else:
 
 simga_n_file = pf + '_mx_' + str(args.mass) + '_annih_prod_' + args.annih_prod + '_bmin_' +\
                str(args.b_min) + plike_tag + extra_tag + '_Mlow_{:.3f}'.format(args.m_low) +\
-               '.dat'
+               args.tag + '.dat'
 
 nobs_dir = "/Cross_v_Nobs/"
 
@@ -76,7 +77,7 @@ Build_obs_class = Observable(args.mass, args.cross_sec, args.annih_prod, m_low=a
                              m_high=args.m_high, c_low=args.c_low,
                              c_high=args.c_high, alpha=args.alpha, profile=args.profile, truncate=truncate,
                              arxiv_num=args.arxiv_num, point_like=args.pointlike, gam=args.gamma,
-                             stiff_rb=stiff_rb)
+                             stiff_rb=stiff_rb, m200=m200)
 
 if dmax:
     if pointlike:

@@ -11,7 +11,8 @@ from Limits import *
 from profiles import *
 import scipy.integrate as integrate
 import scipy.special as special
-from scipy.interpolate import RectBivariateSpline,interp1d,interp2d,LinearNDInterpolator
+from scipy.interpolate import RectBivariateSpline,interp1d,interp2d,\
+    LinearNDInterpolator,bisplrep, bisplev
 from scipy.optimize import fminbound
 import os
 import pickle
@@ -157,10 +158,8 @@ class Model(object):
         integrated_list = np.loadtxt(integrate_file)
         integrated_rate = interp1d(integrated_list[:, 0], integrated_list[:, 1], kind='cubic')
         n_gamma = integrated_rate(self.mx)
-
-        jf = integrate.quad(lambda x: 4. * np.pi * kpctocm * self.subhalo.density(x) ** 2. * x ** 2.,
-                            0., float(self.subhalo.max_radius), epsabs=10**-5., epsrel=10**-5.)
-        return np.sqrt(pre_factor * n_gamma * jf[0] / threshold)
+        jf = 10. ** self.subhalo.J_pointlike(1.)
+        return np.sqrt(pre_factor * n_gamma * jf / threshold)
 
     def D_max_extend(self):
         """
@@ -176,7 +175,7 @@ class Model(object):
 
         def flux_diff_lten(x):
             return np.abs(self.Total_Flux(10. ** x) - self.min_Flux(10. ** x))
-        d_max = fminbound(flux_diff_lten, -4., 2., xtol= 10**-4.)
+        d_max = fminbound(flux_diff_lten, -4., 2., xtol=10**-4.)
         return 10.**float(d_max)
 
     def Determine_Gamma(self):
@@ -223,10 +222,10 @@ class Observable(object):
     """
 
     def __init__(self, mx, cross_sec, annih_prod, m_low=np.log10(3.24 * 10**4.),
-                 m_high=np.log10(1.0 * 10 ** 7.), c_low=np.log10(20.),
+                 m_high=np.log10(1.0 * 10 ** 7.), c_low=np.log10(2.),
                  c_high=2.1, alpha=0.16, profile=0, truncate=False, 
                  arxiv_num=10070438, point_like=True, m200=False,
-                 gam=0.88, stiff_rb=False):
+                 gam=0.85, stiff_rb=False):
 
         point_like = str2bool(point_like)
         stiff_rb = str2bool(stiff_rb)
@@ -291,7 +290,6 @@ class Observable(object):
         self.param_list['gamma'] = self.gam
         self.param_list['stiff_rb'] = self.stiff_rb
 
-    
     def Table_Dmax_Pointlike(self, m_num=20, c_num=15, threshold=7.*10.**-10.):
         """
         Tables the maximimum distance a point-like source can be detected for a specified
@@ -299,25 +297,11 @@ class Observable(object):
         """
         self.param_list['m_num'] = m_num
         self.param_list['c_num'] = c_num
-        
-        if os.path.isfile(self.folder+"param_list.pkl"):
-            openfile = open(self.folder+"param_list.pkl", 'rb')
-            old_dict = pickle.load(openfile)
-            openfile.close()
-            check_diff = DictDiffer(self.param_list, old_dict)
-            if bool(check_diff.changed()):
-                files = glob.glob(self.folder + '/*')
-                for f in files:
-                    os.remove(f)
-                pickle.dump(self.param_list, open(self.folder+"param_list.pkl", "wb")) 
-        else:
-            pickle.dump(self.param_list, open(self.folder+"param_list.pkl", "wb"))
-        
+
         file_name = 'Dmax_POINTLIKE_' + str(Profile_list[self.profile]) + self.tr_tag +\
                     '_mx_' + str(self.mx) + '_cross_sec_{:.3e}'.format(self.cross_sec) +\
                     '_annih_prod_' + self.annih_prod + self.extra_tag + '.dat'
-        mass_list = np.logspace(self.m_low, self.m_high, (self.m_high - self.m_low) * 6)
-
+        mass_list = np.logspace(self.m_low, self.m_high, (self.m_high - self.m_low) * 40)
         print 'Cross Section: ', self.cross_sec, '\n'
         for m in mass_list:
             print 'Subhalo mass: ', m
@@ -325,19 +309,20 @@ class Observable(object):
                 c_list = np.logspace(self.c_low, self.c_high, c_num)
                 for c in c_list:
                     print '    Concentration parameter: ', c
+                    if self.truncate:
+                        mm = 0.005 * m
+                    else:
+                        mm = m
                     try:
                         look_array = np.loadtxt(self.folder + file_name)
-                        if self.truncate:
-                            mm = 0.005 * m
-                        else:
-                            mm = m
-                        if any((np.round([mm,c],4) == x).all() for x in np.round(look_array[:,0:2],4)):
+                        mlook = float('{:.3e}'.format(mm))
+                        clook = float('{:.3e}'.format(c))
+                        if np.sum((mlook == look_array[:, 0]) & (clook == look_array[:, 1])) >= 1:
                             exists = True
                         else:
                             exists = False
                     except:
                         exists = False
-
                     if not exists:
                         dm_model = Model(self.mx, self.cross_sec, self.annih_prod,
                                          m, self.alpha, concentration_param=c,
@@ -347,18 +332,13 @@ class Observable(object):
                                          m200=self.m200)
 
                         dmax = dm_model.d_max_point(threshold=threshold)
-                        if self.truncate:
-                            mm = 0.005 * m
-                        else:
-                            mm = m
                         tab = np.array([mm, c, dmax]).transpose()
-
                         if os.path.isfile(self.folder+file_name):
                             load_info = np.loadtxt(self.folder + file_name)
                             add_to_table = np.vstack((load_info, tab))
-                            np.savetxt(self.folder + file_name, add_to_table)
+                            np.savetxt(self.folder + file_name, add_to_table, fmt='%.3e')
                         else:
-                            np.savetxt(self.folder + file_name, tab)
+                            np.savetxt(self.folder + file_name, tab, fmt='%.3e')
             elif self.profile == 1:
                 try:
                     look_array = np.loadtxt(self.folder + file_name)
@@ -438,7 +418,7 @@ class Observable(object):
                             mm = m
                         mlook = float('{:.3e}'.format(mm))
                         clook = float('{:.3e}'.format(c))
-                        if [mlook, clook] in look_array[:, 0:2]:
+                        if np.sum((mlook == look_array[:, 0]) & (clook == look_array[:, 1])) > 0:
                             exists = True
                         else:
                             exists = False
@@ -502,7 +482,7 @@ class Observable(object):
                         look_array = np.loadtxt(self.folder + file_name)
                         mlook = float('{:.3e}'.format(m))
                         rblook = float('{:.3e}'.format(rb))
-                        if [mlook, rblook] in look_array[:, 0:2]:
+                        if np.sum((mlook == look_array[:, 0]) & (rblook == look_array[:, 1])) > 0:
                             exists = True
                         else:
                             exists = False
@@ -630,8 +610,7 @@ class Observable(object):
             c_num = c_list.size
             int_prep_spline = np.reshape(integrand_table[:, 2], (m_num, c_num))
             integrand = RectBivariateSpline(mass_list, c_list, int_prep_spline)
-            integr = integrand.integral(np.min(mass_list), np.max(mass_list),
-                                        10. ** -4., 1.)
+            integr = integrand.integral(np.min(mass_list), np.max(mass_list), 0., 300.)
             print self.cross_sec, (4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr)
             return 4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr
         if self.profile == 1:
@@ -681,7 +660,8 @@ class Observable(object):
 
         def prob_c(c, m):
             cm = Concentration_parameter(m, arxiv_num=self.arxiv_num)
-            sigma_c = 0.24
+            sigma_c = 0.24 * np.log(10.)
+            #sigma_c = 0.14 * np.log(10.)
             return (np.exp(- (np.log(c / cm) / (np.sqrt(2.0) * sigma_c)) ** 2.0) /
                     (np.sqrt(2. * np.pi) * sigma_c * c))
 
@@ -693,17 +673,22 @@ class Observable(object):
             integrand_table = np.loadtxt(self.folder + file_name)
             mass_list = np.unique(integrand_table[:, 0])
             c_list = np.unique(integrand_table[:, 1])
+
             if self.truncate:
                 divis = 0.005
             else:
                 divis = 1.
-            integrand_table[:, 2] = (260. * (integrand_table[:, 0])**(-1.9) *
-                                     prob_c(integrand_table[:, 1], integrand_table[:, 0] / divis) *
-                                     integrand_table[:, 2] ** 3. / 3.0)
+
             m_num = mass_list.size
             c_num = c_list.size
+
+            integrand_table[:, 2] = (260. * (integrand_table[:, 0]) ** (-1.9) *
+                                     prob_c(integrand_table[:, 1], integrand_table[:, 0] / divis) *
+                                     (integrand_table[:, 2] ** 3.) / 3.0)
+
             int_prep_spline = np.reshape(integrand_table[:, 2], (m_num, c_num))
             integrand = RectBivariateSpline(mass_list, c_list, int_prep_spline)
+
             integr = integrand.integral(np.min(mass_list), np.max(mass_list), np.min(c_list), np.max(c_list))
             print self.cross_sec, (4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr)
             return 4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr

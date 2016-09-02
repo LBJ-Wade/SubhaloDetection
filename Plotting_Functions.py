@@ -300,32 +300,16 @@ class model_plots(object):
         else:
             ptag = '_Extended'
         info_str = "Observable_Profile_" + str(Profile_list[self.profile]) + "_Truncate_" + \
-                   str(self.truncate) + ptag + "_mx_" + str(self.mx) + "_annih_prod_" + \
-                   self.annih_prod + "_arxiv_num_" + str(self.arxiv_num) + "/"
-
+                   ptag + "_mx_" + str(self.mx) + "_annih_prod_" + \
+                   self.annih_prod + "_arxiv_" + str(self.arxiv_num) +\
+                   "_Mlow_{:.3e}/".format(np.log10(3.24 * 10 **4.))
         folder = self.folder + info_str
-        openfile = open(folder + "param_list.pkl", 'rb')
-        dict_info = pickle.load(openfile)
-        openfile.close()
-        if self.truncate:
-            mlow = np.log10(0.005) + dict_info['m_low']
-            mhigh = np.log10(0.005) + dict_info['m_high']
-            mass_list = np.logspace(mlow, mhigh, dict_info['m_num'])
-        else:
-            mass_list = np.logspace(dict_info['m_low'], dict_info['m_high'], dict_info['m_num'])
-        c_list = np.logspace(dict_info['c_low'], dict_info['c_high'], dict_info['c_num'])
-        if self.pointlike:
-            file_name = 'Dmax_POINTLIKE_' + str(Profile_list[self.profile]) + '_Truncate_' + \
-                        str(self.truncate) + '_Cparam_' + str(self.arxiv_num) + '_alpha_' + \
-                        str(self.alpha) + '_mx_' + str(self.mx) + '_cross_sec_' + \
-                        str(np.log10(self.cross_sec)) + '_annih_prod_' + self.annih_prod + '.dat'
-        else:
-            file_name = 'Dmax_Extended' + str(Profile_list[self.profile]) + '_Truncate_' + \
-                        str(self.truncate) + '_Cparam_' + str(self.arxiv_num) + '_alpha_' + \
-                        str(self.alpha) + '_mx_' + str(self.mx) + '_cross_sec_' + \
-                        str(np.log10(self.cross_sec)) + '_annih_prod_' + self.annih_prod + '.dat'
+
+        file_name = 'Dmax_POINTLIKE_Einasto_Truncate__mx_100.0_cross_sec_1.269e-26_annih_prod_BB_arxiv_13131729.dat'
 
         integrand_table = np.loadtxt(folder + file_name)
+        mass_list = np.unique(integrand_table[:, 0])
+        c_list = np.unique(integrand_table[:, 1])
         m_num = mass_list.size
         c_num = c_list.size
         int_prep_spline = np.reshape(integrand_table[:, 2], (m_num, c_num))
@@ -357,12 +341,12 @@ class model_plots(object):
             ptag = '_Pointlike'
         else:
             ptag = '_Extended'
-
+        mlow = 3.24 * 10**4.
         dir = self.folder + '/Cross_v_Nobs/'
-        file_name = self.profile_name + '_Truncate_' + str(self.truncate) + '_Cparam_' +\
-            str(self.arxiv_num) + '_alpha_' + str(self.alpha) + '_mx_' + str(self.mx) +\
+        file_name = self.profile_name + '_mx_' + str(self.mx) +\
             '_annih_prod_' + self.annih_prod + '_bmin_' + str(self.b_min) + ptag +\
-            '.dat' \
+            '_Truncate_' + str(self.truncate) + '_Cparam_' +\
+            str(self.arxiv_num) + '_alpha_' + str(self.alpha) + '_Mlow_{:.3f}'.format(np.log10(mlow)) + '.dat'
 
         try:
             c_vs_n = np.loadtxt(dir + file_name)
@@ -513,9 +497,7 @@ def Jfactor_plots(m_sub=10.**7., dist=1.):
     e_tr = Einasto(m_sub / 0.005, .16, truncate=True, arxiv_num=13131729, M200=False)
     n_ntr = NFW(m_sub, .16, truncate=False, arxiv_num=160106781, M200=True)
     hw_fit = HW_Fit(m_sub, M200=True, cons=False, stiff_rb=False)
-    hw_fit_gl = HW_Fit(m_sub, gam=0.426, M200=True)
-    hw_fit_gh = HW_Fit(m_sub, gam=1.316, M200=True)
-    n_sc = NFW(m_sub, 1., truncate=False, arxiv_num=160304057, M200=True)
+
 
     num_dist_pts = 30
     dist_tab = np.logspace(-3., 1., num_dist_pts)
@@ -531,9 +513,6 @@ def Jfactor_plots(m_sub=10.**7., dist=1.):
         e_tr_j[i] = [dist_tab[i], np.power(10, e_tr.J_pointlike(dist_tab[i]))]
         n_ntr_j[i] = [dist_tab[i], np.power(10, n_ntr.J_pointlike(dist_tab[i]))]
         hw_j[i] = [dist_tab[i], np.power(10, hw_fit.J_pointlike(dist_tab[i]))]
-        hw_j_gl[i] = [dist_tab[i], np.power(10, hw_fit_gl.J_pointlike(dist_tab[i]))]
-        hw_j_gh[i] = [dist_tab[i], np.power(10, hw_fit_gh.J_pointlike(dist_tab[i]))]
-        n_sc_j[i] = 10. ** n_sc.J_pointlike(dist_tab[i])
 
     fig = plt.figure(figsize=(8., 6.))
     ax = plt.gca()
@@ -545,17 +524,15 @@ def Jfactor_plots(m_sub=10.**7., dist=1.):
     plt.plot(e_tr_j[:, 0], e_tr_j[:, 1], lw=1, color='Black', label='BLH')
     plt.plot(n_ntr_j[:, 0], n_ntr_j[:, 1], lw=1, color='Magenta', label='Bertone')
     plt.plot(hw_j[:, 0], hw_j[:, 1], lw=1, color='Blue', label='HW')
-    plt.plot(dist_tab, n_sc_j, lw=1, color='Aqua', label='SC')
 
-    rb_max = np.zeros(len(dist_tab))
-    rb_min = np.zeros(len(dist_tab))
-    g_min = np.zeros(len(dist_tab))
-    g_max = np.zeros(len(dist_tab))
-    for i in range(dist_tab.size):
-        g_min[i] = np.min([hw_j_gh[i, 1], hw_j_gl[i, 1]])
-        g_max[i] = np.max([hw_j_gh[i, 1], hw_j_gl[i, 1]])
-    plt.plot(dist_tab, hw_j_gl[:, 1], '-.', dist_tab, hw_j_gh[:, 1], '-.', color='k')
-    ax.fill_between(dist_tab, g_min, g_max, where=g_max >= g_min, facecolor='Blue', interpolate=True, alpha=0.3)
+
+    #g_min = np.zeros(len(dist_tab))
+    #g_max = np.zeros(len(dist_tab))
+    #for i in range(dist_tab.size):
+    #    g_min[i] = np.min([hw_j_gh[i, 1], hw_j_gl[i, 1]])
+    #    g_max[i] = np.max([hw_j_gh[i, 1], hw_j_gl[i, 1]])
+    #plt.plot(dist_tab, hw_j_gl[:, 1], '-.', dist_tab, hw_j_gh[:, 1], '-.', color='k')
+    #ax.fill_between(dist_tab, g_min, g_max, where=g_max >= g_min, facecolor='Blue', interpolate=True, alpha=0.3)
 
     plt.legend()
 

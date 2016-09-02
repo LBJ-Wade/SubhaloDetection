@@ -33,11 +33,11 @@ class Subhalo(object):
         :return: returns log10 of J factor
         """
 
-        max_theta = radtodeg * np.arctan(self.max_int_radius / dist)
+        max_theta = radtodeg * np.arctan(self.max_radius / dist)
         if theta > max_theta:
             theta = max_theta
         theta = theta * np.pi / 180.
-        eps = 10. ** -3.
+
 
         try:
             jfact1 = integrate.dblquad(lambda x, t: 2. * np.pi * kpctocm * np.sin(t) *
@@ -55,7 +55,6 @@ class Subhalo(object):
                 return 2. * np.pi * kpctocm * np.sin(th) * \
                        self.density(np.sqrt(dist ** 2. + x ** 2. - 2.0 * dist * x * np.cos(th))) ** 2.0
 
-            jfact = 0
             theta_list = np.logspace(-5., np.log10(theta), 50)
             theta_list = np.insert(theta_list, 0, np.array([0.]))
             jfac_list = np.zeros(theta_list.size)
@@ -76,7 +75,7 @@ class Subhalo(object):
             jfact = np.trapz(jfac_list, theta_list)
             check = 10. ** self.J_pointlike(dist)
             if jfact > check:
-                jfact = check[0]
+                jfact = check
             return np.log10(jfact)
 
 
@@ -96,11 +95,11 @@ class Subhalo(object):
         :param dist: Distance to subhalo in kpc
         :return: min bound of los integration
         """
-        if (dist ** 2. * (np.cos(theta) ** 2. - 1.) + self.max_int_radius ** 2.) < 0:
+        if (dist ** 2. * (np.cos(theta) ** 2. - 1.) + self.max_radius ** 2.) < 0:
             return dist * np.cos(theta)
         else:
             return dist * np.cos(theta) - \
-                   np.sqrt(dist ** 2. * (np.cos(theta) ** 2. - 1.) + self.max_int_radius ** 2.)
+                   np.sqrt(dist ** 2. * (np.cos(theta) ** 2. - 1.) + self.max_radius ** 2.)
 
     def los_max(self, theta, dist):
         """
@@ -109,11 +108,11 @@ class Subhalo(object):
         :param dist: Distance to subhalo in kpc
         :return: max bound of los integration
         """
-        if (dist ** 2. * (np.cos(theta) ** 2. - 1.) + self.max_int_radius ** 2.) < 0:
+        if (dist ** 2. * (np.cos(theta) ** 2. - 1.) + self.max_radius ** 2.) < 0:
             return dist * np.cos(theta)
         else:
             return dist * np.cos(theta) + \
-                   np.sqrt(dist ** 2. * (np.cos(theta) ** 2. - 1.) + self.max_int_radius ** 2.)
+                   np.sqrt(dist ** 2. * (np.cos(theta) ** 2. - 1.) + self.max_radius ** 2.)
 
     def d_halo_cent(self, theta, dist, front=True, eps=10.**-4.):
         """

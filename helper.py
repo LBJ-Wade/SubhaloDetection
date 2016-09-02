@@ -65,7 +65,7 @@ def Concentration_parameter(mass, z=0, arxiv_num=13131729, dist=1., vmax=3.):
                                 3.66 * 10**(-4), -2.89237 * 10**(-5), 
                                 5.32 * 10**(-7)])
         for x in range(coeff_array.size):
-            c += coeff_array[x] * (np.log(mass * hubble))**x
+            c += coeff_array[x] * np.log(mass * hubble) ** x
     elif arxiv_num == 10070438:
         w = 0.029
         m = 0.097

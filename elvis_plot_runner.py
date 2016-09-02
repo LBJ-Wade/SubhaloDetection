@@ -42,6 +42,6 @@ from ELVIS_Analysis import *
 #Inner Outer Slopes
 #Preferred_Density_Slopes_elv(mass_low=1*10.** 4, mass_high = 1*10.**7., gcd_min=0., gcd_max=20., tag='0to20kpc')
 
-#ELVIS().obtain_number_density()
+ELVIS().obtain_number_density()
 
-ELVIS().obtain_number_density_not_paired()
+#ELVIS().obtain_number_density_not_paired()
