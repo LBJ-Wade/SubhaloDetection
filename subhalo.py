@@ -301,7 +301,7 @@ class Observable(object):
         file_name = 'Dmax_POINTLIKE_' + str(Profile_list[self.profile]) + self.tr_tag +\
                     '_mx_' + str(self.mx) + '_cross_sec_{:.3e}'.format(self.cross_sec) +\
                     '_annih_prod_' + self.annih_prod + self.extra_tag + '.dat'
-        mass_list = np.logspace(self.m_low, self.m_high, (self.m_high - self.m_low) * 40)
+        mass_list = np.logspace(self.m_low, self.m_high, (self.m_high - self.m_low) * 6)
         print 'Cross Section: ', self.cross_sec, '\n'
         for m in mass_list:
             print 'Subhalo mass: ', m
