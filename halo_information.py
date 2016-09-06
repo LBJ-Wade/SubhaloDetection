@@ -79,8 +79,11 @@ def table_spatial_extension(profile=0, truncate=False, arxiv_num=10070438,
                         ff.write(value)
                         ff.close()
         else:
-            rb_list = np.logspace(-3, np.log10(0.5), 20)
-            gamma_list = np.linspace(0.2, 0.85 + 0.351 / 0.861 - 0.1, 20)
+            rb_med = np.log10(10. ** (-4.24) * m ** 0.459)
+            rb_low = rb_med - 1.
+            rb_high = rb_med + 1.
+            rb_list = np.logspace(rb_low, rb_high, 10)
+            gamma_list = np.linspace(0.2, 0.85 + 0.351 / 0.861 - 0.1, 10)
             for rb in rb_list:
                 print '     Rb: ', rb
                 for gam in gamma_list:
@@ -97,6 +100,7 @@ def table_spatial_extension(profile=0, truncate=False, arxiv_num=10070438,
                             d_check = float('{:.4f}'.format(d))
                             if np.sum((f[:, 0] == m_check) & (f[:, 1] == rb_check) &
                                               (f[:, 2] == gam_check) & (f[:, 3] == d_check)) < 1:
+                                print 'Not HERE'
                                 raise ValueError
                         except:
                             if subhalo.Full_Extension(d) > 0.1:
