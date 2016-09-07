@@ -79,11 +79,12 @@ class Model(object):
         flux threshold for spatially extended sources
         :param dist: distance kpc
         """
+
         file_name = file_name = 'SpatialExtension_' + str(Profile_list[self.profile]) + '.dat'
         dir = MAIN_PATH + '/SubhaloDetection/Data/'
         try:
             se_file = np.loadtxt(dir + file_name)
-            m_comp = float('{:.4e}'.format(self.halo_mass))
+            m_comp = float('{:.3e}'.format(self.halo_mass))
             se_file = se_file[se_file[:, 0] == m_comp]
             if self.profile == 0:
                 c_comp = float('{:.3e}'.format(self.c))
@@ -112,6 +113,7 @@ class Model(object):
                     find_ext = LinearNDInterpolator(se_file[:, 1:-1], se_file[:, -1], fill_value=0.05, rescale=True)
                     extension = find_ext(self.rb, self.gam, dist)
         except:
+            'Try failed.'
             extension = self.subhalo.Spatial_Extension(dist)
         return self.Threshold(self.gamma, extension)
 
@@ -336,7 +338,10 @@ class Observable(object):
                                          profile=self.profile, pointlike=self.point_like,
                                          m200=self.m200)
 
-                        dmax = dm_model.d_max_point(threshold=threshold)
+                        if self.point_like:
+                            dmax = dm_model.d_max_point(threshold=threshold)
+                        else:
+                            dmax = dm_model.D_max_extend()
                         tab = np.array([mm, c, dmax]).transpose()
                         if os.path.isfile(self.folder+file_name):
                             load_info = np.loadtxt(self.folder + file_name)
@@ -361,8 +366,10 @@ class Observable(object):
                                      arxiv_num=self.arxiv_num,
                                      profile=self.profile, pointlike=self.point_like,
                                      m200=self.m200)
-
-                    dmax = dm_model.d_max_point()
+                    if self.point_like:
+                        dmax = dm_model.d_max_point(threshold=threshold)
+                    else:
+                        dmax = dm_model.D_max_extend()
                     tab = np.array([m, dmax]).transpose()
                     if os.path.isfile(self.folder + file_name):
                         load_info = np.loadtxt(self.folder + file_name)
@@ -396,9 +403,13 @@ class Observable(object):
                                              m, profile=self.profile, pointlike=self.point_like,
                                              m200=self.m200, stiff_rb=self.stiff_rb, gam=gam,
                                              rb=rb)
+                            if self.point_like:
+                                temp_arry[jcnt] = dm_model.d_max_point(threshold=threshold) * \
+                                                  self.hw_prob_gamma(gam) * self.hw_prob_rb(rb, m)
+                            else:
+                                temp_arry[jcnt] = dm_model.D_max_extend() * \
+                                                  self.hw_prob_gamma(gam) * self.hw_prob_rb(rb, m)
 
-                            temp_arry[jcnt] = dm_model.d_max_point(threshold=threshold) *\
-                                self.hw_prob_gamma(gam) * self.hw_prob_rb(rb, m)
                             jcnt += 1
                     pre_marg = np.reshape(temp_arry, (rb_list.size, len(gamma_list)))
                     dmax = RectBivariateSpline(rb_list, gamma_list,
