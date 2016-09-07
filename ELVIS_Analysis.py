@@ -314,11 +314,11 @@ class ELVIS(object):
         file_paired = np.loadtxt(self.dir + 'Paired_Subhalos.dat')
 
         full_subhalos = np.concatenate((file_hi[:, 9], file_iso[:, 9], file_paired[:, 9]))
-        full_subhalos = full_subhalos[full_subhalos > min_mass]
+        full_subhalos = full_subhalos[(full_subhalos > min_mass) & (full_subhalos < max_mass)]
 
         dist_bins = np.linspace(1., 300., 20)
-        min_mass = np.min(subhalos[:, 5])
-        max_mass = np.max(subhalos[:, 5])
+        #min_mass = np.min(subhalos[:, 5])
+        #max_mass = np.max(subhalos[:, 5])
         print 'Making Subhalo Number Density Histogram...'
         plt.hist(subhalos[:, 1], bins=dist_bins, log=True, normed=False,
                  weights=1. / (4. / 3. * np.pi * subhalos[:, 1] ** 3.),
@@ -333,9 +333,11 @@ class ELVIS(object):
                                      weights=1. / (4. / 3. * np.pi * subhalos[:, 1] ** 3.))
         d_ein = np.zeros(len(dist_bins) - 1)
         for i in range(len(dist_bins) - 1):
-            d_ein[i] = np.median(subhalos[(subhalos[:, 1] < dist_bins[i + 1]) &
-                                          (subhalos[:, 1] > dist_bins[i])][:, 1])
-
+            try:
+                d_ein[i] = np.median(subhalos[(subhalos[:, 1] < dist_bins[i + 1]) &
+                                              (subhalos[:, 1] > dist_bins[i])][:, 1])
+            except:
+                d_ein[i] = np.mean([dist_bins[i], dist_bins[i+1]])
 
         parms, cov = curve_fit(einasto_fit, d_ein, fit_ein, bounds=([30., 0.2, 0.],
                                                                     [300., .7, .1]), sigma=fit_ein)
@@ -361,7 +363,8 @@ class ELVIS(object):
     def obtain_number_density_not_paired(self, min_mass=1.0e+8, max_mass=1.e+10):
 
         gcd_range = np.array([0., 300.])
-        n_halos = 24.
+        n_halos = 24. + 24. + 3.
+        n_halos = 3.
         file_hi = np.loadtxt(self.dir + 'Hi_Res_Subhalos.dat')
         file_iso = np.loadtxt(self.dir + 'Iso_Subhalos.dat')
         file_pair = np.loadtxt(self.dir + 'Paired_Subhalos.dat')
@@ -397,18 +400,19 @@ class ELVIS(object):
                 if sub[1] < 300.:
                     ind_of_int.append(i)
         file_pair = file_pair[ind_of_int]
-        subhalos = file_pair
+        subhalos = file_hi
         #subhalos = np.vstack((file_iso[:, :10], file_hi[:, :10], file_pair[:, :10]))
         #subhalos = np.vstack((file_iso[:, :10], file_hi[:, :10]))
         subhalos = subhalos[subhalos[:, 1] != 0.]
 
-        min_mass = np.min(subhalos[:, 9])
-        max_mass = np.max(subhalos[:, 9])
+        #min_mass = np.min(subhalos[:, 9])
+        #max_mass = np.max(subhalos[:, 9])
         print 'Num Subhalos: ', len(subhalos)
 
         dist_bins = np.linspace(1., 300., 20)
         print 'Making Subhalo Number Density Histogram...'
 
+        subhalos = subhalos[(subhalos[:, 9] < max_mass) & (subhalos[:, 9] > min_mass)]
         plt.hist(subhalos[:, 1], bins=dist_bins, log=True, normed=False,
                  weights=1. / (4. / 3. * np.pi * subhalos[:, 1] ** 3.),
                  color='White')
@@ -428,22 +432,107 @@ class ELVIS(object):
 
         parms, cov = curve_fit(einasto_fit, d_ein, fit_ein, bounds=([30., 0.2, 0.], [300., .7, .1]),sigma=fit_ein)
         lden = einasto_fit(8.5, parms[0], parms[1], parms[2])
+        print 'Local: ', lden
         hist_norm = 0.9 * lden / (n_halos * (min_mass ** (-0.9) - max_mass ** (-0.9)))
         plot_ein = einasto_fit(dist_bins, parms[0], parms[1], parms[2])
         plt.plot(dist_bins, plot_ein, '--', color='blue')
         plt.text(11., 10. ** -3.2, 'Mass Range: [{:.2e}, {:.2e}]'.format(min_mass, max_mass),
                  fontsize=10, color='k')
-        plt.text(100., 10. ** -3.2, 'All', fontsize=10, color='red')
+        plt.text(100., 10. ** -3.2, 'ALL', fontsize=10, color='red')
         plt.text(100., 10. ** -3.4, 'Einasto Fit', fontsize=10, color='b')
         plt.text(100., 10. ** -3.6, r'$\alpha = {:.2f}$'.format(parms[1]), fontsize=10, color='b')
         plt.text(100., 10. ** -3.8, r'$r_s = {:.2f}$'.format(parms[0]), fontsize=10, color='b')
         plt.text(100., 10. ** -4.1, r'$\frac{{d N}}{{dM dV}} = \frac{{{:.2f}}}{{kpc^{{3}}}} $'.format(hist_norm) +
                                     r'$\left(\frac{M}{M_\odot}\right)^{-1.9}$', fontsize=14, color='k')
 
-        fname = 'ELVIS_PAIRED_Subhalo_Number_Density_Mass_Range_{:.1e}_{:.1e}'.format(min_mass, max_mass) + \
+        fname = 'ELVIS_HIRES_Subhalo_Number_Density_Mass_Range_{:.1e}_{:.1e}'.format(min_mass, max_mass) + \
                 'GCD_range_{:.1f}_{:.1f}'.format(gcd_range[0], gcd_range[1]) + '.pdf'
         pl.savefig(self.dir + '../Elvis_plots/' + fname)
         return
+
+    def obtain_mass_number_density(self, min_mass=3.0e+6, max_mass=1.e+7, mingcd=0., maxgcd=3000.):
+
+        gcd_range = np.array([mingcd, maxgcd])
+        n_halos = 3.
+        file_hi = np.loadtxt(self.dir + 'Hi_Res_Subhalos.dat')
+        file_iso = np.loadtxt(self.dir + 'Iso_Subhalos.dat')
+        file_pair = np.loadtxt(self.dir + 'Paired_Subhalos.dat')
+
+        ind_of_int = []
+        gcd1 = file_hi[0, 1:4]
+        gcd2 = file_iso[0, 1:4]
+
+        for i,sub in enumerate(file_hi):
+            if i != 0:
+                dist1 = np.sqrt(((gcd1 - sub[1:4]) ** 2.).sum()) * 1000.
+                sub[1] = dist1
+                if dist1 < gcd_range[-1]:
+                    ind_of_int.append(i)
+        file_hi = file_hi[ind_of_int]
+        ind_of_int = []
+        for i,sub in enumerate(file_iso):
+            if i != 0:
+                dist1 = np.sqrt(((gcd2 - sub[1:4]) ** 2.).sum()) * 1000.
+                sub[1] = dist1
+                if dist1 < gcd_range[-1]:
+                    ind_of_int.append(i)
+        file_iso = file_iso[ind_of_int]
+
+        gcd3 = file_pair[0, 1:4]
+        gcd3_2 = file_pair[1, 1:4]
+        ind_of_int = []
+        for i, sub in enumerate(file_pair):
+            if i != 0 and i != 1:
+                dist1 = np.sqrt(((gcd3 - sub[1:4]) ** 2.).sum()) * 1000.
+                dist2 = np.sqrt(((gcd3_2 - sub[1:4]) ** 2.).sum()) * 1000.
+                sub[1] = np.min([dist1, dist2])
+                if sub[1] < gcd_range[-1]:
+                    ind_of_int.append(i)
+        file_pair = file_pair[ind_of_int]
+        subhalos = file_hi
+        #subhalos = np.vstack((file_iso[:, :10], file_hi[:, :10], file_pair[:, :10]))
+        #subhalos = np.vstack((file_iso[:, :10], file_hi[:, :10]))
+        subhalos = subhalos[subhalos[:, 1] != 0.]
+
+        print 'Num Subhalos: ', len(subhalos)
+
+        mass_bins = np.logspace(np.log10(min_mass), np.log10(max_mass),
+                                (np.log10(max_mass) - np.log10(min_mass)) * 15)
+        print 'Making Subhalo Mass Number Density Histogram...'
+
+        plt.hist(subhalos[:, 9], bins=mass_bins, log=True, normed=False,
+                 color='White', weights=1. / subhalos[:, 9])
+
+        pl.gca().set_xscale("log")
+        pl.xlim([min_mass, max_mass])
+
+        plt.xlabel(r'Mass', fontsize=16)
+        plt.ylabel(r'$\frac{dN}{dM}$', fontsize=16)
+
+        fit_ein, bine = np.histogram(subhalos[:, 9], bins=mass_bins, normed=False, weights=1. / subhalos[:, 9])
+        d_ein = np.zeros(len(mass_bins) - 1)
+        for i in range(len(mass_bins) - 1):
+            try:
+                d_ein[i] = np.median(subhalos[(subhalos[:, 9] < mass_bins[i + 1]) &
+                                              (subhalos[:, 9] > mass_bins[i])][:, 9])
+            except:
+                d_ein[i] = np.mean([mass_bins[i], mass_bins[i + 1]])
+
+        parms, cov = curve_fit(lin_fit, np.log10(d_ein), np.log10(fit_ein))
+
+        plot_ein = lin_fit(np.log10(mass_bins), parms[0], parms[1])
+        plt.plot(mass_bins, 10.**plot_ein, '--', color='blue')
+        plt.text(10**7., 10. ** -5.4, 'Mass Range: [{:.2e}, {:.2e}]'.format(min_mass, max_mass),
+                 fontsize=10, color='k')
+        plt.text(10**7., 10. ** -5.8, 'All', fontsize=10, color='red')
+
+        plt.text(10**7., 10. ** -6.2, r'$\frac{{d N}}{{d M}} \propto M^{{{:.2f}}}$'.format(parms[0]), fontsize=10, color='b')
+
+        fname = 'ELVIS_MASS_HIRES_Subhalo_Number_Density_Mass_Range_{:.1e}_{:.1e}'.format(min_mass, max_mass) + \
+                'GCD_range_{:.1f}_{:.1f}'.format(gcd_range[0], gcd_range[1]) + '.pdf'
+        pl.savefig(self.dir + '../Elvis_plots/' + fname)
+        return
+
 
 def plot_sample_comparison_elv(sub_num=0, plot=True, show_plot=False):
 

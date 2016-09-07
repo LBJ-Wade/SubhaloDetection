@@ -198,7 +198,7 @@ class LimitPlotter(object):
 class model_plots(object):
     def __init__(self, cross_sec=3. * 10 ** -26., mx=100., annih_prod='BB', pointlike=True, alpha=0.16, profile=0,
                  truncate=True, arxiv_num=10070438, mass_low=-5., mass_high=7., fs=20, b_min=20.,
-                 gam=0.88, stiff_rb=False):
+                 gam=0.85, stiff_rb=False, m_low=10**4):
 
         self.cross_sec = cross_sec
         self.mx = mx
@@ -215,6 +215,7 @@ class model_plots(object):
         self.b_min = b_min
         self.gam = gam
         self.stiff_rb = stiff_rb
+        self.m_low = np.log10(m_low)
         self.folder = MAIN_PATH + "/SubhaloDetection/Data/"
 
     def constant_flux_contours(self, threshold=10 ** -9., flux_low=-18., flux_high=6.):
@@ -299,22 +300,34 @@ class model_plots(object):
             ptag = '_Pointlike'
         else:
             ptag = '_Extended'
-        info_str = "Observable_Profile_" + str(Profile_list[self.profile]) + "_Truncate_" + \
-                   ptag + "_mx_" + str(self.mx) + "_annih_prod_" + \
-                   self.annih_prod + "_arxiv_" + str(self.arxiv_num) +\
-                   "_Mlow_{:.3e}/".format(np.log10(3.24 * 10 **4.))
+        if self.profile == 2:
+            self.extra_tag = '_gamma_{:.2f}_Conser_'.format(self.gam) + '_stiff_rb_' + str(self.stiff_rb)
+        else:
+            self.extra_tag = '_arxiv_' + str(self.arxiv_num)
+        if self.truncate:
+            self.tr_tag = '_Truncate_'
+        else:
+            self.tr_tag = ''
+
+        info_str = "Observable_Profile_" + self.profile_name + self.tr_tag +\
+            ptag + "_mx_" + str(self.mx) + "_annih_prod_" +\
+            self.annih_prod + self.extra_tag + '_Mlow_{:.3e}'.format(self.m_low) + "/"
         folder = self.folder + info_str
 
-        file_name = 'Dmax_POINTLIKE_Einasto_Truncate__mx_100.0_cross_sec_1.269e-26_annih_prod_BB_arxiv_13131729.dat'
+        file_name = 'Dmax_POINTLIKE_HW_mx_200.0_cross_sec_1.000e-27_annih_prod_BB_gamma_0.85_Conser__stiff_rb_False.dat'
 
         integrand_table = np.loadtxt(folder + file_name)
         mass_list = np.unique(integrand_table[:, 0])
         c_list = np.unique(integrand_table[:, 1])
         m_num = mass_list.size
         c_num = c_list.size
-        int_prep_spline = np.reshape(integrand_table[:, 2], (m_num, c_num))
-        dmax = RectBivariateSpline(mass_list, c_list, int_prep_spline)
-        fixinterp = interp2d(integrand_table[:, 0], integrand_table[:, 1], integrand_table[:, 2])
+        if self.profile == 0:
+            int_prep_spline = np.reshape(integrand_table[:, 2], (m_num, c_num))
+            dmax = RectBivariateSpline(mass_list, c_list, int_prep_spline)
+            fixinterp = interp2d(integrand_table[:, 0], integrand_table[:, 1], integrand_table[:, 2])
+        else:
+            dmax = UnivariateSpline(mass_list, integrand_table[:, 1])
+            fixinterp = interp1d(integrand_table[:,0], integrand_table[:, 1])
         f, ax = plt.subplots(5, 2, sharex='col', sharey='row')
 
         m = np.logspace(np.log10(mass_list[0]), np.log10(mass_list[-1]), 200)
@@ -325,8 +338,10 @@ class model_plots(object):
             if i == 5:
                 j = 1
             ii = i % 5
-            points[i] = dmax.ev(m, c_list[2 * i])
-            ax[ii, j].plot(m, points[i], 'b--', mass_list, fixinterp(mass_list, c_list[2 * i]), 'r.', ms=3)
+            #points[i] = dmax.ev(m, c_list[2 * i])
+            points[i] = dmax(m)
+            #ax[ii, j].plot(m, points[i], 'b--', mass_list, fixinterp(mass_list, c_list[2 * i]), 'r.', ms=3)
+            ax[ii, j].plot(m, points[i], 'b--', mass_list, fixinterp(mass_list), 'r.', ms=3)
             ax[ii, j].set_xscale("log")
             ax[ii, j].set_yscale('log')
 

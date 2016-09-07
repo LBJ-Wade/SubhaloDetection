@@ -487,6 +487,7 @@ class Joint_Simulation_Comparison(object):
         g_fit = np.mean(med_gamma)
         g_fit_up = np.mean(high_gamma)
         g_fit_down = np.mean(low_gamma)
+        print g_fit_up, g_fit_down
         bnds = ((0.01, np.inf), (0., np.inf))
         fit_pts = np.array([[0.16, g_fit_down], [0.5, g_fit], [0.84, g_fit_up]])
 

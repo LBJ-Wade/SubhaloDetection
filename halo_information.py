@@ -83,7 +83,7 @@ def table_spatial_extension(profile=0, truncate=False, arxiv_num=10070438,
             rb_low = rb_med - 1.
             rb_high = rb_med + 1.
             rb_list = np.logspace(rb_low, rb_high, 10)
-            gamma_list = np.linspace(0.2, 0.85 + 0.351 / 0.861 - 0.1, 10)
+            gamma_list = np.linspace(0., 0.85 + 0.351 / 0.861 - 0.1, 10)
             for rb in rb_list:
                 print '     Rb: ', rb
                 for gam in gamma_list:

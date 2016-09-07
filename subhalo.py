@@ -290,17 +290,22 @@ class Observable(object):
         self.param_list['gamma'] = self.gam
         self.param_list['stiff_rb'] = self.stiff_rb
 
-    def Table_Dmax_Pointlike(self, m_num=20, c_num=15, threshold=7.*10.**-10.):
+    def Table_Dmax(self, m_num=20, c_num=15, threshold=7.*10.**-10., plike=True):
         """
-        Tables the maximimum distance a point-like source can be detected for a specified
+        Tables the maximimum distance a source can be detected for a specified
         threshold given a particular DM candidate and subhalo specificiations
         """
         self.param_list['m_num'] = m_num
         self.param_list['c_num'] = c_num
 
-        file_name = 'Dmax_POINTLIKE_' + str(Profile_list[self.profile]) + self.tr_tag +\
-                    '_mx_' + str(self.mx) + '_cross_sec_{:.3e}'.format(self.cross_sec) +\
-                    '_annih_prod_' + self.annih_prod + self.extra_tag + '.dat'
+        if plike:
+            file_name = 'Dmax_POINTLIKE_' + str(Profile_list[self.profile]) + self.tr_tag +\
+                        '_mx_' + str(self.mx) + '_cross_sec_{:.3e}'.format(self.cross_sec) +\
+                        '_annih_prod_' + self.annih_prod + self.extra_tag + '.dat'
+        else:
+            file_name = 'Dmax_Extended_' + str(Profile_list[self.profile]) + self.tr_tag + \
+                        '_mx_' + str(self.mx) + '_cross_sec_{:.3e}'.format(self.cross_sec) + \
+                        '_annih_prod_' + self.annih_prod + self.extra_tag + '.dat'
         mass_list = np.logspace(self.m_low, self.m_high, (self.m_high - self.m_low) * 6)
         print 'Cross Section: ', self.cross_sec, '\n'
         for m in mass_list:
@@ -366,87 +371,6 @@ class Observable(object):
                     else:
                         np.savetxt(self.folder + file_name, tab, fmt='%.3e')
             else:
-                rb_list = np.logspace(-3, np.log10(1.), 20)
-                gamma_list = np.linspace(0.2, 0.85 + 0.351 / 0.861 - 0.1, 20)
-                for rb in rb_list:
-                    print '    Rb Parameter: ', rb
-                    temp_arry = np.zeros(len(gamma_list) * 2).reshape(len(gamma_list), 2)
-                    for j, gam in enumerate(gamma_list):
-                        print '         Gamma: ', gam
-                        dm_model = Model(self.mx, self.cross_sec, self.annih_prod,
-                                         m, profile=self.profile, pointlike=self.point_like,
-                                         m200=self.m200, stiff_rb=self.stiff_rb, gam=gam,
-                                         rb=rb)
-
-                        temp_arry[j] = [gam, dm_model.d_max_point(threshold=threshold)]
-                    dmax = UnivariateSpline(temp_arry[:, 0], temp_arry[:, 1] *
-                                            self.hw_prob_gamma(temp_arry[:, 0])).integral(0., 0.85 + 0.351 / 0.861)
-
-                    tab = np.array([m, rb, dmax]).transpose()
-                    if os.path.isfile(self.folder+file_name):
-                        load_info = np.loadtxt(self.folder + file_name)
-                        add_to_table = np.vstack((load_info, tab))
-                        np.savetxt(self.folder + file_name, add_to_table, fmt='%.3e')
-                    else:
-                        np.savetxt(self.folder + file_name, tab, fmt='%.3e')
-        return
-
-    def Table_Dmax_Extended(self, m_num=20, c_num=15):
-        """
-        Tables the maximimum distance an extended source can be detected for a specified
-        threshold given a particular DM candidate and subhalo specificiations
-        """
-        self.param_list['m_num'] = m_num
-        self.param_list['c_num'] = c_num
-
-        file_name = 'Dmax_EXTENDED_' + str(Profile_list[self.profile]) + '_mx_' + str(self.mx) +\
-                    '_cross_sec_{:.3e}'.format(self.cross_sec) + '_annih_prod_' + self.annih_prod + '.dat'
-        mass_list = np.logspace(self.m_low, self.m_high, (self.m_high - self.m_low) * 6)
-
-        print 'Cross Section: ', self.cross_sec, '\n'
-        for m in mass_list:
-            print 'Subhalo mass: ', m
-            if self.profile == 0:
-                c_list = np.logspace(self.c_low, self.c_high, c_num)
-                for c in c_list:
-                    print '    Concentration parameter: ', c
-                    try:
-                        look_array = np.loadtxt(self.folder + file_name)
-                        if self.truncate:
-                            mm = 0.005 * m
-                        else:
-                            mm = m
-                        mlook = float('{:.3e}'.format(mm))
-                        clook = float('{:.3e}'.format(c))
-                        if np.sum((mlook == look_array[:, 0]) & (clook == look_array[:, 1])) > 0:
-                            exists = True
-                        else:
-                            exists = False
-                    except:
-                        exists = False
-
-                    if not exists:
-                        dm_model = Model(self.mx, self.cross_sec, self.annih_prod,
-                                         m, self.alpha, concentration_param=c,
-                                         truncate=self.truncate,
-                                         arxiv_num=self.arxiv_num,
-                                         profile=self.profile, pointlike=self.point_like,
-                                         m200=self.m200)
-
-                        dmax = dm_model.D_max_extend()
-                        if self.truncate:
-                            mm = 0.005 * m
-                        else:
-                            mm = m
-                        tab = np.array([mm, c, dmax]).transpose()
-
-                        if os.path.isfile(self.folder + file_name):
-                            load_info = np.loadtxt(self.folder + file_name)
-                            add_to_table = np.vstack((load_info, tab))
-                            np.savetxt(self.folder + file_name, add_to_table, fmt='%.3e')
-                        else:
-                            np.savetxt(self.folder + file_name, tab, fmt='%.3e')
-            elif self.profile == 1:
                 try:
                     look_array = np.loadtxt(self.folder + file_name)
                     mlook = float('{:.3e}'.format(m))
@@ -457,217 +381,63 @@ class Observable(object):
                 except:
                     exists = False
                 if not exists:
-                    dm_model = Model(self.mx, self.cross_sec, self.annih_prod,
-                                     m, self.alpha,
-                                     truncate=self.truncate,
-                                     arxiv_num=self.arxiv_num,
-                                     profile=self.profile, pointlike=self.point_like,
-                                     m200=self.m200)
+                    rb_med = np.log10(10. ** (-4.24) * m ** 0.459)
+                    rb_low = rb_med - 1.
+                    rb_high = rb_med + 1.
+                    rb_list = np.logspace(rb_low, rb_high, 20)
+                    gamma_list = np.linspace(0., 1.45, 20)
+                    temp_arry = np.zeros(rb_list.size * len(gamma_list))
+                    jcnt = 0
+                    for rb in rb_list:
+                        print '    Rb Parameter: ', rb
+                        for j, gam in enumerate(gamma_list):
+                            print '         Gamma: ', gam
+                            dm_model = Model(self.mx, self.cross_sec, self.annih_prod,
+                                             m, profile=self.profile, pointlike=self.point_like,
+                                             m200=self.m200, stiff_rb=self.stiff_rb, gam=gam,
+                                             rb=rb)
 
-                    dmax = dm_model.D_max_extend()
+                            temp_arry[jcnt] = dm_model.d_max_point(threshold=threshold) *\
+                                self.hw_prob_gamma(gam) * self.hw_prob_rb(rb, m)
+                            jcnt += 1
+                    pre_marg = np.reshape(temp_arry, (rb_list.size, len(gamma_list)))
+                    dmax = RectBivariateSpline(rb_list, gamma_list,
+                                               pre_marg).integral(np.min(rb_list),
+                                                                  np.max(rb_list), 0.,
+                                                                  np.max(gamma_list))
+
                     tab = np.array([m, dmax]).transpose()
-                    if os.path.isfile(self.folder + file_name):
+                    if os.path.isfile(self.folder+file_name):
                         load_info = np.loadtxt(self.folder + file_name)
                         add_to_table = np.vstack((load_info, tab))
                         np.savetxt(self.folder + file_name, add_to_table, fmt='%.3e')
                     else:
                         np.savetxt(self.folder + file_name, tab, fmt='%.3e')
-            else:
-                rb_list = np.logspace(-3, np.log10(0.5), 20)
-                gamma_list = np.linspace(0.2, 0.85 + 0.351 / 0.861 - 0.1, 20)
-                temp_arry = np.zeros(gamma_list.size * 2).reshape((gamma_list.size, 2))
-                for rb in rb_list:
-                    print '     Rb: ', rb
-                    try:
-                        look_array = np.loadtxt(self.folder + file_name)
-                        mlook = float('{:.3e}'.format(m))
-                        rblook = float('{:.3e}'.format(rb))
-                        if np.sum((mlook == look_array[:, 0]) & (rblook == look_array[:, 1])) > 0:
-                            exists = True
-                        else:
-                            exists = False
-                    except:
-                        exists = False
-                    if not exists:
-                        for j, gam in enumerate(gamma_list):
-                            print '         Gamma: ', gam
-                            dm_model = Model(self.mx, self.cross_sec, self.annih_prod,
-                                             m, self.alpha,
-                                             truncate=self.truncate,
-                                             arxiv_num=self.arxiv_num,
-                                             profile=self.profile, pointlike=self.point_like,
-                                             m200=self.m200)
-                            temp_arry[j] = [gam, dm_model.D_max_extend()]
-                        dmax = UnivariateSpline(temp_arry[:, 0], temp_arry[:, 1] *
-                                                self.hw_prob_gamma(temp_arry[:, 0])).integral(0., 0.85 + 0.351 / 0.861)
-                        tab = np.array([m, rb, dmax]).transpose()
-
-                        if os.path.isfile(self.folder + file_name):
-                            load_info = np.loadtxt(self.folder + file_name)
-                            add_to_table = np.vstack((load_info, tab))
-                            np.savetxt(self.folder + file_name, add_to_table, fmt='%.3e')
-                        else:
-                            np.savetxt(self.folder + file_name, tab, fmt='%.3e')
         return
 
-    def Table_Dmax_Extended_Constrained(self, min_extension=0.3):
+
+    def N_obs(self, bmin, plike=True):
         """
-        Tables the maximum distance a subhalo to be observed as spatially extended
-        and have a specified minimum extension (in degrees)
-
-        Note: Table_Dmax_Extended should have already been run!
-        """
-
-        load_file_name = 'Dmax_EXTENDED_' + str(Profile_list[self.profile]) + '_mx_' + str(self.mx) +\
-                         '_cross_sec_{:.3e}'.format(self.cross_sec) + '_annih_prod_' + self.annih_prod + '.dat'
-
-        save_file_name = 'Dmax_EXTENDED_MinExt_{:.2f}'.format(min_extension) +\
-                         str(Profile_list[self.profile]) + '_mx_' +\
-                         str(self.mx) + '_cross_sec_{:.3e}'.format(self.cross_sec) +\
-                         '_annih_prod_' + self.annih_prod + '.dat'
-        try:
-            load_dmax = np.loadtxt(self.folder + load_file_name)
-        except:
-            load_dmax = []
-            print 'File Not Found! Exiting...'
-            exit()
-
-        print 'Cross Section: ', self.cross_sec, '\n'
-
-        def extension_line(d, model):
-            return np.abs(model.subhalo.Spatial_Extension(d) - min_extension)
-
-        for i in range(load_dmax[:, 0]):
-            m = load_dmax[i, 0]
-            c = load_dmax[i, 1]
-            print 'Subhalo mass: ', m, 'Concentration parameter: ', c
-
-            dm_model = Model(self.mx, self.cross_sec, self.annih_prod,
-                             m, self.alpha, concentration_param=c,
-                             truncate=self.truncate,
-                             arxiv_num=self.arxiv_num,
-                             profile=self.profile, pointlike=False,
-                             m200=self.m200)
-
-            dext = fminbound(extension_line, -5., np.log10(load_dmax[i, 2]),
-                             args=dm_model)
-            if self.truncate:
-                mm = 0.005 * m
-            else:
-                mm = m
-
-            tab = np.array([mm, c, np.power(10., dext)]).transpose()
-
-            if os.path.isfile(self.folder + save_file_name):
-                load_info = np.loadtxt(self.folder + save_file_name)
-                add_to_table = np.vstack((load_info, tab))
-                np.savetxt(self.folder + save_file_name, add_to_table)
-            else:
-                np.savetxt(self.folder + save_file_name, tab)
-        return
-
-    def N_Extended(self, bmin, constrained=False, min_extension=0.3):
-        """
-        For pre tabled d_max functions, calculates the number of observable spatially
-        extended subhalos
-
-        :param bmin: These anlayses cut out the galactic plane, b_min (in degrees) specifies location
-        of the cut
-        """
-        
-#        openfile = open(self.folder+"param_list.pkl", 'rb')
-#        dict = pickle.load(openfile)
-#        openfile.close()       
-            
-        def prob_c(c, M):
-            cm = Concentration_parameter(M, arxiv_num=self.arxiv_num)
-            sigma_c = 0.24
-            return (np.exp(- (np.log(c / cm) / (np.sqrt(2.0) * sigma_c)) ** 2.0) /
-                   (np.sqrt(2. * np.pi) * sigma_c * c))
-
-        if constrained:
-            file_name = 'Dmax__Constrained_MinExtension_' + str(min_extension) +\
-                str(Profile_list[self.profile]) + '_Truncate_' +\
-                str(self.truncate) + '_Cparam_' + str(self.arxiv_num) + '_alpha_' +\
-                str(self.alpha) + '_mx_' + str(self.mx) + '_cross_sec_' +\
-                str(np.log10(self.cross_sec)) + '_annih_prod_' + self.annih_prod + '.dat'
-        else:
-            file_name ='Dmax_EXTENDED_' + str(Profile_list[self.profile]) + '_mx_' + str(self.mx) + \
-                       '_cross_sec_{:.3e}'.format(self.cross_sec) + '_annih_prod_' + self.annih_prod + '.dat'
-
-        if self.profile == 0:
-            integrand_table = np.loadtxt(self.folder + file_name)
-            mass_list = np.unique(integrand_table[:, 0])
-            c_list = np.unique(integrand_table[:, 1])
-            if self.truncate:
-                divis = 0.005
-            else:
-                divis = 1.
-            integrand_table[:, 2] = (260. * (integrand_table[:, 0]) ** (-1.9) *
-                                     prob_c(integrand_table[:, 1], integrand_table[:, 0] / divis) *
-                                     integrand_table[:, 2] ** 3. / 3.0)
-            m_num = mass_list.size
-            c_num = c_list.size
-            int_prep_spline = np.reshape(integrand_table[:, 2], (m_num, c_num))
-            integrand = RectBivariateSpline(mass_list, c_list, int_prep_spline)
-            integr = integrand.integral(np.min(mass_list), np.max(mass_list), 0., 300.)
-            print self.cross_sec, (4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr)
-            return 4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr
-        if self.profile == 1:
-            integrand_table = np.loadtxt(self.folder + file_name)
-            mass_list = np.unique(integrand_table[:, 0])
-
-            integrand_table[:, 1] = (260. * (integrand_table[:, 0]) ** (-1.9) *
-                                     integrand_table[:, 1] ** 3. / 3.0)
-
-            integrand = UnivariateSpline(mass_list, integrand_table[:, 1])
-            integr = integrand.integral(np.min(mass_list), np.max(mass_list))
-            print self.cross_sec, (4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr)
-            return 4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr
-        elif self.profile == 2:
-            integrand_table = np.loadtxt(self.folder + file_name)
-
-            mass_list = np.unique(integrand_table[:, 0])
-            rb_list = np.unique(integrand_table[:, 1])
-
-            integrand_table[:, 2] = (110. * (integrand_table[:, 0]) ** (-1.9) *
-                                     self.hw_prob_rb(integrand_table[:, 1], integrand_table[:, 0]) *
-                                     integrand_table[:, 2] ** 3. / 3.0)
-
-            m_num = mass_list.size
-            rb_num = rb_list.size
-
-            int_prep_spline = np.reshape(integrand_table[:, 2], (m_num, rb_num))
-
-            integrand = RectBivariateSpline(mass_list, rb_list, int_prep_spline)
-            integr = integrand.integral(np.min(mass_list), np.max(mass_list),
-                                        10. ** -4., 1.)
-            print self.cross_sec, (4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr)
-            return 4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr
-                                
-
-
-    def N_Pointlike(self, bmin):
-        """
-        For pre tabled d_max functions, calculates the number of observable point-like subhalos
+        For pre tabled d_max functions, calculates the number of observable subhalos
 
         :param bmin: These analyses cut out the galactic plane, b_min (in degrees) specifies location
         of the cut
         """
-        #openfile = open(self.folder+"param_list.pkl", 'rb')
-        #dict = pickle.load(openfile)
-        #openfile.close()
 
         def prob_c(c, m):
             cm = Concentration_parameter(m, arxiv_num=self.arxiv_num)
-            sigma_c = 0.24 * np.log(10.)
-            #sigma_c = 0.14 * np.log(10.)
+            #sigma_c = 0.24 * np.log(10.)
+            sigma_c = 0.14 * np.log(10.)
             return (np.exp(- (np.log(c / cm) / (np.sqrt(2.0) * sigma_c)) ** 2.0) /
                     (np.sqrt(2. * np.pi) * sigma_c * c))
-
-        file_name = 'Dmax_POINTLIKE_' + str(Profile_list[self.profile]) + self.tr_tag + \
-                    '_mx_' + str(self.mx) + '_cross_sec_{:.3e}'.format(self.cross_sec) + \
-                    '_annih_prod_' + self.annih_prod + self.extra_tag + '.dat'
+        if plike:
+            file_name = 'Dmax_POINTLIKE_' + str(Profile_list[self.profile]) + self.tr_tag + \
+                        '_mx_' + str(self.mx) + '_cross_sec_{:.3e}'.format(self.cross_sec) + \
+                        '_annih_prod_' + self.annih_prod + self.extra_tag + '.dat'
+        else:
+            file_name = 'Dmax_Extended_' + str(Profile_list[self.profile]) + self.tr_tag + \
+                        '_mx_' + str(self.mx) + '_cross_sec_{:.3e}'.format(self.cross_sec) + \
+                        '_annih_prod_' + self.annih_prod + self.extra_tag + '.dat'
 
         if self.profile == 0:
             integrand_table = np.loadtxt(self.folder + file_name)
@@ -699,28 +469,21 @@ class Observable(object):
             integrand_table[:, 1] = (260. * (integrand_table[:, 0]) ** (-1.9) *
                                      integrand_table[:, 1] ** 3. / 3.0)
 
-            integrand = UnivariateSpline(mass_list, integrand_table[:, 1])
-            integr = integrand.integral(np.min(mass_list), np.max(mass_list))
+            integrand_interp = interp1d(mass_list, integrand_table[:, 1], kind='linear')
+            mass_full = np.logspace(np.log10(np.min(mass_list)), np.log10(np.max(mass_list)), 200)
+            integr = np.trapz(integrand_interp(mass_full), mass_full)
             print self.cross_sec, (4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr)
             return 4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr
-        else:
+        elif self.profile == 2:
             integrand_table = np.loadtxt(self.folder + file_name)
-
             mass_list = np.unique(integrand_table[:, 0])
-            rb_list = np.unique(integrand_table[:, 1])
-
-            integrand_table[:, 2] = (110. * (integrand_table[:, 0]) ** (-1.9) *
-                                     self.hw_prob_rb(integrand_table[:, 1], integrand_table[:, 0]) *
-                                     integrand_table[:, 2] ** 3. / 3.0)
-
-            m_num = mass_list.size
-            rb_num = rb_list.size
-
-            int_prep_spline = np.reshape(integrand_table[:, 2], (m_num, rb_num))
-
-            integrand = RectBivariateSpline(mass_list, rb_list, int_prep_spline)
-            integr = integrand.integral(np.min(mass_list), np.max(mass_list),
-                                        10.**-4., 1.)
+            integrand_table[:, 1] = (425. * (integrand_table[:, 0]) ** (-1.9) *
+                                     (integrand_table[:, 1] ** 3.) / 3.0)
+            integrand_interp = interp1d(mass_list, integrand_table[:,1], kind='linear')
+            mass_full = np.logspace(np.log10(np.min(mass_list)), np.log10(np.max(mass_list)), 200)
+            integr = np.trapz(integrand_interp(mass_full), mass_full)
+            #integrand = UnivariateSpline(mass_list, integrand_table[:, 1])
+            #integr = integrand.integral(np.min(mass_list), np.max(mass_list))
             print self.cross_sec, (4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr)
             return 4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr
 
@@ -731,8 +494,10 @@ class Observable(object):
                 (np.sqrt(2. * np.pi) * sigma_c * rb))
 
     def hw_prob_gamma(self, gam):
+        # norm inserted b/c integration truncated on region [0, 1.45]
+        norm = 0.9
         sigma = 0.426
         k = 0.1
         mu = 0.85
         y = -1. / k * np.log(1. - k * (gam - mu) / sigma)
-        return np.exp(- y ** 2. / 2.) / (np.sqrt(2. * np.pi) * (sigma - k * (gam - mu)))
+        return np.exp(- y ** 2. / 2.) / (np.sqrt(2. * np.pi) * (sigma - k * (gam - mu))) / norm

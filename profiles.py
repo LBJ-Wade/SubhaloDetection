@@ -448,10 +448,12 @@ class NFW(Subhalo):
 
         if not truncate:
             if arxiv_num == 160106781:
-                self.max_radius = np.power(10, fminbound(self.find_tidal_radius, -4., 1.3))
+                self.max_radius = self.virial_radius
+                #self.max_radius = np.power(10, fminbound(self.find_tidal_radius, -4., 1.3))
                 #self.max_radius = self.scale_radius
             elif arxiv_num == 160304057:
-                self.max_radius = np.power(10, fminbound(self.find_tidal_radius, -4., 1.3))
+                self.max_radius = self.virial_radius
+                #self.max_radius = np.power(10, fminbound(self.find_tidal_radius, -4., 1.3))
             else:
                 self.max_radius = self.virial_radius
         else:
@@ -585,20 +587,23 @@ def find_r1_r2(mass, vmax, rmax):
 
 class HW_Fit(Subhalo):
 
-    def __init__(self, halo_mass, gam=0.85, rb=None, M200=True, gcd=8.5, stiff_rb=False):
+    def __init__(self, halo_mass, gam=0.85, rb=None, M200=True, gcd=8.5,
+                 stiff_rb=False, stiff_rbM=10.**5.):
         self.halo_mass = halo_mass
         self.gam = gam
         m = self.halo_mass
-        if stiff_rb and self.halo_mass < 4. * 10 ** 5.:
-            m = 4. * 10 ** 5.
-        if rb is None:
-            self.rb = 10. ** (-4.240) * m ** 0.459
+        if stiff_rb and self.halo_mass < stiff_rbM:
+            self.rb = 10. ** (-4.240) * stiff_rbM ** 0.459
         else:
-            self.rb = rb
+            if rb is None:
+                self.rb = 10. ** (-4.240) * m ** 0.459
+            else:
+                self.rb = rb
 
+        gam_term = 3. - self.gam
         self.virial_radius = Virial_radius(self.halo_mass, m200=M200)
-        self.scale_density = self.halo_mass / (4. * np.pi * self.rb ** (3. - self.gam) *
-            special.gamma(3. - self.gam) * (1. - special.gammaincc(3. - self.gam, self.virial_radius / self.rb))
+        self.scale_density = self.halo_mass / (4. * np.pi * self.rb ** (gam_term) *
+            special.gamma(gam_term) * (1. - special.gammaincc(gam_term, self.virial_radius / self.rb))
             * kpctocm ** 3. * GeVtoSolarM)
         self.max_radius = self.virial_radius
 
@@ -620,9 +625,11 @@ class HW_Fit(Subhalo):
         except TypeError:
             r = np.array([r])
             den_array = np.zeros(len(r))
+
+        gam_term = 3. - self.gam
         valid_args = r > 0.
-        den_array[valid_args] = self.scale_density * 4. * np.pi * self.rb ** (3. - self.gam) * \
-            special.gamma(3. - self.gam) * (1. - special.gammaincc(3. - self.gam, r[valid_args] / self.rb)) \
+        den_array[valid_args] = self.scale_density * 4. * np.pi * self.rb ** (gam_term) * \
+            special.gamma(gam_term) * (1. - special.gammaincc(gam_term, r[valid_args] / self.rb)) \
             * kpctocm ** 3. * GeVtoSolarM
         return den_array
 
@@ -633,9 +640,11 @@ class HW_Fit(Subhalo):
             r = np.array([r])
             int_arr = np.zeros(len(r))
         valid_args = r > 0.
-        int_arr[valid_args] = self.scale_density ** 2. * 4. * np.pi * 2. ** (2. * self.gam - 3.) * \
-            self.rb ** (3. - 2. * self.gam) * special.gamma(3. - 2. * self.gam) * \
-            (1. - special.gammaincc(3. - 2. * self.gam, 2. * r[valid_args] / self.rb)) * kpctocm
+
+        gam_term = 3. - 2. * self.gam
+        int_arr[valid_args] = self.scale_density ** 2. * 4. * np.pi * 2. ** (-gam_term) * \
+            self.rb ** (gam_term) * special.gamma(gam_term) * \
+            (1. - special.gammaincc(gam_term, 2. * r[valid_args] / self.rb)) * kpctocm
         return int_arr
 
 class KMMDSM(Subhalo):
@@ -674,8 +683,12 @@ class KMMDSM(Subhalo):
         except AttributeError:
             pass
         if r > 0:
-            return (self.scale_density * 4. * np.pi * self.rb ** (3. - self.gam) *
-                    special.gamma(3. - self.gam) * (1. - special.gammaincc(3. - self.gam, r / self.rb))
+            if 3. - self.gam <= 0:
+                gam_term = 10**-7.
+            else:
+                gam_term = 3. - self.gam
+            return (self.scale_density * 4. * np.pi * self.rb ** gam_term *
+                    special.gamma(gam_term) * (1. - special.gammaincc(gam_term, r / self.rb))
                     * kpctocm ** 3. * GeVtoSolarM)
 
     def int_over_rho_sqr(self, r):
@@ -685,9 +698,13 @@ class KMMDSM(Subhalo):
         except AttributeError:
             pass
         if r > 0:
-            return (self.scale_density ** 2. * 4. * np.pi * 2. ** (2. * self.gam - 3.) *
-                    self.rb ** (3. - 2. * self.gam) * special.gamma(3. - 2. * self.gam) *
-                    (1. - special.gammaincc(3. - 2. * self.gam, 2. * r / self.rb)) * kpctocm)
+            if (3. - 2. * self.gam) <= 0:
+                gam_term = 10**-7.
+            else:
+                gam_term = 3. - 2. * self.gam
+            return (self.scale_density ** 2. * 4. * np.pi * 2. ** (-gam_term) *
+                    self.rb ** gam_term * special.gamma(gam_term) *
+                    (1. - special.gammaincc(gam_term, 2. * r / self.rb)) * kpctocm)
 
 
 def find_gamma(mass, vmax, rmax, error=0.):

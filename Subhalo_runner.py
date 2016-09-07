@@ -81,14 +81,14 @@ Build_obs_class = Observable(args.mass, args.cross_sec, args.annih_prod, m_low=a
 
 if dmax:
     if pointlike:
-        Build_obs_class.Table_Dmax_Pointlike(m_num=args.m_num, c_num=args.c_num,
+        Build_obs_class.Table_Dmax(m_num=args.m_num, c_num=args.c_num,
                                              threshold=args.thresh)
     else:
-        Build_obs_class.Table_Dmax_Extended(m_num=args.m_num, c_num=args.c_num)
+        Build_obs_class.Table_Dmax(m_num=args.m_num, c_num=args.c_num, plike=pointlike)
     
 if nobs:
     if pointlike:
-        n_point_obs = Build_obs_class.N_Pointlike(args.b_min)
+        n_point_obs = Build_obs_class.N_obs(args.b_min)
         if os.path.isfile(args.path + '/Data/' + nobs_dir + simga_n_file):
             cross_sec_nobs = np.loadtxt(args.path + '/Data/' + nobs_dir + simga_n_file)
             add_to_table = np.vstack((cross_sec_nobs, [args.cross_sec, n_point_obs]))
@@ -97,7 +97,7 @@ if nobs:
         else:
             np.savetxt(args.path + '/Data/' + nobs_dir + simga_n_file, np.array([args.cross_sec, n_point_obs]))
     else:
-        n_ext_obs = Build_obs_class.N_Extended(args.b_min)
+        n_ext_obs = Build_obs_class.N_obs(args.b_min, plike=pointlike)
         if os.path.isfile(args.path + '/Data/' + nobs_dir + simga_n_file):
             cross_sec_nobs = np.loadtxt(args.path + '/Data/' + nobs_dir + simga_n_file)
             add_to_table = np.vstack((cross_sec_nobs, [args.cross_sec, n_ext_obs]))

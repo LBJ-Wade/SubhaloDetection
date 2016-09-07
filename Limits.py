@@ -26,9 +26,9 @@ class DM_Limits(object):
     """
     def __init__(self, nobs=0., nbkg=0., CL=0.9, annih_prod='BB', pointlike=True,
                  alpha=0.16, profile=0, truncate=False, arxiv_num=10070438, b_min=30.,
-                 method=0):
+                 method=0, stiff_rb=False, m_low=np.log10(10**4.), tag='_'):
 
-        Profile_list = ["Einasto", "NFW"]
+        Profile_list = ["Einasto", "NFW", "HW"]
         Method_list = ["Poisson", "FeldmanCousins"]
         self.method = Method_list[method]
         self.nobs = nobs
@@ -42,6 +42,9 @@ class DM_Limits(object):
         self.arxiv_num = arxiv_num
         self.b_min = b_min
         self.pointlike = pointlike
+        self.stiff_rb = stiff_rb
+        self.m_low = m_low
+        self.tag = tag
         self.folder = MAIN_PATH + "/SubhaloDetection/Data/"
 
     def poisson_limit(self):
@@ -54,12 +57,19 @@ class DM_Limits(object):
         file_name = 'Limits' + plike_tag + '_' + self.profile_name + '_Truncate_' + \
             str(self.truncate) + '_alpha_' + str(self.alpha) +\
             '_annih_prod_' + self.annih_prod + '_arxiv_num_' +\
-            str(self.arxiv_num) + '_bmin_' + str(self.b_min) + '.dat'
+            str(self.arxiv_num) + '_bmin_' + str(self.b_min) +\
+            '_Mlow_{:.3f}'.format(self.m_low) + self.tag + '.dat'
 
-        f_names = self.profile_name + '_Truncate_' + str(self.truncate) + '_Cparam_' +\
-            str(self.arxiv_num) + '_alpha_' + str(self.alpha) + '_mx_' + '*' +\
-            '_annih_prod_' + self.annih_prod + '_bmin_' + str(self.b_min) +\
-            plike_tag + '.dat'
+        if self.profile < 2:
+            extra_tag = '_Truncate_' + str(self.truncate) + '_Cparam_' + str(self.arxiv_num) + \
+                        '_alpha_' + str(self.alpha)
+        else:
+            extra_tag = '_Gamma_0.850_Stiff_rb_'+ str(self.stiff_rb)
+
+        f_names = self.profile_name + '_mx_*' + '_annih_prod_' + self.annih_prod + '_bmin_' +\
+               str(self.b_min) + plike_tag + extra_tag + '_Mlow_{:.3f}'.format(self.m_low) +\
+               self.tag + '.dat'
+        print f_names
 
         foi = glob.glob(self.folder + '/Cross_v_Nobs/' + f_names)
 
