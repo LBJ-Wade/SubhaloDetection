@@ -88,12 +88,17 @@ class Model(object):
             se_file = se_file[se_file[:, 0] == m_comp]
             if self.profile == 0:
                 c_comp = float('{:.3e}'.format(self.c))
+                if c_comp == 8.41:
+                    exit()
                 if np.sum(se_file[:, 1] == c_comp) > 0.:
                     halo_of_int = se_file[se_file[:, 1] == c_comp]
+
                     find_ext = interp1d(halo_of_int[:, -2], halo_of_int[:, -1], kind='linear', bounds_error=False,
                                         fill_value='extrapolate')
                     extension = find_ext(dist)
                 else:
+                    print 'Wrong spot...'
+                    exit()
                     find_ext = interp2d(se_file[:, -3], se_file[:, -2], se_file[:, -1], kind='linear',
                                         bounds_error=False)
                     extension = find_ext(dist)
@@ -168,17 +173,17 @@ class Model(object):
         Calculates the maximum distance a spatially extended subhalo can be to still be observable
         :return: distance in kpc
         """
-        #dist_tab = np.logspace(-3, 1.4, 100)
-        #flux_diff_tab = np.zeros(dist_tab.size)
-        #for i, d in enumerate(dist_tab):
-        #    flux_diff_tab[i] = np.abs(self.Total_Flux(d) - self.min_Flux(d))
+        dist_tab = np.logspace(-3., 1.5, 100)
+        flux_diff_tab = np.zeros(dist_tab.size)
+        for i, d in enumerate(dist_tab):
+            flux_diff_tab[i] = np.abs(self.Total_Flux(d) - self.min_Flux(d))
         #    print d, flux_diff_tab[i]
-        #dmax = dist_tab[np.argmin(flux_diff_tab)]
+        d_max = dist_tab[np.argmin(flux_diff_tab)]
 
-        def flux_diff_lten(x):
-            return np.abs(self.Total_Flux(10. ** x) - self.min_Flux(10. ** x))
-        d_max = fminbound(flux_diff_lten, -4., 2., xtol=10**-4.)
-        return 10.**float(d_max)
+        #def flux_diff_lten(x):
+        #    return np.abs(self.Total_Flux(10. ** x) - self.min_Flux(10. ** x))
+        #d_max = fminbound(flux_diff_lten, -4., 2., xtol=10**-4.)
+        return d_max
 
     def Determine_Gamma(self):
         """

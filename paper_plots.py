@@ -301,21 +301,23 @@ def limit_comparison(plike=True, bmin=20., annih_prod='BB'):
         ptag = 'Pointlike'
     else:
         ptag = 'Extended'
-    nfw = np.loadtxt('Limits_' + ptag + '_NFW_Truncate_False_alpha_0.16_annih_prod_' +
+    dir = MAIN_PATH + '/SubhaloDetection/Data/'
+    nfw = np.loadtxt(dir + 'Limits_' + ptag + '_NFW_Truncate_False_alpha_0.16_annih_prod_' +
                      annih_prod + '_arxiv_num_160106781_bmin_{:.1f}'.format(bmin) + '.dat')
-    blh_old = np.loadtxt('Limits_' + ptag + '_Einasto_Truncate_True_alpha_0.16_annih_prod_' +
-                     annih_prod + '_arxiv_num_13131729_bmin_{:.1f}'.format(bmin) + '_OLD.dat')
-    blh_new = np.loadtxt('Limits_' + ptag + '_Einasto_Truncate_True_alpha_0.16_annih_prod_' +
-                         annih_prod + '_arxiv_num_13131729_bmin_{:.1f}'.format(bmin) + '_NEW.dat')
-    hw_low = np.loadtxt('Limits_' + ptag + '_Einasto_Truncate_True_alpha_0.16_annih_prod_' +
+    blh_old = np.loadtxt(dir + 'Limits_' + ptag + '_Einasto_Truncate_True_alpha_0.16_annih_prod_' +
+                     annih_prod + '_arxiv_num_13131729_bmin_{:.1f}'.format(bmin) + '_Mlow_0.000_OLD.dat')
+    blh_new = np.loadtxt(dir + 'Limits_' + ptag + '_Einasto_Truncate_True_alpha_0.16_annih_prod_' +
+                         annih_prod + '_arxiv_num_13131729_bmin_{:.1f}'.format(bmin) + '_Mlow_0.000_NEW.dat')
+    hw_low = np.loadtxt(dir + 'Limits_' + ptag + '_HW_Truncate_False_alpha_0.16_annih_prod_' +
                          annih_prod + '_arxiv_num_13131729_bmin_{:.1f}'.format(bmin) +
-                        'Mlow_-5.000_' + '.dat')
-    hw_high = np.loadtxt('Limits_' + ptag + '_Einasto_Truncate_True_alpha_0.16_annih_prod_' +
+                        '_Mlow_-5.000_' + '.dat')
+    hw_high = np.loadtxt(dir + 'Limits_' + ptag + '_HW_Truncate_False_alpha_0.16_annih_prod_' +
                          annih_prod + '_arxiv_num_13131729_bmin_{:.1f}'.format(bmin) +
-                         'Mlow_5.000_' + '.dat')
+                         '_Mlow_5.000_' + '.dat')
 
-    list = [nfw, blh_old, blh_new]
+    list = [hw_low, hw_high, nfw, blh_old, blh_new]
     color_list = ['Blue', 'Blue', 'Magenta', 'Black', 'Black']
+    ls_list = ['--', '--', '--', '--', '-.']
     mass_list = np.logspace(1., 3., 100)
 
     fig = plt.figure(figsize=(8., 6.))
@@ -325,21 +327,21 @@ def limit_comparison(plike=True, bmin=20., annih_prod='BB'):
     pl.xlim([10 ** 1., 10. ** 3.])
     pl.ylim([10 ** -27., 10. ** -23.])
     for i, lim in enumerate(list):
-        lim_interp = interp1d(lim[:, 0], lim[:, 1], kind='cubic')
-        pts = lim_interp(mass_list)
-        plt.plot(mass_list, pts, lw=2, color=color_list[i])
+        pts = interpola(mass_list, lim[:, 0], lim[:, 1])
+        plt.plot(mass_list, pts, ls=ls_list[i], lw=1, color=color_list[i])
 
-    lowm = interp1d(hw_low[:, 0], hw_low[:, 1])
-    highm = interp1d(hw_high[:, 0], hw_high[:, 1])
-    ax.fill_between(mass_list, lowm, highm, where=highm >= lowm, facecolor='Blue', interpolate=True, alpha=0.3)
+    lowm = interpola(mass_list, hw_low[:, 0], hw_low[:, 1])
+    highm = interpola(mass_list, hw_high[:, 0], hw_high[:, 1])
+    ax.fill_between(mass_list, lowm, highm, where=highm >= lowm,
+                    facecolor='Blue', edgecolor='None', interpolate=True, alpha=0.3)
 
-    ltop = 10 ** -23.1
+    ltop = 10 ** -24.2
     ldwn = 10 ** -.4
-    plt.text(20, ltop, 'Schoonenberg et al.', color='Magenta', fontsize=10)
-    plt.text(20, ltop - ldwn, 'Bertoni et al.', color='k', fontsize=10)
-    plt.text(20, ltop - 2 * ldwn, 'This Work', color='blue', fontsize=10)
+    plt.text(15, ltop, 'NFW (Post-tidal Stripping)', color='Magenta', fontsize=10)
+    plt.text(15, ltop * ldwn, 'Einasto (Pre-tidal Stripping)', color='k', fontsize=10)
+    plt.text(15, ltop * ldwn ** 2., 'This Work', color='blue', fontsize=10)
 
-    figname = 'Limit_Comparison_' + ptag +'annih_prod_' + \
+    figname = dir + 'Limit_Comparison_' + ptag +'annih_prod_' + \
               annih_prod + '_bmin_{:.1f}'.format(bmin) + '.pdf'
 
     pl.xlabel(r'$m_\chi$   [GeV]', fontsize=20)
