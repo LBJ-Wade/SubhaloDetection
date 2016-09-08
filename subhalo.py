@@ -163,8 +163,7 @@ class Model(object):
         integrate_file = MAIN_PATH + "/Spectrum/IntegratedDMSpectrum" + \
             self.annih_prod + ".dat"
         integrated_list = np.loadtxt(integrate_file)
-        integrated_rate = interp1d(integrated_list[:, 0], integrated_list[:, 1], kind='cubic')
-        n_gamma = integrated_rate(self.mx)
+        n_gamma = interpola(self.mx, integrated_list[:, 0], integrated_list[:, 1])
         jf = 10. ** self.subhalo.J_pointlike(1.)
         return np.sqrt(pre_factor * n_gamma * jf / threshold)
 
@@ -179,7 +178,6 @@ class Model(object):
             flux_diff_tab[i] = np.abs(self.Total_Flux(d) - self.min_Flux(d))
         #    print d, flux_diff_tab[i]
         d_max = dist_tab[np.argmin(flux_diff_tab)]
-
         #def flux_diff_lten(x):
         #    return np.abs(self.Total_Flux(10. ** x) - self.min_Flux(10. ** x))
         #d_max = fminbound(flux_diff_lten, -4., 2., xtol=10**-4.)
@@ -191,8 +189,7 @@ class Model(object):
         :return: [1.5, 2.0, 2.5, 3.0] whichever spectral index most closely produces same average
         photon energy
         """
-        #  TODO: Generalize beyond b\bar{b}
-        #  TODO: Derive this information from Pythia8 (currently done using PPPC)
+
         gamma_tab = np.loadtxt(MAIN_PATH + '/SubhaloDetection/Data/Misc_Items/GammaIndex_given_mx_for_annih_prod_' +
                                self.annih_prod + '.dat')
         gamma = interpola(self.mx, gamma_tab[:, 0], gamma_tab[:, 1])

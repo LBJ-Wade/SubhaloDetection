@@ -1,15 +1,21 @@
+import matplotlib as mpl
+try:
+    mpl.use('Agg')
+except:
+    pass
 import numpy as np
 from subhalo import *
 import os
 import pickle
 from scipy.interpolate import interp1d, interp2d,RectBivariateSpline
 from scipy.optimize import fminbound
-import matplotlib as mpl
 import pylab as pl
 import matplotlib.pyplot as plt
 from matplotlib import rc
 import itertools
 from profiles import *
+from ELVIS_Analysis import *
+from Via_LacteaII_Analysis import *
 
 #  mpl.use('pdf')
 rc('font', **{'family': 'serif', 'serif': ['Times', 'Palatino']})
@@ -22,7 +28,7 @@ mpl.rcParams['ytick.labelsize'] = 16
 
 
 def profile_comparison(plot_hw=True):
-    minrad = -2.
+    minrad = -3.
     mass_list = [10. ** 4., 10 ** 5., 10 ** 6., 10 ** 7.]
     rb_list = np.logspace(-4, np.log10(1.), 20)
     gamma_list = np.linspace(0.2, 0.85 + 0.351 / 0.861 - 0.1, 20)
@@ -296,28 +302,41 @@ def Jfactor_plots(m_sub=10.**7., dist=1.):
     return
 
 
-def limit_comparison(plike=True, bmin=20., annih_prod='BB'):
+def limit_comparison(plike=True, bmin=20., annih_prod='BB', nobs=True):
     if plike:
         ptag = 'Pointlike'
     else:
         ptag = 'Extended'
+    if nobs:
+        ntag = ''
+    else:
+        ntag = '_Nobs_False_'
     dir = MAIN_PATH + '/SubhaloDetection/Data/'
-    nfw = np.loadtxt(dir + 'Limits_' + ptag + '_NFW_Truncate_False_alpha_0.16_annih_prod_' +
-                     annih_prod + '_arxiv_num_160106781_bmin_{:.1f}'.format(bmin) + '.dat')
-    blh_old = np.loadtxt(dir + 'Limits_' + ptag + '_Einasto_Truncate_True_alpha_0.16_annih_prod_' +
-                     annih_prod + '_arxiv_num_13131729_bmin_{:.1f}'.format(bmin) + '_Mlow_0.000_OLD.dat')
-    blh_new = np.loadtxt(dir + 'Limits_' + ptag + '_Einasto_Truncate_True_alpha_0.16_annih_prod_' +
-                         annih_prod + '_arxiv_num_13131729_bmin_{:.1f}'.format(bmin) + '_Mlow_0.000_NEW.dat')
+    # nfw = np.loadtxt(dir + 'Limits_' + ptag + '_NFW_Truncate_False_alpha_0.16_annih_prod_' +
+    #                  annih_prod + '_arxiv_num_160106781_bmin_{:.1f}'.format(bmin) +
+    #                  '_Mlow_4.000_' + ntag + '.dat')
+    # blh_old = np.loadtxt(dir + 'Limits_' + ptag + '_Einasto_Truncate_True_alpha_0.16_annih_prod_' +
+    #                  annih_prod + '_arxiv_num_13131729_bmin_{:.1f}'.format(bmin) +
+    #                  '_Mlow_0.000_OLD' + ntag + '.dat')
+    # blh_new = np.loadtxt(dir + 'Limits_' + ptag + '_Einasto_Truncate_True_alpha_0.16_annih_prod_' +
+    #                      annih_prod + '_arxiv_num_13131729_bmin_{:.1f}'.format(bmin) +
+    #                      '_Mlow_0.000_NEW' + ntag + '.dat')
     hw_low = np.loadtxt(dir + 'Limits_' + ptag + '_HW_Truncate_False_alpha_0.16_annih_prod_' +
                          annih_prod + '_arxiv_num_13131729_bmin_{:.1f}'.format(bmin) +
-                        '_Mlow_-5.000_' + '.dat')
+                        '_Mlow_-5.000__Nobs_True_.dat')
     hw_high = np.loadtxt(dir + 'Limits_' + ptag + '_HW_Truncate_False_alpha_0.16_annih_prod_' +
                          annih_prod + '_arxiv_num_13131729_bmin_{:.1f}'.format(bmin) +
-                         '_Mlow_5.000_' + '.dat')
+                         '_Mlow_5.000__Nobs_True_.dat')
+    hw_low_null = np.loadtxt(dir + 'Limits_' + ptag + '_HW_Truncate_False_alpha_0.16_annih_prod_' +
+                        annih_prod + '_arxiv_num_13131729_bmin_{:.1f}'.format(bmin) +
+                        '_Mlow_-5.000__Nobs_False_.dat')
+    hw_high_null = np.loadtxt(dir + 'Limits_' + ptag + '_HW_Truncate_False_alpha_0.16_annih_prod_' +
+                         annih_prod + '_arxiv_num_13131729_bmin_{:.1f}'.format(bmin) +
+                         '_Mlow_5.000__Nobs_False_.dat')
 
-    list = [hw_low, hw_high, nfw, blh_old, blh_new]
-    color_list = ['Blue', 'Blue', 'Magenta', 'Black', 'Black']
-    ls_list = ['--', '--', '--', '--', '-.']
+    list = [hw_low, hw_high, hw_low_null, hw_high_null]
+    color_list = ['blueviolet', 'blueviolet', 'black', 'black']
+
     mass_list = np.logspace(1., 3., 100)
 
     fig = plt.figure(figsize=(8., 6.))
@@ -328,21 +347,108 @@ def limit_comparison(plike=True, bmin=20., annih_prod='BB'):
     pl.ylim([10 ** -27., 10. ** -23.])
     for i, lim in enumerate(list):
         pts = interpola(mass_list, lim[:, 0], lim[:, 1])
-        plt.plot(mass_list, pts, ls=ls_list[i], lw=1, color=color_list[i])
+        plt.plot(mass_list, pts, lw=1, color=color_list[i], alpha=0.3)
 
+    lowm2 = interpola(mass_list, hw_low_null[:, 0], hw_low_null[:, 1])
+    highm2 = interpola(mass_list, hw_high_null[:, 0], hw_high_null[:, 1])
+    ax.fill_between(mass_list, lowm2, highm2, where=highm2 >= lowm2,
+                    facecolor='black', edgecolor='None', interpolate=True, alpha=0.3)
     lowm = interpola(mass_list, hw_low[:, 0], hw_low[:, 1])
     highm = interpola(mass_list, hw_high[:, 0], hw_high[:, 1])
     ax.fill_between(mass_list, lowm, highm, where=highm >= lowm,
-                    facecolor='Blue', edgecolor='None', interpolate=True, alpha=0.3)
-
-    ltop = 10 ** -24.2
-    ldwn = 10 ** -.4
-    plt.text(15, ltop, 'NFW (Post-tidal Stripping)', color='Magenta', fontsize=10)
-    plt.text(15, ltop * ldwn, 'Einasto (Pre-tidal Stripping)', color='k', fontsize=10)
-    plt.text(15, ltop * ldwn ** 2., 'This Work', color='blue', fontsize=10)
-
+                    facecolor='blueviolet', edgecolor='None', interpolate=True, alpha=0.3)
+    ltop = 10 ** -23.4
+    ldwn = 10 ** -.3
+    #plt.text(15, ltop, 'NFW (Post-tidal Stripping)', color='Magenta', fontsize=10)
+    #plt.text(15, ltop * ldwn, 'Einasto (Pre-tidal Stripping)', color='k', fontsize=10)
+    #plt.text(15, ltop * ldwn ** 2., 'This Work', color='blue', fontsize=10)
+    plt.text(15, ltop, r'$\chi \chi$ ' + r'$\rightarrow$' + r' $b \bar{{b}}$', color='k', fontsize=16)
+    plt.text(15, ltop * ldwn, r'Point-like', color='k', fontsize=12)
+    plt.axhline(y=2.2 * 10 **-26., xmin=0, xmax=1, lw=1, ls='--', color='k', alpha=1)
     figname = dir + 'Limit_Comparison_' + ptag +'annih_prod_' + \
-              annih_prod + '_bmin_{:.1f}'.format(bmin) + '.pdf'
+              annih_prod + '_bmin_{:.0f}'.format(bmin) + ntag + '.pdf'
+
+    pl.xlabel(r'$m_\chi$   [GeV]', fontsize=20)
+    pl.ylabel(r'$\left< \sigma v \right>$   [$cm^3 s^{{-1}}$]', fontsize=20)
+    fig.set_tight_layout(True)
+    pl.savefig(figname)
+    return
+
+
+def limit_comparison_all(plike=True, bmin=20., nobs=True):
+    if plike:
+        ptag = 'Pointlike'
+    else:
+        ptag = 'Extended'
+    if nobs:
+        ntag = ''
+    else:
+        ntag = '_Nobs_False_'
+    dir = MAIN_PATH + '/SubhaloDetection/Data/'
+    bb_low = np.loadtxt(dir + 'Limits_' + ptag + '_HW_Truncate_False_alpha_0.16_annih_prod_' +
+                         'BB' + '_arxiv_num_13131729_bmin_{:.1f}'.format(bmin) +
+                        '_Mlow_-5.000__Nobs_True_.dat')
+    bb_high = np.loadtxt(dir + 'Limits_' + ptag + '_HW_Truncate_False_alpha_0.16_annih_prod_' +
+                         'BB' + '_arxiv_num_13131729_bmin_{:.1f}'.format(bmin) +
+                         '_Mlow_5.000__Nobs_True_.dat')
+    cc_low = np.loadtxt(dir + 'Limits_' + ptag + '_HW_Truncate_False_alpha_0.16_annih_prod_' +
+                        'CC' + '_arxiv_num_13131729_bmin_{:.1f}'.format(bmin) +
+                        '_Mlow_-5.000__Nobs_True_.dat')
+    cc_high = np.loadtxt(dir + 'Limits_' + ptag + '_HW_Truncate_False_alpha_0.16_annih_prod_' +
+                         'CC' + '_arxiv_num_13131729_bmin_{:.1f}'.format(bmin) +
+                         '_Mlow_5.000__Nobs_True_.dat')
+    zz_low = np.loadtxt(dir + 'Limits_' + ptag + '_HW_Truncate_False_alpha_0.16_annih_prod_' +
+                        'ZZ' + '_arxiv_num_13131729_bmin_{:.1f}'.format(bmin) +
+                        '_Mlow_-5.000__Nobs_True_.dat')
+    zz_high = np.loadtxt(dir + 'Limits_' + ptag + '_HW_Truncate_False_alpha_0.16_annih_prod_' +
+                         'ZZ' + '_arxiv_num_13131729_bmin_{:.1f}'.format(bmin) +
+                         '_Mlow_5.000__Nobs_True_.dat')
+    ww_low = np.loadtxt(dir + 'Limits_' + ptag + '_HW_Truncate_False_alpha_0.16_annih_prod_' +
+                        'WW' + '_arxiv_num_13131729_bmin_{:.1f}'.format(bmin) +
+                        '_Mlow_-5.000__Nobs_True_.dat')
+    ww_high = np.loadtxt(dir + 'Limits_' + ptag + '_HW_Truncate_False_alpha_0.16_annih_prod_' +
+                         'WW' + '_arxiv_num_13131729_bmin_{:.1f}'.format(bmin) +
+                         '_Mlow_5.000__Nobs_True_.dat')
+    tautau_low = np.loadtxt(dir + 'Limits_' + ptag + '_HW_Truncate_False_alpha_0.16_annih_prod_' +
+                        'WW' + '_arxiv_num_13131729_bmin_{:.1f}'.format(bmin) +
+                        '_Mlow_-5.000__Nobs_True_.dat')
+    tautau_high = np.loadtxt(dir + 'Limits_' + ptag + '_HW_Truncate_False_alpha_0.16_annih_prod_' +
+                         'tautau' + '_arxiv_num_13131729_bmin_{:.1f}'.format(bmin) +
+                         '_Mlow_5.000__Nobs_True_.dat')
+
+
+    list = [bb_low, bb_high, cc_low, cc_high, zz_low, zz_high,
+            ww_low, ww_high, tautau_low, tautau_high]
+    color_list = ['blueviolet', 'goldenrod',
+                  'maroon', 'blue', 'green']
+
+    mass_list = np.logspace(1., 3., 100)
+
+    fig = plt.figure(figsize=(8., 6.))
+    ax = plt.gca()
+    ax.set_xscale("log")
+    ax.set_yscale('log')
+    pl.xlim([10 ** 1., 10. ** 3.])
+    pl.ylim([10 ** -27., 10. ** -23.])
+    for i in range(len(list) / 2):
+        pts1 = interpola(mass_list, list[2 * i][:, 0], list[2 *i][:, 1])
+        pts2 = interpola(mass_list, list[2 * i + 1][:, 0], list[2 * i + 1][:, 1])
+        ax.fill_between(mass_list, pts1, pts2, where=pts2 >= pts1,
+                        facecolor=color_list[2 * i], edgecolor='None', interpolate=True, alpha=0.3)
+
+    ltop = 10 ** -23.4
+    ldwn = 10 ** -.3
+    plt.text(15, ltop, r'$b\bar{{b}}$', color='blueviolet', fontsize=10)
+    plt.text(15, ltop * ldwn, r'$c\bar{{c}}$', color='goldenrod', fontsize=10)
+    plt.text(15, ltop * ldwn ** 2.,  r'$ZZ$', color='maroon', fontsize=10)
+    plt.text(15, ltop * ldwn ** 3., r'$ZZ$', color='maroon', fontsize=10)
+    plt.text(15, ltop * ldwn ** 4., r'$W^+W^-$', color='blue', fontsize=10)
+    plt.text(15, ltop * ldwn ** 5., r'$\tau^+\tau^-$', color='green', fontsize=10)
+    #plt.text(15, ltop, r'$\chi \chi$ ' + r'$\rightarrow$' + r' $b \bar{{b}}$', color='k', fontsize=16)
+    #plt.text(15, ltop * ldwn, r'Point-like', color='k', fontsize=12)
+    plt.axhline(y=2.2 * 10 **-26., xmin=0, xmax=1, lw=1, ls='--', color='k', alpha=1)
+    figname = dir + 'Limit_Comparison_' + ptag +\
+              'Annih_to_All' + '_bmin_{:.0f}'.format(bmin) + ntag + '.pdf'
 
     pl.xlabel(r'$m_\chi$   [GeV]', fontsize=20)
     pl.ylabel(r'$\left< \sigma v \right>$   [$cm^3 s^{{-1}}$]', fontsize=20)
@@ -368,8 +474,8 @@ def hw_prob_gamma(gam):
 
 
 def obtain_number_density():
-    max_mass = 10. ** 10.
-    min_mass = 10. ** 8.
+    max_mass = 1 * 10. ** 10.
+    min_mass = 1 * 10. ** 8.
     gcd_range = np.array([0., 300.])
     n_halos = 24. + 24. + 3.
     dir = MAIN_PATH + '/SubhaloDetection/Data/Misc_Items/ELVIS_Halo_Catalogs/'
@@ -437,8 +543,8 @@ def obtain_number_density():
     plt.xlabel(r'Mass   [$M_\odot$]', fontsize=18)
     plt.ylabel(r'$\frac{dN}{dM}$', fontsize=22, rotation='horizontal')
     subhalos = subhalos[(subhalos[:, 9] < max_mass) & (subhalos[:, 9] > min_mass)]
-    mass_bins = np.logspace(np.log10(np.min(subhalos[:, 9])), 10.,
-                            (10. - np.log10(np.min(subhalos[:, 9]))) * 15)
+    mass_bins = np.logspace(np.log10(np.min(subhalos[:, 9])), np.log10(np.max(subhalos[:, 9])),
+                            (np.log10(np.max(subhalos[:, 9])) - np.log10(np.min(subhalos[:, 9]))) * 15)
     fit_ein, bine = np.histogram(subhalos[:, 9], bins=mass_bins, normed=False, weights=1. / subhalos[:, 9])
     d_ein = np.zeros(len(mass_bins) - 1)
 
@@ -500,3 +606,155 @@ def obtain_number_density():
     pl.savefig(dir + '../../../Plots/' + fname)
 
     return
+
+
+def scatter_fits():
+    m_list = [4.10e+05, 5.35e+06, 1.70e+07, 3.16e+07, 5.52e+07, 1.18e+08, 10.**10.]
+    gcd_range = np.linspace(0., 300., 100)
+    dir = MAIN_PATH + '/SubhaloDetection/Data/Misc_Items/'
+    sim_list = ['ViaLacteaII_Useable_Subhalos.dat', 'Elvis_Useable_Subhalos.dat']
+    class_list = [Via_Lactea_II(), ELVIS()]
+    subs = [np.loadtxt(dir + sim_list[0]),
+                     np.loadtxt(dir + sim_list[1])]
+    names = ['Via Lactea II', 'ELVIS']
+
+    f, ax = plt.subplots(6, 2, sharex='col')
+    for j in range(len(m_list) - 1):
+        mlow, mhigh = m_list[j], m_list[j + 1]
+        print 'Mrange: [{:.2e} {:.2e}]'.format(mlow, mhigh)
+        for i in range(len(class_list)):
+            print names[i]
+            sub_o_int = class_list[i].find_subhalos(min_mass=mlow, max_mass=mhigh,
+                                                         gcd_min=gcd_range[0],
+                                                         gcd_max=gcd_range[-1],
+                                                         print_info=False)
+            if i == 0:
+                subhalos = subs[i][sub_o_int][:, :6]
+            else:
+                subhalos = np.vstack((subhalos, subs[i][sub_o_int][:, :6]))
+
+        print 'Calculating Fits...'
+        for k, sub in enumerate(subhalos):
+            rvmax, vmax, mass = [sub[4], sub[3], sub[5]]
+            try:
+                bf_gamma = find_gamma(mass, vmax, rvmax)
+                subhalo_kmmdsm = KMMDSM(mass, bf_gamma, arxiv_num=160106781,
+                                        vmax=vmax, rmax=rvmax)
+                try:
+                    gamma_plt = np.vstack((gamma_plt, [sub[1], bf_gamma]))
+                    rb_plt = np.vstack((rb_plt, [sub[1], subhalo_kmmdsm.rb]))
+                except UnboundLocalError:
+                    gamma_plt = np.array([sub[1], bf_gamma])
+                    rb_plt = np.array([sub[1], subhalo_kmmdsm.rb])
+            except ValueError:
+                bf_gamma = 0.
+
+        print 'Finding fit to gerneralized normal distribution...'
+        regions = 4
+        r_groups = Joint_Simulation_Comparison().equipartition(x=gamma_plt[:, 0], bnd_num=regions)
+        r_bounds = [r_groups[a][0] for a in range(regions)]
+        r_bounds.append(r_groups[-1][-1])
+        print 'GCD Bounds: ', r_bounds
+        r_diff_tab = np.diff(r_bounds) / 2. + r_bounds[:-1]
+        fit_tabs_g = np.zeros(regions * 7).reshape((regions, 7))
+        fit_tabs_rb = np.zeros(regions * 5).reshape((regions, 5))
+
+        for i in range(regions):
+
+            print 'Dist Range: ', r_bounds[i], r_bounds[i + 1]
+            args_o_int = (r_bounds[i] < gamma_plt[:, 0]) & (gamma_plt[:, 0] < r_bounds[i + 1])
+            print 'Number Subhalos in Range: ', args_o_int.sum()
+            print 'Mean Gamma of Subhalos in Range: ', np.mean(gamma_plt[args_o_int][:, 1])
+            r_diff = np.median(gamma_plt[args_o_int][:, 0])
+
+            hist_g, bin_edges_g = np.histogram(gamma_plt[args_o_int][:, 1], bins='auto', normed=True)
+            x_fit_g = np.diff(bin_edges_g) / 2. + bin_edges_g[:-1]
+            mu_g, sig_g, k_g = gen_norm_fit_finder(x_fit_g, hist_g, sigma=np.sqrt(hist_g), mu_low=.5,
+                                                   mu_high=2., klow=.01, khigh=1., slow=.1, shigh=1.)
+            median_g = mu_g
+            std_dev_g_low = lower_sigma_gen_norm(mu_g, sig_g, k_g)
+            std_dev_g_high = upper_sigma_gen_norm(mu_g, sig_g, k_g)
+            fit_tabs_g[i] = [r_diff, mu_g, sig_g, k_g, median_g,
+                             std_dev_g_low, std_dev_g_high]
+
+            hist_rb, bin_edges_rb = np.histogram(rb_plt[args_o_int][:, 1], bins='auto', normed=True)
+            x_fit_rb = np.diff(bin_edges_rb) / 2. + bin_edges_rb[:-1]
+            pars1, cov = curve_fit(lnnormal, x_fit_rb, hist_rb, bounds=(0., np.inf))
+            mu, sig = [pars1[0], pars1[1]]
+            std_dev_r_high = lower_sigma_lnnorm(mu, sig)
+            std_dev_r_low = upper_sigma_lnnorm(mu, sig)
+            fit_tabs_rb[i] = [r_diff, mu, sig, std_dev_r_low, std_dev_r_high]
+
+        gam_mean_fit = np.polyfit(np.log10(fit_tabs_g[:, 0]), np.log10(fit_tabs_g[:, 4]), 1)
+        gcd_tab_plt = np.logspace(1., np.log10(300.), 100)
+        gam_fit_plt = 10. ** np.polyval(gam_mean_fit, np.log10(gcd_tab_plt))
+
+
+        ax[j, 0].set_xscale("log")
+        ax[j, 0].set_yscale('log')
+        ax[j, 0].set_xlim([10., 300.])
+        ymin = 0.3
+        ymax = np.max(gamma_plt[:, 1])
+        ax[j, 0].set_ylim([ymin, ymax])
+        if j == len(m_list) - 1:
+            ax[j, 0].set_xlabel('GC Distance (kpc)', fontsize=16)
+        ax[j, 0].set_ylabel(r'$\gamma$', fontsize=16)
+
+        ax[j, 0].plot(gamma_plt[:, 0], gamma_plt[:, 1], 'ro', alpha=0.3)
+        ax[j, 0].plot(fit_tabs_g[:, 0], fit_tabs_g[:, 4], 'kx', ms=6, mew=3)
+
+        for x in range(fit_tabs_g[:, 0].size):
+            if (fit_tabs_g[x, 4] - fit_tabs_g[x, 5]) > 0.:
+                yerr_l = (np.log10(fit_tabs_g[x, 4] - fit_tabs_g[x, 5]) -
+                          np.log10(ymin)) / (np.log10(ymax) - np.log10(ymin))
+            else:
+                yerr_l = 0.
+            yerr_h = (np.log10(fit_tabs_g[x, 4] + fit_tabs_g[x, 6]) -
+                      np.log10(ymin)) / (np.log10(ymax) - np.log10(ymin))
+
+            ax[j, 0].axvline(x=fit_tabs_g[x, 0], ymin=yerr_l, ymax=yerr_h,
+                            linewidth=2, color='Black')
+
+        ymin = np.min(gamma_plt[:, 1])
+        ymax = np.max(gamma_plt[:, 1])
+        legtop = .8 * (ymax - ymin)
+        ax[j, 0].plot(gcd_tab_plt, gam_fit_plt, 'k', ms=2)
+        ax[j, 0].text(12., legtop, r'$\gamma(R_\oplus)$ = {:.3f}'.format(10. ** np.polyval(gam_mean_fit, np.log10(8.5))),
+                      fontsize=16, ha='left', va='center', color='Black')
+
+        print 'Making Rb vs GCD scatter...'
+        rb_mean_fit = np.polyfit(np.log10(fit_tabs_rb[:, 0]), np.log10(fit_tabs_rb[:, 1]), 1)
+        rb_fit_plt = 10. ** np.polyval(rb_mean_fit, np.log10(gcd_tab_plt))
+
+        ax[j, 1].set_xscale("log")
+        ax[j, 1].set_yscale('log')
+        ax[j, 1].set_xlim([10., 300.])
+        ymin = np.min(rb_plt[:, 1])
+        ymax = np.max(rb_plt[:, 1])
+        ax[j, 1].set_ylim([ymin, ymax])
+        if j == len(m_list) - 1:
+            ax[j, 1].set_xlabel('GC Distance (kpc)', fontsize=16)
+        ax[j, 1].set_ylabel(r'$R_b$   [kpc]', fontsize=16)
+        ax[j, 1].plot(rb_plt[:, 0], rb_plt[:, 1], 'ro', alpha=0.3)
+        ax[j, 1].plot(fit_tabs_rb[:, 0], fit_tabs_rb[:, 1], 'kx', ms=6, mew=3)
+        ax[j, 1].plot(gcd_tab_plt, rb_fit_plt, 'k', ms=2)
+
+        for x in range(fit_tabs_rb[:, 0].size):
+            if (fit_tabs_rb[x, 1] - fit_tabs_rb[x, 3]) > 0.:
+                yerr_l = (np.log10(fit_tabs_rb[x, 1] - fit_tabs_rb[x, 3]) -
+                          np.log10(ymin)) / (np.log10(ymax) - np.log10(ymin))
+            else:
+                yerr_l = 0.
+            yerr_h = (np.log10(fit_tabs_rb[x, 1] + fit_tabs_rb[x, 4]) -
+                      np.log10(ymin)) / (np.log10(ymax) - np.log10(ymin))
+            ax[j, 1].axvline(x=fit_tabs_rb[x, 0], ymin=yerr_l, ymax=yerr_h,
+                        linewidth=2, color='Black')
+        legtop = .8 * (ymax - ymin)
+        ax[j, 1].text(12., legtop, r'$R_b(R_\oplus)$ = {:.3f}'.format(10. ** np.polyval(rb_mean_fit, np.log10(8.5))),
+                 fontsize=16, ha='left', va='center', color='Black')
+
+    f.tight_layout(rect=(0, .0, 1, 1))
+    plt.subplots_adjust(wspace=0.15, hspace=0.)
+    figname = MAIN_PATH + '/SubhaloDetection/Plots/PaperPlots/Scatter_Multiplot.pdf'
+    pl.savefig(figname)
+
