@@ -10,6 +10,7 @@ from math import factorial
 from scipy.integrate import quad
 from scipy.optimize import fminbound
 from scipy.interpolate import interp1d
+from scipy.special import gamma
 import glob
 from subhalo import *
 
@@ -24,7 +25,7 @@ class DM_Limits(object):
     Given precalculated cross section vs n_obs files, this class calculates the
     the upper limits at a chosen CL
     """
-    def __init__(self, nobs=0., nbkg=0., CL=0.9, annih_prod='BB', pointlike=True,
+    def __init__(self, nobs=True, nbkg=0., CL=0.9, annih_prod='BB', pointlike=True,
                  alpha=0.16, profile=0, truncate=False, arxiv_num=10070438, b_min=30.,
                  method=0, stiff_rb=False, m_low=np.log10(10**4.), tag='_'):
 
@@ -48,7 +49,11 @@ class DM_Limits(object):
         self.folder = MAIN_PATH + "/SubhaloDetection/Data/"
 
     def poisson_limit(self):
-
+        sources = np.loadtxt(self.folder + 'Misc_Items/WeightedSources_' + self.annih_prod + '.dat')
+        if self.nobs:
+            nobstag = '_Nobs_True_'
+        else:
+            nobstag = '_Nobs_False_'
         if self.pointlike:
             plike_tag = '_Pointlike'
         else:
@@ -58,7 +63,7 @@ class DM_Limits(object):
             str(self.truncate) + '_alpha_' + str(self.alpha) +\
             '_annih_prod_' + self.annih_prod + '_arxiv_num_' +\
             str(self.arxiv_num) + '_bmin_' + str(self.b_min) +\
-            '_Mlow_{:.3f}'.format(self.m_low) + self.tag + '.dat'
+            '_Mlow_{:.3f}'.format(self.m_low) + self.tag + nobstag + '.dat'
 
         if self.profile < 2:
             extra_tag = '_Truncate_' + str(self.truncate) + '_Cparam_' + str(self.arxiv_num) + \
@@ -72,45 +77,49 @@ class DM_Limits(object):
         print f_names
 
         foi = glob.glob(self.folder + '/Cross_v_Nobs/' + f_names)
-
-        if self.method == "Poisson":
-            lim_vals = Poisson(self.nobs, self.nbkg, self.CL).poisson_integ_up()
-            lim_val = lim_vals
-        elif self.method == "FeldmanCousins":
-            lim_vals = Poisson(self.nobs, self.nbkg, self.CL).FeldmanCousins()
-            if lim_vals[0] == 0.:
-                lim_val = lim_vals[1]
-            else:
-                print 'Feldman-Cousins returns two sided band... Exiting...'
-                lim_val = 0.
-                exit()
-        else:
-            print 'Invalid method call.'
-            raise ValueError
-
         limarr = np.zeros(2 * len(foi)).reshape((len(foi), 2))
 
         for i, f in enumerate(foi):
             print f
-            cross_vs_n = np.loadtxt(f)
-            cs_list = np.logspace(np.log10(cross_vs_n[0, 0]), np.log10(cross_vs_n[-1, 0]), 200)
-            cross_n_interp = interp1d(cross_vs_n[:, 0], cross_vs_n[:, 1], kind='linear', bounds_error=False)
-            fd_min = np.abs(cross_n_interp(cs_list) - lim_val)
-            print 'Cross Section Limit: ', cs_list[np.argmin(fd_min)]
             mstart = f.find('_mx_')
             mstart += 4
             j = 0
             found_mass = False
             while not found_mass:
                 try:
-                    mx = float(f[mstart:mstart+j+1])
+                    mx = float(f[mstart:mstart + j + 1])
                     j += 1
                 except ValueError:
-                    mx = float(f[mstart:mstart+j])
+                    mx = float(f[mstart:mstart + j])
                     found_mass = True
+            if self.nobs:
+                nobs = interpola(mx, sources[:, 0], sources[:, 1])
+                if nobs < 0:
+                    nobs = 0.
+                print 'mx: ', mx, 'Nobs: ', nobs
+            else:
+                nobs = 0.
+            if self.method == "Poisson":
+                lim_vals = Poisson(nobs, self.nbkg, self.CL).poisson_integ_up()
+                lim_val = lim_vals
+            elif self.method == "FeldmanCousins":
+                lim_vals = Poisson(self.nobs, self.nbkg, self.CL).FeldmanCousins()
+                if lim_vals[0] == 0.:
+                    lim_val = lim_vals[1]
+                else:
+                    print 'Feldman-Cousins returns two sided band... Exiting...'
+                    lim_val = 0.
+                    exit()
+            else:
+                print 'Invalid method call.'
+                raise ValueError
+            cross_vs_n = np.loadtxt(f)
+            cs_list = np.logspace(np.log10(cross_vs_n[0, 0]), np.log10(cross_vs_n[-1, 0]), 200)
+            cross_n_interp = interp1d(cross_vs_n[:, 0], cross_vs_n[:, 1], kind='linear', bounds_error=False)
+            fd_min = np.abs(cross_n_interp(cs_list) - lim_val)
+            print 'Cross Section Limit: ', cs_list[np.argmin(fd_min)]
 
             limarr[i] = [mx, cs_list[np.argmin(fd_min)]]
-
         limarr = limarr[np.argsort(limarr[:, 0])]
         print 'Limit: '
         print limarr
@@ -129,7 +138,7 @@ class Poisson(object):
         self.CL = CL
 
     def pdf(self, mu, b, n):
-        pdf = (mu + b)**n * np.exp(-(mu + b)) / factorial(n)
+        pdf = (mu + b)**n * np.exp(-(mu + b)) / gamma(n + 1.)
         return pdf
 
     def poisson_integ_up(self):

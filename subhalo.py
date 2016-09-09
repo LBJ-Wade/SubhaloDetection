@@ -86,19 +86,28 @@ class Model(object):
             se_file = np.loadtxt(dir + file_name)
             m_comp = float('{:.3e}'.format(self.halo_mass))
             se_file = se_file[se_file[:, 0] == m_comp]
+            # Only Look at Masses of interest
             if self.profile == 0:
                 c_comp = float('{:.3e}'.format(self.c))
-                if c_comp == 8.41:
-                    exit()
+                # See if C value has been calculated
                 if np.sum(se_file[:, 1] == c_comp) > 0.:
                     halo_of_int = se_file[se_file[:, 1] == c_comp]
-
-                    find_ext = interp1d(halo_of_int[:, -2], halo_of_int[:, -1], kind='linear', bounds_error=False,
-                                        fill_value='extrapolate')
-                    extension = find_ext(dist)
+                    if halo_of_int[0, -1] == 2.:
+                        upper_lim_hit = True
+                    else:
+                        upper_lim_hit = False
+                    if halo_of_int[-1, -1] == 0.5:
+                        lower_lim_hit = True
+                    else:
+                        lower_lim_hit = False
+                    valid_dist = halo_of_int[(halo_of_int[:, -1] > 0.5) & (halo_of_int[:, -1] < 2.0)]
+                    if (dist < valid_dist[0, -2]) and upper_lim_hit:
+                        extension = 2.
+                    elif (dist > valid_dist[-1, -2]) and lower_lim_hit:
+                        extension = 0.5
+                    else:
+                        extension = interpola(dist, valid_dist[:, -2], valid_dist[:, -1])
                 else:
-                    print 'Wrong spot...'
-                    exit()
                     find_ext = interp2d(se_file[:, -3], se_file[:, -2], se_file[:, -1], kind='linear',
                                         bounds_error=False)
                     extension = find_ext(dist)
@@ -108,7 +117,7 @@ class Model(object):
                 extension = find_ext(dist)
             else:
                 rb_comp = float('{:.3e}'.format(self.rb))
-                g_comp = float('{:.2f}'.format(self.gam))
+                g_comp = float('{:.4f}'.format(self.gam))
                 if np.sum((se_file[:, 1] == rb_comp) & (se_file[:, 2] == g_comp)) > 0:
                     halo_of_int = se_file[(se_file[:, 1] == rb_comp) & (se_file[:, 2] == g_comp)]
                     find_ext = interp1d(halo_of_int[:, -2], halo_of_int[:, -1], kind='linear', bounds_error=False,

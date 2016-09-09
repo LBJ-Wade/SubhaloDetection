@@ -37,8 +37,8 @@ class Via_Lactea_II(object):
 
     def __init__(self, profile=0, alpha=0.16, c=None, truncate=False, arxiv_num=13131729):
         self.dir = MAIN_PATH + '/SubhaloDetection/Data/Misc_Items/'
-        self.f_name = 'ViaLacteaII_Info.dat'
-        #self.f_name = 'ViaLacteaII_Useable_Subhalos.dat'
+        #self.f_name = 'ViaLacteaII_Info.dat'
+        self.f_name = 'ViaLacteaII_Useable_Subhalos.dat'
         self.profile = profile
         self.truncate = truncate
         self.alpha = alpha

@@ -410,7 +410,7 @@ def limit_comparison_all(plike=True, bmin=20., nobs=True):
                          'WW' + '_arxiv_num_13131729_bmin_{:.1f}'.format(bmin) +
                          '_Mlow_5.000__Nobs_True_.dat')
     tautau_low = np.loadtxt(dir + 'Limits_' + ptag + '_HW_Truncate_False_alpha_0.16_annih_prod_' +
-                        'WW' + '_arxiv_num_13131729_bmin_{:.1f}'.format(bmin) +
+                        'tautau' + '_arxiv_num_13131729_bmin_{:.1f}'.format(bmin) +
                         '_Mlow_-5.000__Nobs_True_.dat')
     tautau_high = np.loadtxt(dir + 'Limits_' + ptag + '_HW_Truncate_False_alpha_0.16_annih_prod_' +
                          'tautau' + '_arxiv_num_13131729_bmin_{:.1f}'.format(bmin) +
@@ -421,38 +421,69 @@ def limit_comparison_all(plike=True, bmin=20., nobs=True):
             ww_low, ww_high, tautau_low, tautau_high]
     color_list = ['blueviolet', 'goldenrod',
                   'maroon', 'blue', 'green']
+    ls_list = ['-', '--', ':', '-.', '--']
 
     mass_list = np.logspace(1., 3., 100)
+    mz_list = np.logspace(np.log10(91.), 3., 100)
+    mw_list = np.logspace(np.log10(80.), 3., 100)
 
-    fig = plt.figure(figsize=(8., 6.))
-    ax = plt.gca()
-    ax.set_xscale("log")
-    ax.set_yscale('log')
-    pl.xlim([10 ** 1., 10. ** 3.])
-    pl.ylim([10 ** -27., 10. ** -23.])
+    f, ax = plt.subplots(1, 2, sharey='col', figsize=(10, 5))
+
+    ax[0].set_xscale("log")
+    ax[0].set_yscale('log')
+    ax[0].set_xlim([10 ** 1., 10. ** 3.])
+    ax[0].set_ylim([2 *10 ** -27., 10. ** -24.])
+    ax[1].set_xscale("log")
+    ax[1].set_yscale('log')
+    ax[1].set_xlim([10 ** 1., 10. ** 3.])
+    ax[1].set_ylim([2 * 10 ** -27., 10. ** -24.])
     for i in range(len(list) / 2):
-        pts1 = interpola(mass_list, list[2 * i][:, 0], list[2 *i][:, 1])
-        pts2 = interpola(mass_list, list[2 * i + 1][:, 0], list[2 * i + 1][:, 1])
-        ax.fill_between(mass_list, pts1, pts2, where=pts2 >= pts1,
-                        facecolor=color_list[2 * i], edgecolor='None', interpolate=True, alpha=0.3)
+        if i == 2:
+            m = mz_list
+        elif i == 3:
+            m = mw_list
+        else:
+            m = mass_list
+        pts1 = interpola(m, list[2 * i][:, 0], list[2 * i][:, 1])
+        pts2 = interpola(m, list[2 * i + 1][:, 0], list[2 * i + 1][:, 1])
+        #ax.fill_between(m, pts1, pts2, where=pts2 >= pts1,
+        #                facecolor=color_list[i], edgecolor='None', interpolate=True, alpha=0.3)
 
-    ltop = 10 ** -23.4
-    ldwn = 10 ** -.3
-    plt.text(15, ltop, r'$b\bar{{b}}$', color='blueviolet', fontsize=10)
-    plt.text(15, ltop * ldwn, r'$c\bar{{c}}$', color='goldenrod', fontsize=10)
-    plt.text(15, ltop * ldwn ** 2.,  r'$ZZ$', color='maroon', fontsize=10)
-    plt.text(15, ltop * ldwn ** 3., r'$ZZ$', color='maroon', fontsize=10)
-    plt.text(15, ltop * ldwn ** 4., r'$W^+W^-$', color='blue', fontsize=10)
-    plt.text(15, ltop * ldwn ** 5., r'$\tau^+\tau^-$', color='green', fontsize=10)
+        ax[0].plot(m, pts1, color=color_list[i], lw=2)
+        ax[1].plot(m, pts2, color=color_list[i], lw=2)
+
+    ltop = 10 ** -24.4
+    ldwn = 10 ** -.2
+    ax[1].text(15, ltop, r'$b\bar{{b}}$', color='blueviolet', fontsize=18)
+    ax[1].text(15, ltop * ldwn, r'$c\bar{{c}}$', color='goldenrod', fontsize=18)
+    ax[1].text(15, ltop * ldwn ** 2.,  r'$ZZ$', color='maroon', fontsize=18)
+    ax[1].text(15, ltop * ldwn ** 3., r'$W^+W^-$', color='blue', fontsize=18)
+    ax[1].text(15, ltop * ldwn ** 4., r'$\tau^+\tau^-$', color='green', fontsize=18)
+    ax[0].text(15, ltop, r'$b\bar{{b}}$', color='blueviolet', fontsize=18)
+    ax[0].text(15, ltop * ldwn, r'$c\bar{{c}}$', color='goldenrod', fontsize=18)
+    ax[0].text(15, ltop * ldwn ** 2., r'$ZZ$', color='maroon', fontsize=18)
+    ax[0].text(15, ltop * ldwn ** 3., r'$W^+W^-$', color='blue', fontsize=18)
+    ax[0].text(15, ltop * ldwn ** 4., r'$\tau^+\tau^-$', color='green', fontsize=18)
+
+    ax[0].text(150, 3 * 10**-27., r'$M_{{min}} = 10^{{-5}} M_\odot$', color='k', fontsize=16)
+    ax[1].text(150, 3 * 10 ** -27., r'$M_{{min}} = 10^{{5}} M_\odot$', color='k', fontsize=16)
     #plt.text(15, ltop, r'$\chi \chi$ ' + r'$\rightarrow$' + r' $b \bar{{b}}$', color='k', fontsize=16)
     #plt.text(15, ltop * ldwn, r'Point-like', color='k', fontsize=12)
-    plt.axhline(y=2.2 * 10 **-26., xmin=0, xmax=1, lw=1, ls='--', color='k', alpha=1)
+    ax[1].axhline(y=2.2 * 10 **-26., xmin=0, xmax=1, lw=1, ls='--', color='k', alpha=1)
+    ax[0].axhline(y=2.2 * 10 ** -26., xmin=0, xmax=1, lw=1, ls='--', color='k', alpha=1)
+
+
+
     figname = dir + 'Limit_Comparison_' + ptag +\
               'Annih_to_All' + '_bmin_{:.0f}'.format(bmin) + ntag + '.pdf'
 
-    pl.xlabel(r'$m_\chi$   [GeV]', fontsize=20)
-    pl.ylabel(r'$\left< \sigma v \right>$   [$cm^3 s^{{-1}}$]', fontsize=20)
-    fig.set_tight_layout(True)
+    ax[0].set_xlabel(r'$m_\chi$   [GeV]', fontsize=20)
+    ax[1].set_xlabel(r'$m_\chi$   [GeV]', fontsize=20)
+    ax[1].yaxis.tick_right()
+    ax[0].set_ylabel(r'$\left< \sigma v \right>$   [$cm^3 s^{{-1}}$]', fontsize=20)
+    #ax[1].set_ylabel(r'$\left< \sigma v \right>$   [$cm^3 s^{{-1}}$]', fontsize=20)
+    f.tight_layout(rect=(0, .0, 1, 1))
+    plt.subplots_adjust(wspace=0.1, hspace=0.)
     pl.savefig(figname)
     return
 

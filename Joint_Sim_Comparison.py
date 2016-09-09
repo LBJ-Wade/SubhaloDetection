@@ -4,12 +4,16 @@ Created on Fri Aug 19 2016
 
 @author: SamWitte
 """
+import matplotlib as mpl
+try:
+    mpl.use('Agg')
+except:
+    pass
 import numpy as np
 import os
 from subhalo import *
 from profiles import NFW, Einasto
 import helper
-import matplotlib as mpl
 import pylab as pl
 import matplotlib.pyplot as plt
 from matplotlib import rc
@@ -20,6 +24,7 @@ from ELVIS_Analysis import *
 from scipy.optimize import curve_fit, minimize
 from scipy.special import beta, kv, erf
 
+
 #warnings.filterwarnings('error')
 
 #  mpl.use('pdf')
@@ -28,8 +33,8 @@ rc('text', usetex=True)
 
 mpl.rcParams['xtick.major.size'] = 8
 mpl.rcParams['ytick.major.size'] = 8
-mpl.rcParams['xtick.labelsize'] = 18
-mpl.rcParams['ytick.labelsize'] = 18
+mpl.rcParams['xtick.labelsize'] = 16
+mpl.rcParams['ytick.labelsize'] = 16
 
 try:
     MAIN_PATH = os.environ['SUBHALO_MAIN_PATH']
@@ -203,8 +208,7 @@ class Joint_Simulation_Comparison(object):
         return
 
     def fit_hisogram(self, mlow=10**4., mhigh=10.**7.):
-        gcd_range = np.linspace(.1, 300., 100)
-
+        gcd_range = np.linspace(0., 300., 100)
         for i in range(len(self.class_list)):
             print self.names[i]
             sub_o_int = self.class_list[i].find_subhalos(min_mass=mlow, max_mass=mhigh,
@@ -216,39 +220,39 @@ class Joint_Simulation_Comparison(object):
             else:
                 subhalos = np.vstack((subhalos, self.subhalos[i][sub_o_int][:, :6]))
 
-        print 'Making Number Density Histogram...'
-        plt.hist(subhalos[:, 1], bins=gcd_range, log=True, normed=False,
-                 weights=1. / (subhalos[:, 1]**3. * 4. * np.pi / 3.),
-                 alpha=0.3, color='Blue')
+        # print 'Making Number Density Histogram...'
+        # plt.hist(subhalos[:, 1], bins=gcd_range, log=True, normed=False,
+        #          weights=1. / (subhalos[:, 1]**3. * 4. * np.pi / 3.),
+        #          alpha=0.3, color='Blue')
+        #
+        # pl.xlim([gcd_range[0], gcd_range[-1]])
+        # plt.xlabel(r'GC Distance (kpc)', fontsize=16)
+        # plt.ylabel(r'dN/dV', fontsize=16)
+        # plt.xscale('log')
+        # plt.text(270, 10. ** -3.,
+        #          r'Mass Range: [{:.1e}, {:.1e}] $M_\odot$'.format(mlow, mhigh),
+        #          fontsize=10, ha='right', va='center', color='Black')
+        #
+        # fname = 'Number_Histogram_Func_GCD__Mass_Range_{:.1e}_{:.1e}'.format(mlow, mhigh) +\
+        #     '.pdf'
+        # pl.savefig(self.dir + '/Joint_Sim_plots/' + fname)
 
-        pl.xlim([gcd_range[0], gcd_range[-1]])
-        plt.xlabel(r'GC Distance (kpc)', fontsize=16)
-        plt.ylabel(r'dN/dV', fontsize=16)
-        plt.xscale('log')
-        plt.text(270, 10. ** -3.,
-                 r'Mass Range: [{:.1e}, {:.1e}] $M_\odot$'.format(mlow, mhigh),
-                 fontsize=10, ha='right', va='center', color='Black')
-
-        fname = 'Number_Histogram_Func_GCD__Mass_Range_{:.1e}_{:.1e}'.format(mlow, mhigh) +\
-            '.pdf'
-        pl.savefig(self.dir + '/Joint_Sim_plots/' + fname)
-
-        print 'Making Mass Density Histogram...'
-        plt.hist(subhalos[:, 1], bins=gcd_range, log=True, normed=False,
-                 weights= subhalos[:, 5] / (subhalos[:, 1] ** 3. * 4. * np.pi / 3.),
-                 alpha=0.3, color='Blue')
-
-        pl.xlim([gcd_range[0], gcd_range[-1]])
-        plt.xlabel(r'GC Distance (kpc)', fontsize=16)
-        plt.ylabel(r'$M \frac{dN}{dV}$', fontsize=16)
-
-        plt.text(270, 10. ** -3.,
-                 r'Mass Range: [{:.1e}, {:.1e}] $M_\odot$'.format(mlow, mhigh),
-                 fontsize=10, ha='right', va='center', color='Black')
-
-        fname = 'Number_Mass_Histogram_Func_GCD__Mass_Range_{:.1e}_{:.1e}'.format(mlow, mhigh) + \
-                '.pdf'
-        pl.savefig(self.dir + '/Joint_Sim_plots/' + fname)
+        # print 'Making Mass Density Histogram...'
+        # plt.hist(subhalos[:, 1], bins=gcd_range, log=True, normed=False,
+        #          weights= subhalos[:, 5] / (subhalos[:, 1] ** 3. * 4. * np.pi / 3.),
+        #          alpha=0.3, color='Blue')
+        #
+        # pl.xlim([gcd_range[0], gcd_range[-1]])
+        # plt.xlabel(r'GC Distance (kpc)', fontsize=16)
+        # plt.ylabel(r'$M \frac{dN}{dV}$', fontsize=16)
+        #
+        # plt.text(270, 10. ** -3.,
+        #          r'Mass Range: [{:.1e}, {:.1e}] $M_\odot$'.format(mlow, mhigh),
+        #          fontsize=10, ha='right', va='center', color='Black')
+        #
+        # fname = 'Number_Mass_Histogram_Func_GCD__Mass_Range_{:.1e}_{:.1e}'.format(mlow, mhigh) + \
+        #         '.pdf'
+        # pl.savefig(self.dir + '/Joint_Sim_plots/' + fname)
 
         print 'Calculating Fits...'
         for j, sub in enumerate(subhalos):
@@ -276,7 +280,12 @@ class Joint_Simulation_Comparison(object):
         fit_tabs_g = np.zeros(regions * 7).reshape((regions, 7))
         fit_tabs_rb = np.zeros(regions * 5).reshape((regions, 5))
 
+        f, ax = plt.subplots(2, 2, sharex='col')
+        j = 0
         for i in range(regions):
+            ii = i % 2
+            if i > 1:
+                j = 1
             print 'Dist Range: ', r_bounds[i], r_bounds[i+1]
             args_o_int = (r_bounds[i] < gamma_plt[:, 0]) & (gamma_plt[:, 0] < r_bounds[i + 1])
             print 'Number Subhalos in Range: ', args_o_int.sum()
@@ -292,17 +301,39 @@ class Joint_Simulation_Comparison(object):
             std_dev_g_high = upper_sigma_gen_norm(mu_g, sig_g, k_g)
             fit_tabs_g[i] = [r_diff, mu_g, sig_g, k_g, median_g,
                              std_dev_g_low, std_dev_g_high]
-            # fig = plt.figure(figsize=(8., 6.))
-            # ax = plt.gca()
-            # x_lin = np.linspace(gamma_plt[args_o_int][:, 1].min(), gamma_plt[args_o_int][:, 1].max(), 100)
-            # y_test = gen_norm_dist(x_lin, mu_g, sig_g, k_g)
-            # plt.hist(gamma_plt[args_o_int][:, 1], bins='auto', normed=True, fc=None, ec='Black')
-            # plt.plot(x_lin, y_test)
-            # plt.axvline(x=fit_tabs_g[i,4] - fit_tabs_g[i,5], ymin=0, ymax=1, color='r')
-            # plt.axvline(x=fit_tabs_g[i, 4] + fit_tabs_g[i, 6], ymin=0, ymax=1, color='r')
-            # name = '/Users/SamWitte/Desktop/Gamma_Fit_Distribution_' + str(i) + '_.pdf'
-            # pl.savefig(name)
 
+            x_lin = np.linspace(gamma_plt[args_o_int][:, 1].min(), gamma_plt[args_o_int][:, 1].max(), 100)
+            y_test = gen_norm_dist(x_lin, mu_g, sig_g, k_g)
+            ax[ii, j].axes.get_yaxis().set_ticks([])
+            ax[ii, j].hist(gamma_plt[args_o_int][:, 1], bins='auto', normed=True, histtype='step',
+                           fc=None, ec='Black', lw=2)
+            ax[ii, j].plot(x_lin, y_test, lw=2)
+            #ax[ii, j].axvline(x=fit_tabs_g[i, 4] - fit_tabs_g[i, 5], ymin=0, ymax=1, color='r', lw=2)
+            #ax[ii, j].axvline(x=fit_tabs_g[i, 4] + fit_tabs_g[i, 6], ymin=0, ymax=1, color='r', lw=2)
+            xmax = np.max(x_lin)
+            ymax = np.max(y_test)
+            ax[ii, j].text(0.05 * xmax, 0.9 * ymax, r'Mass Range:')
+            ax[ii, j].text(0.05 * xmax, 0.8 * ymax, r'[{:.1e}, {:.1e}] $M_\odot$'.format(mlow, mhigh))
+            ax[ii, j].text(0.05 * xmax, 0.7 * ymax, r'GCD:')
+            ax[ii, j].text(0.05 * xmax, 0.6 * ymax, r'[{:.0f}, {:.0f}] kpc'.format(r_bounds[i], r_bounds[i + 1]))
+            ax[ii, j].set_xlabel(r'$\gamma$')
+
+        f.tight_layout(rect=(0, 0, 1, 1))
+        plt.subplots_adjust(wspace=0.1, hspace=0.)
+        name = MAIN_PATH + '/SubhaloDetection/Plots/Gamma_Fit_Distribution.pdf'
+        pl.savefig(name)
+
+        f, ax = plt.subplots(2, 2, sharex='col')
+        j = 0
+        for i in range(regions):
+            print 'Dist Range: ', r_bounds[i], r_bounds[i + 1]
+            args_o_int = (r_bounds[i] < gamma_plt[:, 0]) & (gamma_plt[:, 0] < r_bounds[i + 1])
+            print 'Number Subhalos in Range: ', args_o_int.sum()
+            print 'Mean Gamma of Subhalos in Range: ', np.mean(gamma_plt[args_o_int][:, 1])
+            r_diff = np.median(gamma_plt[args_o_int][:, 0])
+            ii = i%2
+            if i > 1:
+                j = 1
             hist_rb, bin_edges_rb = np.histogram(rb_plt[args_o_int][:, 1], bins='auto', normed=True)
             x_fit_rb = np.diff(bin_edges_rb) / 2. + bin_edges_rb[:-1]
             pars1, cov = curve_fit(lnnormal, x_fit_rb, hist_rb, bounds=(0., np.inf))
@@ -310,16 +341,26 @@ class Joint_Simulation_Comparison(object):
             std_dev_r_high = lower_sigma_lnnorm(mu, sig)
             std_dev_r_low = upper_sigma_lnnorm(mu, sig)
             fit_tabs_rb[i] = [r_diff, mu, sig, std_dev_r_low, std_dev_r_high]
-            # fig = plt.figure(figsize=(8., 6.))
-            # ax = plt.gca()
-            # x_lin = np.linspace(rb_plt[args_o_int][:, 1].min(), rb_plt[args_o_int][:, 1].max(), 100)
-            # y_test = lnnormal(x_lin, mu, sig)
-            # plt.hist(rb_plt[args_o_int][:, 1], bins='auto', normed=True, color='White')
-            # plt.plot(x_lin, y_test)
-            # plt.axvline(x=fit_tabs_rb[i,1] - fit_tabs_rb[i,3], ymin=0, ymax=1, color='r')
-            # plt.axvline(x=fit_tabs_rb[i, 1] + fit_tabs_rb[i, 4], ymin=0, ymax=1, color='r')
-            # name = '/Users/SamWitte/Desktop/Rb_Fit_Distribution_BURR_' + str(i) + '_.pdf'
-            # pl.savefig(name)
+
+            ax[ii, j].axes.get_yaxis().set_ticks([])
+            x_lin = np.linspace(rb_plt[args_o_int][:, 1].min(), rb_plt[args_o_int][:, 1].max(), 100)
+            y_test = lnnormal(x_lin, mu, sig)
+            ax[ii, j].hist(rb_plt[args_o_int][:, 1], bins='auto', normed=True, histtype='step',
+                           fc=None, ec='Black', lw=2)
+            ax[ii, j].plot(x_lin, y_test, lw=2)
+            #ax[ii, j].axvline(x=fit_tabs_rb[i,1] - fit_tabs_rb[i,3], ymin=0, ymax=1, color='r', lw=2)
+            #ax[ii, j].axvline(x=fit_tabs_rb[i, 1] + fit_tabs_rb[i, 4], ymin=0, ymax=1, color='r', lw=2)
+            xmax = np.max(x_lin)
+            ymax = np.max(y_test)
+            ax[ii, j].text(0.4 * xmax, 0.9 * ymax, r'Mass Range:')
+            ax[ii, j].text(0.4 * xmax, 0.8 * ymax, r'[{:.1e}, {:.1e}] $M_\odot$'.format(mlow, mhigh))
+            ax[ii, j].text(0.4 * xmax, 0.7 * ymax, r'GCD:')
+            ax[ii, j].text(0.4 * xmax, 0.6 * ymax, r'[{:.0f}, {:.0f}] kpc'.format(r_bounds[i], r_bounds[i + 1]))
+            ax[ii, j].set_xlabel(r'$R_b$   [kpc]')
+        f.tight_layout(rect=(0, 0, 1, 1))
+        plt.subplots_adjust(wspace=0.1, hspace=0.)
+        name = MAIN_PATH + '/SubhaloDetection/Plots/Rb_Fit_Distribution_lognorm.pdf'
+        pl.savefig(name)
 
         print 'Gamma Fit Tabs: ', fit_tabs_g
         print 'Rb Fit Tabs: ', fit_tabs_rb
@@ -369,23 +410,25 @@ class Joint_Simulation_Comparison(object):
 
         gam_local_err = 10. ** lin_fit(np.log10(8.5), pars[0], pars[1])
         gam_local_err2 = 10. ** lin_fit(np.log10(8.5), pars2[0], pars2[1])
-
+        ymin = np.min(gamma_plt[:, 1])
+        ymax = np.max(gamma_plt[:, 1])
+        legtop = .8 * (ymax - ymin)
         plt.plot(gcd_tab_plt, gam_fit_plt, 'k', ms=2)
-        plt.text(12., 10.**.05, r'$\gamma(R_\oplus)$ = {:.3f}'.format(10. ** np.polyval(gam_mean_fit,np.log10(8.5))),
-                 fontsize=10, ha='left', va='center', color='Black')
-        plt.text(12., 10.**.1, r'$\gamma^+(R_\oplus)$ = {:.3f}'.format(gam_local_err),
-                 fontsize=10, ha='left', va='center', color='Black')
-        plt.text(12., 10**.05, r'$\gamma^-(R_\oplus)$ = {:.3f}'.format(gam_local_err2),
-                 fontsize=10, ha='left', va='center', color='Black')
-        plt.text(12., 10**0., r'$\mu$ = {:.2f} {:.2f} {:.2f} {:.2f}'.format(fit_tabs_g[0, 1], fit_tabs_g[1, 1],
-                                                                        fit_tabs_g[2, 1], fit_tabs_g[3, 1]),
-                 fontsize=10, ha='left', va='center', color='Black')
-        plt.text(12., 10.**-.05, r'$\sigma$ = {:.2f} {:.2f} {:.2f} {:.2f}'.format(fit_tabs_g[0, 2], fit_tabs_g[1, 2],
-                                                                         fit_tabs_g[2, 2], fit_tabs_g[3, 2]),
-                 fontsize=10, ha='left', va='center', color='Black')
-        plt.text(12., 10.**-.1, r'$k$ = {:.2f} {:.2f} {:.2f} {:.2f}'.format(fit_tabs_g[0, 3], fit_tabs_g[1, 3],
-                                                                         fit_tabs_g[2, 3], fit_tabs_g[3, 3]),
-                 fontsize=10, ha='left', va='center', color='Black')
+        plt.text(12., legtop, r'$\gamma(R_\oplus)$ = {:.3f}'.format(10. ** np.polyval(gam_mean_fit,np.log10(8.5))),
+                 fontsize=16, ha='left', va='center', color='Black')
+        #plt.text(12., 10.**.1, r'$\gamma^+(R_\oplus)$ = {:.3f}'.format(gam_local_err),
+        #         fontsize=10, ha='left', va='center', color='Black')
+        #plt.text(12., 10**.05, r'$\gamma^-(R_\oplus)$ = {:.3f}'.format(gam_local_err2),
+        #         fontsize=10, ha='left', va='center', color='Black')
+        #plt.text(12., 10**0., r'$\mu$ = {:.2f} {:.2f} {:.2f} {:.2f}'.format(fit_tabs_g[0, 1], fit_tabs_g[1, 1],
+        #                                                                fit_tabs_g[2, 1], fit_tabs_g[3, 1]),
+        #         fontsize=10, ha='left', va='center', color='Black')
+        #plt.text(12., 10.**-.05, r'$\sigma$ = {:.2f} {:.2f} {:.2f} {:.2f}'.format(fit_tabs_g[0, 2], fit_tabs_g[1, 2],
+        #                                                                 fit_tabs_g[2, 2], fit_tabs_g[3, 2]),
+        #         fontsize=10, ha='left', va='center', color='Black')
+        #plt.text(12., 10.**-.1, r'$k$ = {:.2f} {:.2f} {:.2f} {:.2f}'.format(fit_tabs_g[0, 3], fit_tabs_g[1, 3],
+        #                                                                 fit_tabs_g[2, 3], fit_tabs_g[3, 3]),
+        #         fontsize=10, ha='left', va='center', color='Black')
 
         pl.savefig(self.dir + '/Joint_Sim_plots/' + fname)
 
@@ -402,7 +445,7 @@ class Joint_Simulation_Comparison(object):
         ymax = np.max(rb_plt[:, 1])
         pl.ylim([ymin, ymax])
         plt.xlabel('GC Distance (kpc)', fontsize=16)
-        plt.ylabel(r'$R_b$', fontsize=16)
+        plt.ylabel(r'$R_b$   [kpc]', fontsize=16)
         fname = 'Rb_vs_GCD_Scatter__Mass_Range_{:.1e}_{:.1e}'.format(mlow, mhigh) + \
                 '.pdf'
         plt.plot(rb_plt[:, 0], rb_plt[:, 1], 'ro', alpha=0.3)
@@ -432,16 +475,16 @@ class Joint_Simulation_Comparison(object):
         legtop = .8 * (ymax - ymin)
         down = legtot / 8
         plt.text(12., legtop, r'$R_b(R_\oplus)$ = {:.3f}'.format(10. ** np.polyval(rb_mean_fit, np.log10(8.5))),
-                 fontsize=10, ha='left', va='center', color='Black')
-        plt.text(12., legtop - down, r'$R_b^+(R_\oplus)$ = {:.3f}'.format(rb_local_err),
-                 fontsize=10, ha='left', va='center', color='Black')
-        plt.text(12., legtop - 2. * down, r'$R_b^-(R_\oplus)$ = {:.3f}'.format(rb_local_err2),
-                 fontsize=10, ha='left', va='center', color='Black')
-        plt.text(12., legtop - 3. * down, r'$\sigma$ = {:.2f} {:.2f} {:.2f} {:.2f}'.format(fit_tabs_rb[0, 2],
-                                                                                           fit_tabs_rb[1, 2],
-                                                                                           fit_tabs_rb[2, 2],
-                                                                                           fit_tabs_rb[3, 2]),
-                 fontsize=10, ha='left', va='center', color='Black')
+                 fontsize=16, ha='left', va='center', color='Black')
+        #plt.text(12., legtop - down, r'$R_b^+(R_\oplus)$ = {:.3f}'.format(rb_local_err),
+        #         fontsize=10, ha='left', va='center', color='Black')
+        #plt.text(12., legtop - 2. * down, r'$R_b^-(R_\oplus)$ = {:.3f}'.format(rb_local_err2),
+        #         fontsize=10, ha='left', va='center', color='Black')
+        #plt.text(12., legtop - 3. * down, r'$\sigma$ = {:.2f} {:.2f} {:.2f} {:.2f}'.format(fit_tabs_rb[0, 2],
+        #                                                                                   fit_tabs_rb[1, 2],
+        #                                                                                   fit_tabs_rb[2, 2],
+        #                                                                                   fit_tabs_rb[3, 2]),
+        #         fontsize=10, ha='left', va='center', color='Black')
         pl.savefig(self.dir + '/Joint_Sim_plots/' + fname)
         return
 
