@@ -13,14 +13,14 @@ from profiles import *
 
 def table_spatial_extension(profile=0, truncate=False, arxiv_num=10070438,
                             M200=False, d_low=-3., d_high=1., d_num=30, m_num=20,
-                            c_num=20, m_low=10.**4., m_high=10**7.):
+                            c_num=20, m_low=10.**5., m_high=10**7.):
     """ Tables spatial extension for future use.
 
         Profile Numbers correspond to [Einasto, NFW, HW] # 0 - 2
     """
 
     alpha = 0.16
-    file_name = 'SpatialExtension_' + str(Profile_list[profile]) + '.dat'
+    file_name = 'SpatialExtension_' + str(Profile_list[profile]) + '2.dat'
 
     dir = MAIN_PATH + '/SubhaloDetection/Data/'
     open(dir + file_name, "a")
@@ -82,8 +82,8 @@ def table_spatial_extension(profile=0, truncate=False, arxiv_num=10070438,
             rb_med = np.log10(10. ** (-4.24) * m ** 0.459)
             rb_low = rb_med - 1.
             rb_high = rb_med + 1.
-            rb_list = np.logspace(rb_low, rb_high, 10)
-            gamma_list = np.linspace(0., 0.85 + 0.351 / 0.861 - 0.1, 10)
+            rb_list = np.logspace(rb_low, rb_high, 8)
+            gamma_list = np.linspace(0., 1.45, 8)
             for rb in rb_list:
                 print '     Rb: ', rb
                 for gam in gamma_list:
@@ -96,11 +96,12 @@ def table_spatial_extension(profile=0, truncate=False, arxiv_num=10070438,
                             f = np.loadtxt(dir + file_name)
                             m_check = float('{:.4e}'.format(m))
                             rb_check = float('{:.3e}'.format(rb))
-                            gam_check = float('{:.2f}'.format(gam))
+                            gam_check = float('{:.6f}'.format(gam))
                             d_check = float('{:.4f}'.format(d))
                             if np.sum((f[:, 0] == m_check) & (f[:, 1] == rb_check) &
                                               (f[:, 2] == gam_check) & (f[:, 3] == d_check)) < 1:
-                                print 'Not HERE'
+                                print np.sum((f[:, 0] == m_check) & (f[:, 1] == rb_check) &
+                                              (f[:, 2] == gam_check) & (f[:, 3] == d_check))
                                 raise ValueError
                         except:
                             if subhalo.Full_Extension(d) > 0.1:
