@@ -12,7 +12,7 @@ from Limits import *
 import scipy.integrate as integrate
 import scipy.special as special
 from scipy.optimize import fminbound, minimize_scalar, minimize, brentq
-from scipy.interpolate import interp1d, interpn
+from scipy.interpolate import interp1d, interpn, LinearNDInterpolator
 import warnings
 
 warnings.filterwarnings('error')
@@ -66,7 +66,7 @@ class Subhalo(object):
                                           points=[dist * np.cos(th)])
                     hold = hold[0]
                 except Warning:
-                    dist_tab = np.logspace(-5., np.log10(self.los_max(th, dist) - dist * np.cos(th)), 50)
+                    dist_tab = np.logspace(-5., np.log10(self.los_max(th, dist) - dist * np.cos(th)), 100)
                     dist_tab = np.concatenate((dist * np.cos(th) - dist_tab, dist * np.cos(th) + dist_tab))
                     tab_d = 2. * np.pi * kpctocm * np.sin(th) * self.density(dist_tab) ** 2.0
                     hold = np.trapz(tab_d, dist_tab)
@@ -172,44 +172,107 @@ class Subhalo(object):
         :return: returns quoted spatial extension to be used for calculation of
         flux threshold of spatially extended sources
         """
-        # try:
-        #     file_name = 'SpatialExtension_' + str(self.halo_name) + '_Truncate_' + \
-        #                 str(self.truncate) + '_Cparam_' + str(self.arxiv_num) + '_alpha_' + \
-        #                 str(self.alpha) + '.dat'
-        #     se_table = np.loadtxt(MAIN_PATH + '/SubhaloDetection/Data/' + file_name)
-        #
-        #     pos_index = np.where(np.round(se_table[:, 0], 5) == np.round(self.halo_mass, 5))
-        #     pos_index = np.where(np.round(se_table[pos_index][:, 1], 5) == np.round(self.c, 5))
-        #     mind = np.min(se_table[pos_index][:, 2])
-        #     maxd = np.max(se_table[pos_index][:, 2])
-        #     if not mind < dist < maxd:
-        #         raise ValueError
-        #     exten_interp = interp1d(np.log10(se_table[pos_index][:, 2]), np.log10(se_table[pos_index][:, 3]),
-        #                             kind='cubic')
-        #     extension = 10.**exten_interp(np.log10(dist))
-        # except:
-        #     extension = fminbound(self.AngRad68, 0.01, 90., args=[dist], xtol=10**-3.)
+        if self.halo_name == 'Einasto':
+            extension = 0.0397018 * dist ** -0.929435 * self.halo_mass ** 0.309235 *\
+                self.c ** -0.765418
+        elif self.halo_name == 'NFW':
+            extension = 0.0026794 * dist ** -0.999045 * self.halo_mass ** 0.432234
+        else:
+            if thresh_calc:
+                if 10. ** (self.J(dist, 2.) - self.J_pointlike(dist)) < 0.68:
+                    return 2.
+                if 10. ** (self.J(dist, .05) - self.J_pointlike(dist)) > 0.68:
+                    return 0.05
+            try:
+                extension = fminbound(self.AngRad68, 0.05, 2., args=[dist], xtol=10 ** -2.)
+                if np.abs(10. ** (self.J(dist, extension) - self.J_pointlike(dist)) - 0.68) < 0.03:
+                    extension = extension
+                else:
+                    raise ValueError
+            except:
+                theta_tab = np.logspace(np.log10(0.05), np.log10(2), 40)
+                full_tab = np.logspace(np.log10(0.05), np.log10(2), 200)
+                ang68 = np.zeros(theta_tab.size)
+                for i, theta in enumerate(theta_tab):
+                    ang68[i] = self.AngRad68(theta, dist)
+                extension = full_tab[np.argmin(interp1d(theta_tab, ang68, kind='linear', bounds_error=False,
+                                                        fill_value=np.inf)(full_tab))]
+        return extension
 
-        if thresh_calc:
-            if 10. ** (self.J(dist, 2.) - self.J_pointlike(dist)) < 0.68:
-                return 2.
-            if 10. ** (self.J(dist, .05) - self.J_pointlike(dist)) > 0.68:
-                return 0.05
+    def sig_68(self, dist):
+        file_name = file_name = 'SpatialExtension_' + self.halo_name + '.dat'
+        dir = MAIN_PATH + '/SubhaloDetection/Data/'
         try:
-            extension = fminbound(self.AngRad68, 0.01, 2., args=[dist], xtol=10 ** -2.)
-            if np.abs(10. ** (self.J(dist, extension) - self.J_pointlike(dist)) - 0.68) < 0.03:
-                extension = extension
-            else:
-                raise ValueError
-        except:
+            se_file = np.loadtxt(dir + file_name)
+            m_comp = float('{:.4e}'.format(self.halo_mass))
 
-            theta_tab = np.logspace(np.log10(0.05), np.log10(2), 40)
-            full_tab = np.logspace(np.log10(0.05), np.log10(2), 200)
-            ang68 = np.zeros(theta_tab.size)
-            for i, theta in enumerate(theta_tab):
-                ang68[i] = self.AngRad68(theta, dist)
-            extension = full_tab[np.argmin(interp1d(theta_tab, ang68, kind='linear', bounds_error=False,
-                                                    fill_value=np.inf)(full_tab))]
+            if np.sum(se_file[:, 0] == m_comp) > 0:
+                se_file = se_file[se_file[:, 0] == m_comp]
+                # Only Look at Masses of interest
+                if self.halo_name == 'Einasto':
+                    c_comp = float('{:.3e}'.format(self.c))
+                    # See if C value has been calculated
+                    if np.sum(se_file[:, 1] == c_comp) > 0.:
+                        halo_of_int = se_file[se_file[:, 1] == c_comp]
+                        if halo_of_int[0, -1] == 2.:
+                            upper_lim_hit = True
+                        else:
+                            upper_lim_hit = False
+                        if halo_of_int[-1, -1] == 0.05:
+                            lower_lim_hit = True
+                        else:
+                            lower_lim_hit = False
+                        valid_dist = halo_of_int[(halo_of_int[:, -1] > 0.5) & (halo_of_int[:, -1] < 2.0)]
+                        if (dist < valid_dist[0, -2]) and upper_lim_hit:
+                            extension = 2.
+                        elif (dist > valid_dist[-1, -2]) and lower_lim_hit:
+                            extension = 0.5
+                        else:
+                            extension = interpola(dist, valid_dist[:, -2], valid_dist[:, -1])
+                    else:
+                        find_ext = LinearNDInterpolator(se_file[:, 1:-1], se_file[:, -1], fill_value=0.05, rescale=True)
+                        extension = find_ext(self.c, dist)
+
+                elif self.halo_name == 'NFW':
+                    if se_file[0, -1] == 2.:
+                        upper_lim_hit = True
+                    else:
+                        upper_lim_hit = False
+                    if se_file[-1, -1] == 0.05:
+                        lower_lim_hit = True
+                    else:
+                        lower_lim_hit = False
+                    valid_dist = se_file[(se_file[:, -1] > 0.5) & (se_file[:, -1] < 2.0)]
+
+                    if (dist < valid_dist[0, -2]) and upper_lim_hit:
+                        extension = 2.
+                    elif (dist > valid_dist[-1, -2]) and lower_lim_hit:
+                        extension = 0.5
+                    else:
+                        extension = interpola(dist, valid_dist[:, -2], valid_dist[:, -1])
+
+                else:
+                    rb_comp = float('{:.3e}'.format(self.rb))
+                    g_comp = float('{:.6f}'.format(self.gam))
+                    if np.sum((se_file[:, 1] == rb_comp) & (se_file[:, 2] == g_comp)) > 0:
+                        halo_of_int = se_file[(se_file[:, 1] == rb_comp) & (se_file[:, 2] == g_comp)]
+                        find_ext = interp1d(halo_of_int[:, -2], halo_of_int[:, -1], kind='linear', bounds_error=False,
+                                            fill_value='extrapolate')
+                        extension = find_ext(dist)
+                    else:
+                        find_ext = LinearNDInterpolator(se_file[:, 1:-1], se_file[:, -1], fill_value=0.05, rescale=True)
+                        extension = find_ext(self.rb, self.gam, dist)
+            else:
+                find_ext = LinearNDInterpolator(se_file[:, :-1], se_file[:, -1], fill_value=0.05, rescale=True)
+                if self.halo_name == 'Einasto':
+                    extension = find_ext(self.halo_mass, self.c, dist)
+                elif self.halo_name == 'NFW':
+                    extension = find_ext(self.halo_mass, dist)
+                else:
+                    extension = find_ext(self.halo_mass, self.rb, self.gam, dist)
+        except:
+            print 'Everything failed.'
+            extension = self.Spatial_Extension(dist)
         return extension
 
     def Full_Extension(self, dist):
@@ -255,7 +318,7 @@ class Einasto(Subhalo):
     is equal to 200 times the critical density.
     """
     def __init__(self, halo_mass, alpha=0.16, concentration_param=None,
-                 z=0., truncate=False, arxiv_num=10070438, M200=False,
+                 z=0., truncate=False, arxiv_num=13131729, M200=False,
                  gcd=8.5, vmax=None, rmax=None):
 
         self.pname = 'Einasto_alpha_' + str(alpha) + '_C_params_' + str(arxiv_num) + \
@@ -591,6 +654,7 @@ class HW_Fit(Subhalo):
                  stiff_rb=False, stiff_rbM=10.**5.):
         self.halo_mass = halo_mass
         self.gam = gam
+        self.halo_name = 'HW'
         m = self.halo_mass
         if stiff_rb and self.halo_mass < stiff_rbM:
             self.rb = 10. ** (-4.240) * stiff_rbM ** 0.459

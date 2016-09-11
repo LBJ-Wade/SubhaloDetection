@@ -302,6 +302,73 @@ def Jfactor_plots(m_sub=10.**7., dist=1.):
     return
 
 
+def sigma_68(mx=100., cs=2.2*10**-26., annih='BB'):
+    #hw7 = HW_Fit(10**7, gam=0.85, rb=None)
+    hw7 = HW_Fit(10**7, gam=0.828571, rb=9.645e-02)
+    model_hw7 = Model(mx, cs, annih, 10**7, profile=2, m200=True, rb=hw7.rb)
+
+    hw6 = HW_Fit(1.2328e+06, gam=0.828571, rb=9.645e-02)
+    model_hw6 = Model(mx, cs, annih, 10**6, profile=2, m200=True, rb=hw6.rb)
+
+    hw5 = HW_Fit(10**5, gam=0.828571, rb=9.645e-02)
+    model_hw5 = Model(mx, cs, annih, 10**5, profile=2, m200=True, rb=hw5.rb)
+
+
+    d_list = np.logspace(-1., 1., 30)
+    sig68_7 = np.zeros(d_list.size * 2).reshape((d_list.size, 2))
+    sig68_6 = np.zeros(d_list.size * 2).reshape((d_list.size, 2))
+    sig68_5 = np.zeros(d_list.size * 2).reshape((d_list.size, 2))
+
+    for i, d in enumerate(d_list):
+        print i+1, '/30'
+        val = hw7.sig_68(d)
+        if 0.05 < val < 2.0:
+            sig68_7[i] = [d, val]
+        val = hw6.sig_68(d)
+        if 0.05 < val < 2.0:
+            sig68_6[i] = [d, val]
+        val = hw5.sig_68(d)
+        if 0.05 < val < 2.0:
+            sig68_5[i] = [d, val]
+
+    print 'Obtaining Dmax Extended'
+    dmax_7 = model_hw7.D_max_extend()
+    dmax_6 = model_hw6.D_max_extend()
+    dmax_5 = model_hw5.D_max_extend()
+    print dmax_7, dmax_6, dmax_5
+
+    print 'Plotting'
+    sig68_7 = sig68_7[sig68_7[:, 1] > 0.]
+    sig68_6 = sig68_6[sig68_6[:, 1] > 0.]
+    sig68_5 = sig68_5[sig68_5[:, 1] > 0.]
+
+    fig = plt.figure(figsize=(8., 6.))
+    ax = plt.gca()
+    ax.set_xscale("log")
+    ax.set_yscale('log')
+
+    xmin = sig68_5[0, 0]
+    pl.xlim([xmin, 10. ** 1.])
+    pl.ylim([0.1, 1.9])
+    pl.xlabel(r'Distance (kpc)', fontsize=20)
+    pl.ylabel(r'$\sigma_{{68}}$   [$\deg$]', fontsize=20)
+    pl.plot(sig68_7[:, 0], sig68_7[:, 1], lw=2, color='k')
+    pl.plot(sig68_6[:, 0], sig68_6[:, 1], lw=2, color='blueviolet')
+    pl.plot(sig68_5[:, 0], sig68_5[:, 1], lw=2, color='blue')
+    pl.axvline(x=dmax_7, ls='--', lw=2, color='k', alpha=0.5)
+    pl.axvline(x=dmax_6, ls='--', lw=2, color='blueviolet', alpha=0.5)
+    pl.axvline(x=dmax_5, ls='--', lw=2, color='blue', alpha=0.5)
+
+    pl.text(xmin * 1.2, 10**-.4, r'$10^7 M_\odot$', color='k', fontsize=14)
+    pl.text(xmin * 1.2, 10 ** -.5, r'$10^6 M_\odot$', color='blueviolet', fontsize=14)
+    pl.text(xmin * 1.2, 10 ** -.6, r'$10^5 M_\odot$', color='blue', fontsize=14)
+
+    folder = MAIN_PATH + "/SubhaloDetection/Plots/"
+    fig_name = folder + 'Sigma68.pdf'
+    fig.set_tight_layout(True)
+    pl.savefig(fig_name)
+    return
+
 def limit_comparison(plike=True, bmin=20., annih_prod='BB', nobs=True):
     if plike:
         ptag = 'Pointlike'
@@ -544,12 +611,9 @@ def obtain_number_density():
                 ind_of_int.append(i)
     file_pair = file_pair[ind_of_int]
     subhalos = np.vstack((file_iso[:, :10], file_hi[:, :10], file_pair[:, :10]))
-    subhalos = np.vstack((file_iso[:, :10], file_hi[:, :10]))
     subhalos = subhalos[subhalos[:, 1] != 0.]
     print 'Num Subhalos: ', len(subhalos)
-
     fig = plt.figure(figsize=(8., 6.))
-
     mass_bins = np.logspace(np.log10(4. * 10.**6.), 10.,
                             (10. - np.log10(3. * 10.**6.)) * 15)
     print 'Making Subhalo Mass Number Density Histogram...'
@@ -609,7 +673,7 @@ def obtain_number_density():
     pl.xlim([10., 300])
 
     plt.xlabel(r'Distance   [kpc]', fontsize=18)
-    plt.ylabel(r'$\frac{dN}{dV}$', fontsize=18)
+    plt.ylabel(r'$\frac{dN}{dV}$', fontsize=22, rotation='horizontal')
 
     fit_ein, bine = np.histogram(subhalos[:, 1], bins=dist_bins, normed=False,
                                  weights=1. / (4. / 3. * np.pi * subhalos[:, 1] ** 3.))
