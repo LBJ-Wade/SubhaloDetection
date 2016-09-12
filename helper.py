@@ -8,6 +8,7 @@ import numpy as np
 import os
 from scipy.interpolate import interp1d, UnivariateSpline
 from scipy.integrate import quad
+from scipy.spatial import cKDTree
 from scipy.special import hyp2f1, gammaincc, gamma
 import glob
 import re
@@ -312,4 +313,11 @@ def find_max_gen_prof(x, r1, r2):
 
 def find_max_KMMDSM_prof(x, gam):
     return - np.sqrt(gamma(3. - gam) * (1. - gammaincc(3. - gam, x)) / x)
+
+
+def do_kdtree(combined_x_y_arrays,points):
+    mytree = cKDTree(combined_x_y_arrays)
+    dist, indexes = mytree.query(points)
+    return indexes
+
 
