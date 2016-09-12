@@ -61,7 +61,7 @@ def pool_map_dmax_extend(arg_p):
     kwargs = {'point_like': pointlike, 'm_low': np.log10(masslist[mass_choice]),
               'm_high': 2 * np.log10(masslist[mass_choice]),
               'profile': profile, 'truncate': truncate, 'arxiv_num': arxiv_num,
-              'gam': gamma, 'm200': m200}
+              'gam': gamma, 'm200': m200, 'mltag': m_low}
     Observable(mass, cross_sec, annih_prod, **kwargs).Table_Dmax(plike=pointlike)
     return
 

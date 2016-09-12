@@ -273,7 +273,7 @@ class Observable(object):
                  m_high=np.log10(1.0 * 10 ** 7.), c_low=np.log10(2.),
                  c_high=2.1, alpha=0.16, profile=0, truncate=False, 
                  arxiv_num=10070438, point_like=True, m200=False,
-                 gam=0.85, stiff_rb=False):
+                 gam=0.85, stiff_rb=False, mltag=None):
 
         point_like = str2bool(point_like)
         stiff_rb = str2bool(stiff_rb)
@@ -309,12 +309,13 @@ class Observable(object):
             self.extra_tag = '_gamma_{:.2f}_Conser_'.format(self.gam) + '_stiff_rb_' + str(self.stiff_rb)
         else:
             self.extra_tag = '_arxiv_' + str(self.arxiv_num)
-
+        if mltag is None:
+            mltag = m_low
         self.arxiv_num = arxiv_num
         self.folder = MAIN_PATH + "/SubhaloDetection/Data/"
         info_str = "Observable_Profile_" + self.profile_name + self.tr_tag +\
             ptag + "_mx_" + str(mx) + "_annih_prod_" +\
-            annih_prod + self.extra_tag + '_Mlow_{:.3e}'.format(m_low) + "/"
+            annih_prod + self.extra_tag + '_Mlow_{:.3e}'.format(mltag) + "/"
         
         self.folder += info_str
         ensure_dir(self.folder)
