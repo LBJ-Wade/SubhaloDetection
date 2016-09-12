@@ -208,7 +208,7 @@ class Model(object):
         :return: distance in kpc
         """
         max_dist = self.d_max_point()
-        dist_tab = np.logspace(-2., max_dist, 15)
+        dist_tab = np.logspace(-2., np.log10(max_dist), 15)
         flux_diff_tab = np.zeros(dist_tab.size)
         for i, d in enumerate(dist_tab):
             flux_diff_tab[i] = np.abs(self.Total_Flux(d) - self.min_Flux(d))
