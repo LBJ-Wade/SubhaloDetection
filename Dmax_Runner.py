@@ -102,8 +102,8 @@ else:
     for i in range(n_runs):
         fout = open('runs_dmax/Calc_Dmax_commandrunner_' + str(i + 1) + '.sh', 'w')
         fout.write('#! /bin/bash\n')
-        fout.write('#$ -pe shared 4\n')
-        fout.write('#$ -l h_rt=24:00:00,h_data=6G\n')
+        fout.write('#$ -pe shared 6\n')
+        fout.write('#$ -l h_rt=24:00:00,h_data=2G\n')
         fout.write('#$ -cwd\n')
         fout.write('#$ -V\n')
         fout.write('bash calc_Dmax__' + str(i + 1) + '.sh\n')
