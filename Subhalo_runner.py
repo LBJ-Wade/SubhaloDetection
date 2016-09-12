@@ -111,7 +111,8 @@ if dmax:
                     truncate, args.arxiv_num, args.gamma, m200,
                     args.mass, args.cross_sec, args.annih_prod]
             arg_pass.append(arg_hold)
-        parmap(pool_map_dmax_extend, arg_pass, processes=num)
+        parmap(pool_map_dmax_extend, arg_pass, processes=None)
+
     
 if nobs:
     if pointlike:
