@@ -447,14 +447,15 @@ class Observable(object):
                         rb_med = np.log10(10. ** (-4.24) * m ** 0.459)
                         rb_low = rb_med - 1.
                         rb_high = rb_med + 1.
-                        rb_list = np.logspace(rb_low, rb_high, 8)
-                        gamma_list = np.linspace(0., 1.45, 8)
+                        rb_list = np.logspace(rb_low, rb_high, 20)
+                        gamma_list = np.linspace(0., 1.45, 15)
                     temp_arry = np.zeros(rb_list.size * len(gamma_list))
                     jcnt = 0
                     for rb in rb_list:
                         print '    Rb Parameter: ', rb
                         for j, gam in enumerate(gamma_list):
                             print '         Gamma: ', gam
+
                             dm_model = Model(self.mx, self.cross_sec, self.annih_prod,
                                              m, profile=self.profile, pointlike=self.point_like,
                                              m200=self.m200, stiff_rb=self.stiff_rb, gam=gam,
