@@ -79,109 +79,105 @@ class Model(object):
         flux threshold for spatially extended sources
         :param dist: distance kpc
         """
-        if 10. ** (self.subhalo.J(dist, 2.) - self.subhalo.J_pointlike(dist)) < 0.68:
-            return self.Threshold(self.gamma, 2.)
-        if 10. ** (self.subhalo.J(dist, .1) - self.subhalo.J_pointlike(dist)) > 0.68:
-            return self.Threshold(self.gamma, 0.05)
-        
-        file_name = file_name = 'SpatialExtension_' + Profile_list[self.profile] + '.dat'
-        dir = MAIN_PATH + '/SubhaloDetection/Data/'
-        try:
-            se_file = np.loadtxt(dir + file_name)
-            m_comp = float('{:.4e}'.format(self.halo_mass))
-            if np.sum(se_file[:, 0] == m_comp) > 0:
-                se_file = se_file[se_file[:, 0] == m_comp]
-                # Only Look at Masses of interest
-                if self.profile == 0:
-                    c_comp = float('{:.3e}'.format(self.c))
-                    # See if C value has been calculated
-                    if np.sum(se_file[:, 1] == c_comp) > 0.:
-                        halo_of_int = se_file[se_file[:, 1] == c_comp]
-                        if halo_of_int[0, -1] == 2.:
-                            upper_lim_hit = True
-                        else:
-                            upper_lim_hit = False
-                        if halo_of_int[-1, -1] == 0.05:
-                            lower_lim_hit = True
-                        else:
-                            lower_lim_hit = False
-                        valid_dist = halo_of_int[(halo_of_int[:, -1] > 0.05) & (halo_of_int[:, -1] < 2.0)]
-                        if (dist < valid_dist[0, -2]) and upper_lim_hit:
-                            extension = 2.
-                        elif (dist > valid_dist[-1, -2]) and lower_lim_hit:
-                            extension = 0.05
-                        else:
-                            extension = interpola(dist, valid_dist[:, -2], valid_dist[:, -1])
-                    else:
-                        find_ext = LinearNDInterpolator(se_file[:, 1:-1], se_file[:, -1], fill_value=0.05, rescale=True)
-                        extension = find_ext(self.c, dist)
 
-                elif self.profile == 1:
-                    if se_file[0, -1] == 2.:
-                        upper_lim_hit = True
-                    else:
-                        upper_lim_hit = False
-                    if se_file[-1, -1] == 0.05:
-                        lower_lim_hit = True
-                    else:
-                        lower_lim_hit = False
-                    valid_dist = se_file[(se_file[:, -1] > 0.05) & (se_file[:, -1] < 2.0)]
-
-                    if (dist < valid_dist[0, -2]) and upper_lim_hit:
-                        extension = 2.
-                    elif (dist > valid_dist[-1, -2]) and lower_lim_hit:
-                        extension = 0.5
-                    else:
-                        extension = interpola(dist, valid_dist[:, -2], valid_dist[:, -1])
-
-                else:
-                    rb_comp = float('{:.3e}'.format(self.rb))
-                    g_comp = float('{:.6f}'.format(self.gam))
-                    if np.sum((se_file[:, 1] == rb_comp) & (se_file[:, 2] == g_comp)) > 0:
-                        halo_of_int = se_file[(se_file[:, 1] == rb_comp) & (se_file[:, 2] == g_comp)]
-                        if halo_of_int[0, -1] == 2.:
-                            upper_lim_hit = True
-                        else:
-                            upper_lim_hit = False
-                        if halo_of_int[-1, -1] == 0.05:
-                            lower_lim_hit = True
-                        else:
-                            lower_lim_hit = False
-                        valid_dist = halo_of_int[(halo_of_int[:, -1] > 0.5) & (halo_of_int[:, -1] < 2.0)]
-                        if (dist < valid_dist[0, -2]) and upper_lim_hit:
-                            extension = 2.
-                        elif (dist > valid_dist[-1, -2]) and lower_lim_hit:
-                            extension = 0.05
-                        else:
-                            extension = interpola(dist, halo_of_int[:, -2], halo_of_int[:, -1])
-                    else:
-                        halo_of_int = se_file[(se_file[:, -1] < 2.) & (se_file[:, -1] > 0.05)]
-                        find_ext = LinearNDInterpolator(halo_of_int[:, 1:-1], halo_of_int[:, -1], rescale=True)
-                        extension = find_ext(self.rb, self.gam, dist)
-                        if np.isnan(extension):
-                            ind = do_kdtree(se_file[:, 1:-1], np.array([self.rb, self.gam, dist]))
-                            extension = se_file[ind, -1]
-            else:
-                se_file = se_file[(se_file[:, -1] > 0.05) & (se_file[:, -1] < 2.0)]
-                find_ext = LinearNDInterpolator(se_file[:, :-1], se_file[:, -1], rescale=True)
-                if self.profile == 0:
-                    extension = find_ext(self.halo_mass, self.c, dist)
-                    if np.isnan(extension):
-                        ind = do_kdtree(se_file[:, :-1], np.array([self.halo_mass, self.c, dist]))
-                        extension = se_file[ind, -1]
-                elif self.profile == 1:
-                    extension = find_ext(self.halo_mass, dist)
-                    if np.isnan(extension):
-                        ind = do_kdtree(se_file[:, :-1], np.array([self.halo_mass, dist]))
-                        extension = se_file[ind, -1]
-                else:
-                    extension = find_ext(self.halo_mass, self.rb, self.gam, dist)
-                    if np.isnan(extension):
-                        ind = do_kdtree(se_file[:, 1:-1], np.array([self.rb, self.gam, dist]))
-                        extension = se_file[ind, -1]
-        except:
-            print 'Everything failed.'
-            extension = self.subhalo.Spatial_Extension(dist)
+        # file_name = file_name = 'SpatialExtension_' + Profile_list[self.profile] + '.dat'
+        # dir = MAIN_PATH + '/SubhaloDetection/Data/'
+        # try:
+        #     se_file = np.loadtxt(dir + file_name)
+        #     m_comp = float('{:.4e}'.format(self.halo_mass))
+        #     if np.sum(se_file[:, 0] == m_comp) > 0:
+        #         se_file = se_file[se_file[:, 0] == m_comp]
+        #         # Only Look at Masses of interest
+        #         if self.profile == 0:
+        #             c_comp = float('{:.3e}'.format(self.c))
+        #             # See if C value has been calculated
+        #             if np.sum(se_file[:, 1] == c_comp) > 0.:
+        #                 halo_of_int = se_file[se_file[:, 1] == c_comp]
+        #                 if halo_of_int[0, -1] == 2.:
+        #                     upper_lim_hit = True
+        #                 else:
+        #                     upper_lim_hit = False
+        #                 if halo_of_int[-1, -1] == 0.05:
+        #                     lower_lim_hit = True
+        #                 else:
+        #                     lower_lim_hit = False
+        #                 valid_dist = halo_of_int[(halo_of_int[:, -1] > 0.05) & (halo_of_int[:, -1] < 2.0)]
+        #                 if (dist < valid_dist[0, -2]) and upper_lim_hit:
+        #                     extension = 2.
+        #                 elif (dist > valid_dist[-1, -2]) and lower_lim_hit:
+        #                     extension = 0.05
+        #                 else:
+        #                     extension = interpola(dist, valid_dist[:, -2], valid_dist[:, -1])
+        #             else:
+        #                 find_ext = LinearNDInterpolator(se_file[:, 1:-1], se_file[:, -1], fill_value=0.05, rescale=True)
+        #                 extension = find_ext(self.c, dist)
+        #
+        #         elif self.profile == 1:
+        #             if se_file[0, -1] == 2.:
+        #                 upper_lim_hit = True
+        #             else:
+        #                 upper_lim_hit = False
+        #             if se_file[-1, -1] == 0.05:
+        #                 lower_lim_hit = True
+        #             else:
+        #                 lower_lim_hit = False
+        #             valid_dist = se_file[(se_file[:, -1] > 0.05) & (se_file[:, -1] < 2.0)]
+        #
+        #             if (dist < valid_dist[0, -2]) and upper_lim_hit:
+        #                 extension = 2.
+        #             elif (dist > valid_dist[-1, -2]) and lower_lim_hit:
+        #                 extension = 0.5
+        #             else:
+        #                 extension = interpola(dist, valid_dist[:, -2], valid_dist[:, -1])
+        #
+        #         else:
+        #             rb_comp = float('{:.3e}'.format(self.rb))
+        #             g_comp = float('{:.6f}'.format(self.gam))
+        #             if np.sum((se_file[:, 1] == rb_comp) & (se_file[:, 2] == g_comp)) > 0:
+        #                 halo_of_int = se_file[(se_file[:, 1] == rb_comp) & (se_file[:, 2] == g_comp)]
+        #                 if halo_of_int[0, -1] == 2.:
+        #                     upper_lim_hit = True
+        #                 else:
+        #                     upper_lim_hit = False
+        #                 if halo_of_int[-1, -1] == 0.05:
+        #                     lower_lim_hit = True
+        #                 else:
+        #                     lower_lim_hit = False
+        #                 valid_dist = halo_of_int[(halo_of_int[:, -1] > 0.5) & (halo_of_int[:, -1] < 2.0)]
+        #                 if (dist < valid_dist[0, -2]) and upper_lim_hit:
+        #                     extension = 2.
+        #                 elif (dist > valid_dist[-1, -2]) and lower_lim_hit:
+        #                     extension = 0.05
+        #                 else:
+        #                     extension = interpola(dist, halo_of_int[:, -2], halo_of_int[:, -1])
+        #             else:
+        #                 halo_of_int = se_file[(se_file[:, -1] < 2.) & (se_file[:, -1] > 0.05)]
+        #                 find_ext = LinearNDInterpolator(halo_of_int[:, 1:-1], halo_of_int[:, -1], rescale=True)
+        #                 extension = find_ext(self.rb, self.gam, dist)
+        #                 if np.isnan(extension):
+        #                     ind = do_kdtree(se_file[:, 1:-1], np.array([self.rb, self.gam, dist]))
+        #                     extension = se_file[ind, -1]
+        #     else:
+        #         se_file = se_file[(se_file[:, -1] > 0.05) & (se_file[:, -1] < 2.0)]
+        #         find_ext = LinearNDInterpolator(se_file[:, :-1], se_file[:, -1], rescale=True)
+        #         if self.profile == 0:
+        #             extension = find_ext(self.halo_mass, self.c, dist)
+        #             if np.isnan(extension):
+        #                 ind = do_kdtree(se_file[:, :-1], np.array([self.halo_mass, self.c, dist]))
+        #                 extension = se_file[ind, -1]
+        #         elif self.profile == 1:
+        #             extension = find_ext(self.halo_mass, dist)
+        #             if np.isnan(extension):
+        #                 ind = do_kdtree(se_file[:, :-1], np.array([self.halo_mass, dist]))
+        #                 extension = se_file[ind, -1]
+        #         else:
+        #             extension = find_ext(self.halo_mass, self.rb, self.gam, dist)
+        #             if np.isnan(extension):
+        #                 ind = do_kdtree(se_file[:, 1:-1], np.array([self.rb, self.gam, dist]))
+        #                 extension = se_file[ind, -1]
+        # except:
+        #     print 'Everything failed.'
+        extension = self.subhalo.Spatial_Extension(dist)
         return self.Threshold(self.gamma, extension)
 
     def Total_Flux(self, dist):
@@ -234,17 +230,19 @@ class Model(object):
         Calculates the maximum distance a spatially extended subhalo can be to still be observable
         :return: distance in kpc
         """
-        #dist_tab = np.logspace(-1.5, 1.5, 30)
-        #flux_diff_tab = np.zeros(dist_tab.size)
-        #for i, d in enumerate(dist_tab):
-        #    flux_diff_tab[i] = np.abs(self.Total_Flux(d) - self.min_Flux(d))
-        #    print d, flux_diff_tab[i]
-        #d_max = dist_tab[np.argmin(flux_diff_tab)]
-        def flux_diff_lten(x):
-            return np.abs(self.Total_Flux(10. ** x) - self.min_Flux(10. ** x))
-        d_max = fminbound(flux_diff_lten, -4., 2., xtol=10**-4.)
-        return 10 ** d_max
-        #return d_max
+        dist_tab = np.logspace(-2., 2., 15)
+        full_dist_tab = np.logspace(-2., 2., 150)
+        flux_diff_tab = np.zeros(dist_tab.size)
+        for i, d in enumerate(dist_tab):
+            flux_diff_tab[i] = np.abs(self.Total_Flux(d) - self.min_Flux(d))
+            #print d, flux_diff_tab[i]
+        interp = interpola(full_dist_tab, dist_tab, flux_diff_tab)
+        d_max = full_dist_tab[np.argmin(interp)]
+        #def flux_diff_lten(x):
+        #    return np.abs(self.Total_Flux(10. ** x) - self.min_Flux(10. ** x))
+        #d_max = fminbound(flux_diff_lten, -4., 2., xtol=10**-4.)
+        #return 10 ** d_max
+        return d_max
 
     def Determine_Gamma(self):
         """

@@ -181,22 +181,14 @@ class Subhalo(object):
             if thresh_calc:
                 if 10. ** (self.J(dist, 2.) - self.J_pointlike(dist)) < 0.68:
                     return 2.
-                if 10. ** (self.J(dist, .05) - self.J_pointlike(dist)) > 0.68:
-                    return 0.05
-            try:
-                extension = fminbound(self.AngRad68, 0.05, 2., args=[dist], xtol=10 ** -2.)
-                if np.abs(10. ** (self.J(dist, extension) - self.J_pointlike(dist)) - 0.68) < 0.03:
-                    extension = extension
-                else:
-                    raise ValueError
-            except:
-                theta_tab = np.logspace(np.log10(0.05), np.log10(2), 40)
-                full_tab = np.logspace(np.log10(0.05), np.log10(2), 200)
-                ang68 = np.zeros(theta_tab.size)
-                for i, theta in enumerate(theta_tab):
-                    ang68[i] = self.AngRad68(theta, dist)
-                extension = full_tab[np.argmin(interp1d(theta_tab, ang68, kind='linear', bounds_error=False,
-                                                        fill_value=np.inf)(full_tab))]
+                if 10. ** (self.J(dist, .1) - self.J_pointlike(dist)) > 0.68:
+                    return 0.1
+            theta_tab = np.logspace(-1., np.log10(2), 10)
+            full_tab = np.logspace(-1., np.log10(2), 100)
+            ang68 = np.zeros(theta_tab.size)
+            for i, theta in enumerate(theta_tab):
+                ang68[i] = self.AngRad68(theta, dist)
+            extension = full_tab[np.argmin(interp1d(theta_tab, ang68, kind='cubic')(full_tab))]
         return extension
 
     def sig_68(self, dist):
