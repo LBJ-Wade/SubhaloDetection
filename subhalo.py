@@ -445,10 +445,10 @@ class Observable(object):
                         gamma_list = np.linspace(0., 1.45, 20)
                     else:
                         rb_med = np.log10(10. ** (-4.24) * m ** 0.459)
-                        rb_low = rb_med - 1.
-                        rb_high = rb_med + 1.
-                        rb_list = np.logspace(rb_low, rb_high, 20)
-                        gamma_list = np.linspace(0., 1.45, 15)
+                        rb_low = rb_med - .75
+                        rb_high = rb_med + .75
+                        rb_list = np.logspace(rb_low, rb_high, 15)
+                        gamma_list = np.linspace(0., 1.45, 12)
                     temp_arry = np.zeros(rb_list.size * len(gamma_list))
                     jcnt = 0
                     for rb in rb_list:
@@ -468,6 +468,7 @@ class Observable(object):
                                                   self.hw_prob_gamma(gam) * self.hw_prob_rb(rb, m)
 
                             jcnt += 1
+                    print temp_arry
                     pre_marg = np.reshape(temp_arry, (rb_list.size, len(gamma_list)))
                     dmax = RectBivariateSpline(rb_list, gamma_list,
                                                pre_marg).integral(np.min(rb_list),
