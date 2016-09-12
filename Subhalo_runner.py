@@ -11,6 +11,7 @@ import argparse
 import numpy as np
 from subhalo import *
 from multiprocessing import Process, Pool
+from parallel_map import *
 
 
 parser = argparse.ArgumentParser()
@@ -102,15 +103,15 @@ if dmax:
         Build_obs_class.Table_Dmax(m_num=args.m_num, c_num=args.c_num,
                                              threshold=args.thresh)
     else:
-        p = Pool(processes=int((args.m_high - args.m_low) * 6))
+        num = int((args.m_high - args.m_low) * 6)
         masslist = np.logspace(args.m_low, args.m_high, (args.m_high - args.m_low) * 6)
         arg_pass = []
         for i in range(masslist.size):
-            arg_hold = (i, args.m_low, args.m_high, pointlike, args.profile,
+            arg_hold = [i, args.m_low, args.m_high, pointlike, args.profile,
                     truncate, args.arxiv_num, args.gamma, m200,
-                    args.mass, args.cross_sec, args.annih_prod)
+                    args.mass, args.cross_sec, args.annih_prod]
             arg_pass.append(arg_hold)
-        p.map(pool_map_dmax_extend, arg_pass)
+        parmap(pool_map_dmax_extend, arg_pass, processes=num)
     
 if nobs:
     if pointlike:
