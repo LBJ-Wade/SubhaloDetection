@@ -10,9 +10,9 @@ import subhalo
 parser = argparse.ArgumentParser()
 parser.add_argument('--dmax', default=True)
 parser.add_argument('--nobs', default=True)
-parser.add_argument('--tag', default='_')
-parser.add_argument('--mass', default=15., type=float)
-parser.add_argument('--pointlike', default=False)
+parser.add_argument('--tag', default='_GAMMA_1.35')
+parser.add_argument('--mass', default=15.5, type=float)
+parser.add_argument('--pointlike', default=True)
 parser.add_argument('--cross_sec_low', default=-27., type=float)  # In log10
 parser.add_argument('--cross_sec_high', default=-23., type=float)  # In log10
 parser.add_argument('--annih_prod', default='BB')
@@ -89,7 +89,7 @@ for i in range(count_initial, count_initial + count):
         fout.write('{}\n'.format(cmd))
     fout.close()
 
-if plike == 'True':
+if plike:
     fout = open('runs_dmax/Calc_Dmax_commandrunner_.sh', 'w')
     fout.write('#! /bin/bash\n')
     fout.write('#$ -l h_rt=24:00:00,h_data=2G\n')

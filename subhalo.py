@@ -208,7 +208,7 @@ class Model(object):
         :return: distance in kpc
         """
         max_dist = self.d_max_point()
-        dist_tab = np.logspace(-2., np.log10(max_dist), 15)
+        dist_tab = np.logspace(-1., np.log10(max_dist), 15)
         flux_diff_tab = np.zeros(dist_tab.size)
         for i, d in enumerate(dist_tab):
             flux_diff_tab[i] = np.abs(self.Total_Flux(d) - self.min_Flux(d))
@@ -448,7 +448,7 @@ class Observable(object):
                         rb_low = rb_med - .75
                         rb_high = rb_med + .75
                         rb_list = np.logspace(rb_low, rb_high, 15)
-                        gamma_list = np.linspace(0., 1.45, 12)
+                        gamma_list = np.logspace(-1., np.log10(1.45), 8)
                     temp_arry = np.zeros(rb_list.size * len(gamma_list))
                     jcnt = 0
                     for rb in rb_list:
@@ -464,8 +464,9 @@ class Observable(object):
                                 temp_arry[jcnt] = dm_model.d_max_point(threshold=threshold) * \
                                                   self.hw_prob_gamma(gam) * self.hw_prob_rb(rb, m)
                             else:
-                                temp_arry[jcnt] = dm_model.D_max_extend() * \
-                                                  self.hw_prob_gamma(gam) * self.hw_prob_rb(rb, m)
+                                dmx = dm_model.D_max_extend()
+                                print '             dmax: ', dmx
+                                temp_arry[jcnt] = dmx * self.hw_prob_gamma(gam) * self.hw_prob_rb(rb, m)
 
                             jcnt += 1
                     print temp_arry
@@ -564,9 +565,9 @@ class Observable(object):
 
     def hw_prob_gamma(self, gam):
         # norm inserted b/c integration truncated on region [0, 1.45]
-        norm = 0.9
         sigma = 0.426
         k = 0.1
         mu = 0.85
         y = -1. / k * np.log(1. - k * (gam - mu) / sigma)
+        norm = quad(lambda x: np.exp(- x ** 2. / 2.) / (np.sqrt(2. * np.pi) * (sigma - k * (gam - mu))), 0., 1.45)[0]
         return np.exp(- y ** 2. / 2.) / (np.sqrt(2. * np.pi) * (sigma - k * (gam - mu))) / norm
