@@ -79,6 +79,11 @@ class Model(object):
         flux threshold for spatially extended sources
         :param dist: distance kpc
         """
+        if 10. ** (self.subhalo.J(dist, 2.) - self.subhalo.J_pointlike(dist)) < 0.68:
+            return self.Threshold(self.gamma, 2.)
+        if 10. ** (self.subhalo.J(dist, .1) - self.subhalo.J_pointlike(dist)) > 0.68:
+            return self.Threshold(self.gamma, 0.05)
+        
         file_name = file_name = 'SpatialExtension_' + Profile_list[self.profile] + '.dat'
         dir = MAIN_PATH + '/SubhaloDetection/Data/'
         try:
