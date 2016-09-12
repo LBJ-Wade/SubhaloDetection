@@ -215,8 +215,8 @@ class Model(object):
         #interp = interpola(full_dist_tab, dist_tab, flux_diff_tab)
         cent = np.argmin(flux_diff_tab)
         try:
-            full_dist_tab = np.logspace(np.log10(dist_tab[cent - 3]), np.log10(dist_tab[cent + 2]), 60)
-            interp = interpola(full_dist_tab, dist_tab[cent - 3: cent + 2], flux_diff_tab[cent - 3: cent + 2])
+            full_dist_tab = np.logspace(np.log10(dist_tab[0]), np.log10(dist_tab[cent + 2]), 60)
+            interp = interpola(full_dist_tab, dist_tab[:cent + 2], flux_diff_tab[:cent + 2])
         except:
             full_dist_tab = np.logspace(np.log10(dist_tab[0]), np.log10(dist_tab[-1]), 60)
             interp = interpola(full_dist_tab, dist_tab, flux_diff_tab)
