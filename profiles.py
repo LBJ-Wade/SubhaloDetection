@@ -76,6 +76,8 @@ class Subhalo(object):
             check = 10. ** self.J_pointlike(dist)
             if jfact > check:
                 jfact = check
+            if jfact <= 0:
+                jfact = 10**-10.
             return np.log10(jfact)
 
 
