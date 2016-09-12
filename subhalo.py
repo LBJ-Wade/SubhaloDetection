@@ -219,7 +219,8 @@ class Model(object):
             interp = interpola(full_dist_tab, dist_tab[:cent + 2], flux_diff_tab[:cent + 2])
         except:
             full_dist_tab = np.logspace(np.log10(dist_tab[0]), np.log10(dist_tab[-1]), 60)
-            interp = interpola(full_dist_tab, dist_tab, flux_diff_tab)
+            interp = interp1d(dist_tab, flux_diff_tab, kind='linear', fill_value=10**5,
+                              bounds_error=False)(full_dist_tab)
         d_max = full_dist_tab[np.argmin(interp)]
         #def flux_diff_lten(x):
         #    return np.abs(self.Total_Flux(10. ** x) - self.min_Flux(10. ** x))
