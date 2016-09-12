@@ -207,16 +207,19 @@ class Model(object):
         Calculates the maximum distance a spatially extended subhalo can be to still be observable
         :return: distance in kpc
         """
-        dist_tab = np.logspace(-2., 1.8, 15)
+        max_dist = self.d_max_point()
+        dist_tab = np.logspace(-2., max_dist, 15)
         flux_diff_tab = np.zeros(dist_tab.size)
         for i, d in enumerate(dist_tab):
             flux_diff_tab[i] = np.abs(self.Total_Flux(d) - self.min_Flux(d))
-            print d, flux_diff_tab[i]
         #interp = interpola(full_dist_tab, dist_tab, flux_diff_tab)
         cent = np.argmin(flux_diff_tab)
-        fit = np.polyfit(dist_tab[cent - 4: cent + 4], flux_diff_tab[cent - 4:cent + 4], 2)
-        full_dist_tab = np.logspace(np.log10(dist_tab[cent - 4]), np.log10(dist_tab[cent + 4]), 60)
-        interp = np.polyval(fit, full_dist_tab)
+        try:
+            full_dist_tab = np.logspace(np.log10(dist_tab[cent - 3]), np.log10(dist_tab[cent + 2]), 60)
+            interp = interpola(full_dist_tab, dist_tab[cent - 3: cent + 2], flux_diff_tab[cent - 3: cent + 2])
+        except:
+            full_dist_tab = np.logspace(np.log10(dist_tab[0]), np.log10(dist_tab[-1]), 60)
+            interp = interpola(full_dist_tab, dist_tab, flux_diff_tab)
         d_max = full_dist_tab[np.argmin(interp)]
         #def flux_diff_lten(x):
         #    return np.abs(self.Total_Flux(10. ** x) - self.min_Flux(10. ** x))
