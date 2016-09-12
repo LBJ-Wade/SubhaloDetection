@@ -304,30 +304,29 @@ def Jfactor_plots(m_sub=10.**7., dist=1.):
 
 def sigma_68(mx=100., cs=2.2*10**-26., annih='BB'):
     #hw7 = HW_Fit(10**7, gam=0.85, rb=None)
-    hw7 = HW_Fit(10**7, gam=0.828571, rb=9.645e-02)
+    hw7 = HW_Fit(10**7, gam=0.85)
     model_hw7 = Model(mx, cs, annih, 10**7, profile=2, m200=True, rb=hw7.rb)
 
-    hw6 = HW_Fit(1.2328e+06, gam=0.828571, rb=9.645e-02)
+    hw6 = HW_Fit(10**7, gam=0.85)
     model_hw6 = Model(mx, cs, annih, 10**6, profile=2, m200=True, rb=hw6.rb)
 
-    hw5 = HW_Fit(10**5, gam=0.828571, rb=9.645e-02)
+    hw5 = HW_Fit(10**5, gam=0.85)
     model_hw5 = Model(mx, cs, annih, 10**5, profile=2, m200=True, rb=hw5.rb)
 
-
-    d_list = np.logspace(-1., 1., 30)
+    d_list = np.logspace(-1., 1., 15)
     sig68_7 = np.zeros(d_list.size * 2).reshape((d_list.size, 2))
     sig68_6 = np.zeros(d_list.size * 2).reshape((d_list.size, 2))
     sig68_5 = np.zeros(d_list.size * 2).reshape((d_list.size, 2))
-
+    d_list_full = np.logspace(-2., 1., 150)
     for i, d in enumerate(d_list):
-        print i+1, '/30'
-        val = hw7.sig_68(d)
+        print i+1, '/', len(d_list)
+        val = hw7.Spatial_Extension(d)
         if 0.05 < val < 2.0:
             sig68_7[i] = [d, val]
-        val = hw6.sig_68(d)
+        val = hw6.Spatial_Extension(d)
         if 0.05 < val < 2.0:
             sig68_6[i] = [d, val]
-        val = hw5.sig_68(d)
+        val = hw5.Spatial_Extension(d)
         if 0.05 < val < 2.0:
             sig68_5[i] = [d, val]
 
@@ -341,6 +340,9 @@ def sigma_68(mx=100., cs=2.2*10**-26., annih='BB'):
     sig68_7 = sig68_7[sig68_7[:, 1] > 0.]
     sig68_6 = sig68_6[sig68_6[:, 1] > 0.]
     sig68_5 = sig68_5[sig68_5[:, 1] > 0.]
+    s7_plot = interpola(d_list_full, sig68_7[:, 0], sig68_7[:, 1])
+    s6_plot = interpola(d_list_full, sig68_6[:, 0], sig68_6[:, 1])
+    s5_plot = interpola(d_list_full, sig68_5[:, 0], sig68_5[:, 1])
 
     fig = plt.figure(figsize=(8., 6.))
     ax = plt.gca()

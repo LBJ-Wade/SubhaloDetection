@@ -222,9 +222,7 @@ class Subhalo(object):
                         else:
                             extension = interpola(dist, valid_dist[:, -2], valid_dist[:, -1])
                     else:
-                        find_ext = LinearNDInterpolator(se_file[:, 1:-1], se_file[:, -1], fill_value=0.05, rescale=True)
-                        extension = find_ext(self.c, dist)
-
+                        raise ValueError
                 elif self.halo_name == 'NFW':
                     if se_file[0, -1] == 2.:
                         upper_lim_hit = True
@@ -248,20 +246,11 @@ class Subhalo(object):
                     g_comp = float('{:.6f}'.format(self.gam))
                     if np.sum((se_file[:, 1] == rb_comp) & (se_file[:, 2] == g_comp)) > 0:
                         halo_of_int = se_file[(se_file[:, 1] == rb_comp) & (se_file[:, 2] == g_comp)]
-                        find_ext = interp1d(halo_of_int[:, -2], halo_of_int[:, -1], kind='linear', bounds_error=False,
-                                            fill_value='extrapolate')
-                        extension = find_ext(dist)
+                        extension = interpola(dist, halo_of_int[:, -2], halo_of_int[:, -1])
                     else:
-                        find_ext = LinearNDInterpolator(se_file[:, 1:-1], se_file[:, -1], fill_value=0.05, rescale=True)
-                        extension = find_ext(self.rb, self.gam, dist)
+                        raise ValueError
             else:
-                find_ext = LinearNDInterpolator(se_file[:, :-1], se_file[:, -1], fill_value=0.05, rescale=True)
-                if self.halo_name == 'Einasto':
-                    extension = find_ext(self.halo_mass, self.c, dist)
-                elif self.halo_name == 'NFW':
-                    extension = find_ext(self.halo_mass, dist)
-                else:
-                    extension = find_ext(self.halo_mass, self.rb, self.gam, dist)
+                raise ValueError
         except:
             print 'Everything failed.'
             extension = self.Spatial_Extension(dist)

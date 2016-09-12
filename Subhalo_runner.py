@@ -10,6 +10,7 @@ matplotlib.use('agg')
 import argparse
 import numpy as np
 from subhalo import *
+from multiprocessing import Process, Pool
 
 
 parser = argparse.ArgumentParser()
@@ -47,6 +48,23 @@ def str2bool(v):
     elif type(v) == str:
         return v.lower() in ("yes", "true", "t", "1")
 
+
+def multi_run_wrapper(args):
+   return pool_map_dmax_extend(*args)
+
+
+def pool_map_dmax_extend(arg_p):
+    mass_choice, m_low, m_high, pointlike, profile, \
+    truncate, arxiv_num, gamma, m200, mass, cross_sec, \
+    annih_prod = arg_p
+    masslist = np.logspace(m_low, m_high, (m_high - m_low) * 6)
+    kwargs = {'point_like': pointlike, 'm_low': np.log10(masslist[mass_choice]),
+              'm_high': 2 * np.log10(masslist[mass_choice]),
+              'profile': profile, 'truncate': truncate, 'arxiv_num': arxiv_num,
+              'gam': gamma, 'm200': m200}
+    Observable(mass, cross_sec, annih_prod, **kwargs).Table_Dmax(plike=pointlike)
+    return
+
 dmax = str2bool(args.dmax)
 nobs = str2bool(args.nobs)
 pointlike = str2bool(args.pointlike)
@@ -76,7 +94,7 @@ nobs_dir = "/Cross_v_Nobs/"
 Build_obs_class = Observable(args.mass, args.cross_sec, args.annih_prod, m_low=args.m_low, 
                              m_high=args.m_high, c_low=args.c_low,
                              c_high=args.c_high, alpha=args.alpha, profile=args.profile, truncate=truncate,
-                             arxiv_num=args.arxiv_num, point_like=args.pointlike, gam=args.gamma,
+                             arxiv_num=args.arxiv_num, point_like=pointlike, gam=args.gamma,
                              stiff_rb=stiff_rb, m200=m200)
 
 if dmax:
@@ -84,7 +102,15 @@ if dmax:
         Build_obs_class.Table_Dmax(m_num=args.m_num, c_num=args.c_num,
                                              threshold=args.thresh)
     else:
-        Build_obs_class.Table_Dmax(m_num=args.m_num, c_num=args.c_num, plike=pointlike)
+        p = Pool(processes=int((args.m_high - args.m_low) * 6))
+        masslist = np.logspace(args.m_low, args.m_high, (args.m_high - args.m_low) * 6)
+        arg_pass = []
+        for i in range(masslist.size):
+            arg_hold = (i, args.m_low, args.m_high, pointlike, args.profile,
+                    truncate, args.arxiv_num, args.gamma, m200,
+                    args.mass, args.cross_sec, args.annih_prod)
+            arg_pass.append(arg_hold)
+        p.map(pool_map_dmax_extend, arg_pass)
     
 if nobs:
     if pointlike:
