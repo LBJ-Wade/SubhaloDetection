@@ -427,35 +427,37 @@ class Observable(object):
                     else:
                         np.savetxt(self.folder + file_name, tab, fmt='%.3e')
             else:
-                try:
-                    look_array = np.loadtxt(self.folder + file_name)
-                    mlook = float('{:.3e}'.format(m))
-                    if mlook in look_array[:, 0]:
-                        exists = True
-                    else:
-                        exists = False
-                except:
-                    exists = False
-                if not exists:
-                    if self.point_like:
-                        rb_med = np.log10(10. ** (-4.24) * m ** 0.459)
-                        rb_low = rb_med - 1.
-                        rb_high = rb_med + 1.
-                        rb_list = np.logspace(rb_low, rb_high, 20)
-                        gamma_list = np.linspace(0., 1.45, 20)
-                    else:
-                        rb_med = np.log10(10. ** (-4.24) * m ** 0.459)
-                        rb_low = rb_med - .75
-                        rb_high = rb_med + .75
-                        rb_list = np.logspace(rb_low, rb_high, 10)
-                        gamma_list = np.logspace(-1., np.log10(1.45), 8)
-                    temp_arry = np.zeros(rb_list.size * len(gamma_list))
-                    jcnt = 0
-                    for rb in rb_list:
-                        print '    Rb Parameter: ', rb
-                        for j, gam in enumerate(gamma_list):
-                            print '         Gamma: ', gam
-
+                if self.point_like:
+                    rb_med = np.log10(10. ** (-4.24) * m ** 0.459)
+                    rb_low = rb_med - 1.
+                    rb_high = rb_med + 1.
+                    rb_list = np.logspace(rb_low, rb_high, 20)
+                    gamma_list = np.linspace(0., 1.45, 20)
+                else:
+                    rb_med = np.log10(10. ** (-4.24) * m ** 0.459)
+                    rb_low = rb_med - .75
+                    rb_high = rb_med + .75
+                    rb_list = np.logspace(rb_low, rb_high, 10)
+                    gamma_list = np.logspace(-1., np.log10(1.45), 8)
+                temp_arry = np.zeros(rb_list.size * len(gamma_list))
+                jcnt = 0
+                for rb in rb_list:
+                    print '    Rb Parameter: ', rb
+                    for j, gam in enumerate(gamma_list):
+                        print '         Gamma: ', gam
+                        try:
+                            look_array = np.loadtxt(self.folder + file_name)
+                            mlook = float('{:.3e}'.format(m))
+                            rblook = float('{:.3e}'.format(rb))
+                            gamlook = float('{:.3e}'.format(gam))
+                            if np.sum((mlook == look_array[:, 0]) & (rblook == look_array[:, 1]) &
+                                              (gamlook == look_array[:, 2])) == 1:
+                                exists = True
+                            else:
+                                exists = False
+                        except:
+                            exists = False
+                        if not exists:
                             dm_model = Model(self.mx, self.cross_sec, self.annih_prod,
                                              m, profile=self.profile, pointlike=self.point_like,
                                              m200=self.m200, stiff_rb=self.stiff_rb, gam=gam,
@@ -546,7 +548,7 @@ class Observable(object):
         elif self.profile == 2:
             integrand_table = np.loadtxt(self.folder + file_name)
             mass_list = np.unique(integrand_table[:, 0])
-            
+
             integrand_table[:, 1] = (628. * (integrand_table[:, 0]) ** (-1.9) *
                                      (integrand_table[:, 1] ** 3.) / 3.0)
             integrand_interp = interp1d(mass_list, integrand_table[:,1], kind='linear')
