@@ -10,7 +10,7 @@ matplotlib.use('agg')
 import argparse
 import numpy as np
 from subhalo import *
-from multiprocessing import Process, Pool
+from multiprocessing import Process, Pool, cpu_count
 from parallel_map import *
 
 
@@ -111,8 +111,12 @@ if dmax:
                     truncate, args.arxiv_num, args.gamma, m200,
                     args.mass, args.cross_sec, args.annih_prod]
             arg_pass.append(arg_hold)
-        parmap(pool_map_dmax_extend, arg_pass, processes=None)
-
+        processes = multiprocessing.cpu_count()
+        runs = int(float(len(masslist)) / processes + 0.5)
+        j = 0
+        for i in range(runs):
+            parmap(pool_map_dmax_extend, arg_pass[j:np.min([j+processes, len(masslist)])], processes=processes)
+            j += processes
     
 if nobs:
     if pointlike:
