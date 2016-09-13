@@ -466,23 +466,22 @@ class Observable(object):
                             else:
                                 dmx = dm_model.D_max_extend()
                                 print '             dmax: ', dmx
-                                temp_arry[jcnt] = dmx * self.hw_prob_gamma(gam) * self.hw_prob_rb(rb, m)
-
+                                temp_arry[jcnt] = dmx
+                                #temp_arry[jcnt] = dmx * self.hw_prob_gamma(gam) * self.hw_prob_rb(rb, m)
                             jcnt += 1
-                    print temp_arry
-                    pre_marg = np.reshape(temp_arry, (rb_list.size, len(gamma_list)))
-                    dmax = RectBivariateSpline(rb_list, gamma_list,
-                                               pre_marg).integral(np.min(rb_list),
-                                                                  np.max(rb_list), 0.,
-                                                                  np.max(gamma_list))
+                    #pre_marg = np.reshape(temp_arry, (rb_list.size, len(gamma_list)))
+                    #dmax = RectBivariateSpline(rb_list, gamma_list,
+                    #                           pre_marg).integral(np.min(rb_list),
+                    #                                              np.max(rb_list), 0.,
+                    #                                              np.max(gamma_list))
 
-                    tab = np.array([m, dmax]).transpose()
-                    if os.path.isfile(self.folder+file_name):
-                        load_info = np.loadtxt(self.folder + file_name)
-                        add_to_table = np.vstack((load_info, tab))
-                        np.savetxt(self.folder + file_name, add_to_table, fmt='%.3e')
-                    else:
-                        np.savetxt(self.folder + file_name, tab, fmt='%.3e')
+                            tab = np.array([m, rb, gam, temp_arry[jcnt - 1]]).transpose()
+                            if os.path.isfile(self.folder+file_name):
+                                load_info = np.loadtxt(self.folder + file_name)
+                                add_to_table = np.vstack((load_info, tab))
+                                np.savetxt(self.folder + file_name, add_to_table, fmt='%.3e')
+                            else:
+                                np.savetxt(self.folder + file_name, tab, fmt='%.3e')
         return
 
 
@@ -547,6 +546,7 @@ class Observable(object):
         elif self.profile == 2:
             integrand_table = np.loadtxt(self.folder + file_name)
             mass_list = np.unique(integrand_table[:, 0])
+            
             integrand_table[:, 1] = (628. * (integrand_table[:, 0]) ** (-1.9) *
                                      (integrand_table[:, 1] ** 3.) / 3.0)
             integrand_interp = interp1d(mass_list, integrand_table[:,1], kind='linear')
