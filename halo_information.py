@@ -91,7 +91,7 @@ def table_spatial_extension(profile=0, truncate=False, arxiv_num=10070438,
                     subhalo = HW_Fit(m, gam=gam, rb=rb, M200=True, gcd=8.5, stiff_rb=False)
                     for ind, d in enumerate(dist_list):
                         print '           Distance', d
-                        value = '{:.3e}     {:.3e}      {:3e}      {:.3e}'.format(m, rb, gam, d)
+                        value = '{:.3e}     {:.3e}      {:.3e}      {:.3e}'.format(m, rb, gam, d)
                         try:
                             f = np.loadtxt(dir + file_name)
                             m_check = float('{:.3e}'.format(m))
