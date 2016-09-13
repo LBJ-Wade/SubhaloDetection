@@ -447,7 +447,7 @@ class Observable(object):
                         rb_med = np.log10(10. ** (-4.24) * m ** 0.459)
                         rb_low = rb_med - .75
                         rb_high = rb_med + .75
-                        rb_list = np.logspace(rb_low, rb_high, 15)
+                        rb_list = np.logspace(rb_low, rb_high, 10)
                         gamma_list = np.logspace(-1., np.log10(1.45), 8)
                     temp_arry = np.zeros(rb_list.size * len(gamma_list))
                     jcnt = 0
