@@ -571,28 +571,27 @@ class Observable(object):
                     rbfocus = np.unique(listofint[:, 1])
                     rb_list = np.logspace(np.log10(np.min(rbfocus)), np.log10(np.max(rbfocus)), 100)
                     dmax_table_pre = np.zeros(len(rbfocus))
-                    print rbfocus
                     for j,rb in enumerate(rbfocus):
                         listofint2 = listofint[listofint[:, 1] == rb]
-                        gam_int = interp1d(listofint2[:, -2], listofint2[:, -1],
-                                           kind='linear', bounds_error=False,
-                                           fill_value='extrapolate')(gam_full)
+                        gam_int = interpola(gam_full, listofint2[:, -2], listofint2[:, -1])
                         gam_full = gam_full[gam_int > 0.]
                         gam_int = gam_int[gam_int > 0.]
-                        dmax_table_pre[j] = np.trapz(gam_int * self.hw_prob_gamma(gam_full), gam_full) *\
-                                            self.hw_prob_rb(rb, m)
-                    print 'Post gamma: ', dmax_table_pre, rbfocus
-                    rb_pre_int = interp1d(rbfocus, dmax_table_pre, kind='linear',
-                                          bounds_error=False, fill_value='extrapolate')(rb_list)
-                    #rb_pre_int = interpola(rb_list, rbfocus, dmax_table_pre)
-                    print 'interp: ', rb_pre_int
+                        #dmax_table_pre[j] = np.trapz(gam_int * self.hw_prob_gamma(gam_full), gam_full) *\
+                        #                    self.hw_prob_rb(rb, m)
+                        dmax_table_pre[j] = np.trapz(gam_int * self.hw_prob_gamma(gam_full), gam_full)
+                    #print np.column_stack((rbfocus, dmax_table_pre))
+                    rb_pre_int = 10. ** interpola(np.log10(rb_list), np.log10(rbfocus), np.log10(dmax_table_pre))
+                    #print np.column_stack((rb_list, rb_pre_int))
+                    #rb_pre_int = interp1d(rbfocus, dmax_table_pre, kind='linear',
+                    #                      bounds_error=False, fill_value='extrapolate')(rb_list)
                     rb_list = rb_list[rb_pre_int > 0.]
                     rb_pre_int = rb_pre_int[rb_pre_int > 0.]
-                    dmax_table[i] = np.trapz(rb_pre_int, rb_list)
+                    dmax_table[i] = np.trapz(rb_pre_int * self.hw_prob_rb(rb_list, m), rb_list)
                 integrd = (628. * mass_list ** (-1.9) * (dmax_table ** 3.) / 3.0)
-                integrand_interp = interp1d(mass_list, integrd, kind='linear')
                 mass_full = np.logspace(np.log10(np.min(mass_list)), np.log10(np.max(mass_list)), 200)
-                integr = np.trapz(integrand_interp(mass_full), mass_full)
+                integrand_interp = 10. ** interpola(np.log10(mass_full), np.log10(mass_list), np.log10(integrd))
+                integr = np.trapz(integrand_interp, mass_full)
+
             print self.cross_sec, (4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr)
             return 4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr
 

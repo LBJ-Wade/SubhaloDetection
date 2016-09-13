@@ -111,7 +111,7 @@ if dmax:
                     truncate, args.arxiv_num, args.gamma, m200,
                     args.mass, args.cross_sec, args.annih_prod]
             arg_pass.append(arg_hold)
-        processes = 8
+        processes = 6
         runs = int(float(len(masslist)) / processes + 0.5)
         j = 0
         for i in range(runs):
