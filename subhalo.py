@@ -465,25 +465,32 @@ class Observable(object):
                             if self.point_like:
                                 temp_arry[jcnt] = dm_model.d_max_point(threshold=threshold) * \
                                                   self.hw_prob_gamma(gam) * self.hw_prob_rb(rb, m)
+                                pre_marg = np.reshape(temp_arry, (rb_list.size, len(gamma_list)))
+                                dmax = RectBivariateSpline(rb_list, gamma_list,
+                                                           pre_marg).integral(np.min(rb_list),
+                                                                              np.max(rb_list), 0.,
+                                                                              np.max(gamma_list))
+                                jcnt += 1
+                                tab = np.array([m, dmax]).transpose()
+                                if os.path.isfile(self.folder + file_name):
+                                    load_info = np.loadtxt(self.folder + file_name)
+                                    add_to_table = np.vstack((load_info, tab))
+                                    np.savetxt(self.folder + file_name, add_to_table, fmt='%.3e')
+                                else:
+                                    np.savetxt(self.folder + file_name, tab, fmt='%.3e')
                             else:
                                 dmx = dm_model.D_max_extend()
                                 print '             dmax: ', dmx
                                 temp_arry[jcnt] = dmx
                                 #temp_arry[jcnt] = dmx * self.hw_prob_gamma(gam) * self.hw_prob_rb(rb, m)
-                            jcnt += 1
-                    #pre_marg = np.reshape(temp_arry, (rb_list.size, len(gamma_list)))
-                    #dmax = RectBivariateSpline(rb_list, gamma_list,
-                    #                           pre_marg).integral(np.min(rb_list),
-                    #                                              np.max(rb_list), 0.,
-                    #                                              np.max(gamma_list))
-
-                            tab = np.array([m, rb, gam, temp_arry[jcnt - 1]]).transpose()
-                            if os.path.isfile(self.folder+file_name):
-                                load_info = np.loadtxt(self.folder + file_name)
-                                add_to_table = np.vstack((load_info, tab))
-                                np.savetxt(self.folder + file_name, add_to_table, fmt='%.3e')
-                            else:
-                                np.savetxt(self.folder + file_name, tab, fmt='%.3e')
+                                jcnt += 1
+                                tab = np.array([m, rb, gam, temp_arry[jcnt - 1]]).transpose()
+                                if os.path.isfile(self.folder+file_name):
+                                    load_info = np.loadtxt(self.folder + file_name)
+                                    add_to_table = np.vstack((load_info, tab))
+                                    np.savetxt(self.folder + file_name, add_to_table, fmt='%.3e')
+                                else:
+                                    np.savetxt(self.folder + file_name, tab, fmt='%.3e')
         return
 
 
@@ -548,14 +555,44 @@ class Observable(object):
         elif self.profile == 2:
             integrand_table = np.loadtxt(self.folder + file_name)
             mass_list = np.unique(integrand_table[:, 0])
-
-            integrand_table[:, 1] = (628. * (integrand_table[:, 0]) ** (-1.9) *
-                                     (integrand_table[:, 1] ** 3.) / 3.0)
-            integrand_interp = interp1d(mass_list, integrand_table[:,1], kind='linear')
-            mass_full = np.logspace(np.log10(np.min(mass_list)), np.log10(np.max(mass_list)), 200)
-            integr = np.trapz(integrand_interp(mass_full), mass_full)
-            #integrand = UnivariateSpline(mass_list, integrand_table[:, 1])
-            #integr = integrand.integral(np.min(mass_list), np.max(mass_list))
+            if self.point_like:
+                integrand_table[:, 1] = (628. * (integrand_table[:, 0]) ** (-1.9) *
+                                         (integrand_table[:, 1] ** 3.) / 3.0)
+                integrand_interp = interp1d(mass_list, integrand_table[:,1], kind='linear')
+                mass_full = np.logspace(np.log10(np.min(mass_list)), np.log10(np.max(mass_list)), 200)
+                integr = np.trapz(integrand_interp(mass_full), mass_full)
+                #integrand = UnivariateSpline(mass_list, integrand_table[:, 1])
+                #integr = integrand.integral(np.min(mass_list), np.max(mass_list))
+            else:
+                dmax_table = np.zeros(len(mass_list))
+                gam_full = np.linspace(0., 1.45, 100)
+                for i,m in enumerate(mass_list):
+                    listofint = integrand_table[integrand_table[:, 0] == m]
+                    rbfocus = np.unique(listofint[:, 1])
+                    rb_list = np.logspace(np.log10(np.min(rbfocus)), np.log10(np.max(rbfocus)), 100)
+                    dmax_table_pre = np.zeros(len(rbfocus))
+                    print rbfocus
+                    for j,rb in enumerate(rbfocus):
+                        listofint2 = listofint[listofint[:, 1] == rb]
+                        gam_int = interp1d(listofint2[:, -2], listofint2[:, -1],
+                                           kind='linear', bounds_error=False,
+                                           fill_value='extrapolate')(gam_full)
+                        gam_full = gam_full[gam_int > 0.]
+                        gam_int = gam_int[gam_int > 0.]
+                        dmax_table_pre[j] = np.trapz(gam_int * self.hw_prob_gamma(gam_full), gam_full) *\
+                                            self.hw_prob_rb(rb, m)
+                    print 'Post gamma: ', dmax_table_pre, rbfocus
+                    rb_pre_int = interp1d(rbfocus, dmax_table_pre, kind='linear',
+                                          bounds_error=False, fill_value='extrapolate')(rb_list)
+                    #rb_pre_int = interpola(rb_list, rbfocus, dmax_table_pre)
+                    print 'interp: ', rb_pre_int
+                    rb_list = rb_list[rb_pre_int > 0.]
+                    rb_pre_int = rb_pre_int[rb_pre_int > 0.]
+                    dmax_table[i] = np.trapz(rb_pre_int, rb_list)
+                integrd = (628. * mass_list ** (-1.9) * (dmax_table ** 3.) / 3.0)
+                integrand_interp = interp1d(mass_list, integrd, kind='linear')
+                mass_full = np.logspace(np.log10(np.min(mass_list)), np.log10(np.max(mass_list)), 200)
+                integr = np.trapz(integrand_interp(mass_full), mass_full)
             print self.cross_sec, (4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr)
             return 4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr
 
@@ -571,5 +608,6 @@ class Observable(object):
         k = 0.1
         mu = 0.85
         y = -1. / k * np.log(1. - k * (gam - mu) / sigma)
-        norm = quad(lambda x: np.exp(- x ** 2. / 2.) / (np.sqrt(2. * np.pi) * (sigma - k * (gam - mu))), 0., 1.45)[0]
+        norm = quad(lambda x: np.exp(- -1. / k * np.log(1. - k * (x - mu) / sigma) ** 2. / 2.)
+                              / (np.sqrt(2. * np.pi) * (sigma - k * (x - mu))), 0., 1.45)[0]
         return np.exp(- y ** 2. / 2.) / (np.sqrt(2. * np.pi) * (sigma - k * (gam - mu))) / norm
