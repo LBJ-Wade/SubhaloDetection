@@ -115,15 +115,14 @@ class DM_Limits(object):
                 raise ValueError
             cross_vs_n = np.loadtxt(f)
             cs_list = np.logspace(np.log10(cross_vs_n[0, 0]), np.log10(cross_vs_n[-1, 0]), 200)
-            cross_n_interp = interp1d(cross_vs_n[:, 0], cross_vs_n[:, 1], kind='linear', bounds_error=False)
-            fd_min = np.abs(cross_n_interp(cs_list) - lim_val)
+            cross_n_interp = interp1d(np.log10(cross_vs_n[:, 0]), np.log10(cross_vs_n[:, 1]), kind='cubic')
+            fd_min = np.abs(10. ** cross_n_interp(np.log10(cs_list)) - lim_val)
             print 'Cross Section Limit: ', cs_list[np.argmin(fd_min)]
 
             limarr[i] = [mx, cs_list[np.argmin(fd_min)]]
         limarr = limarr[np.argsort(limarr[:, 0])]
         print 'Limit: '
         print limarr
-
         np.savetxt(self.folder + file_name, limarr)
         return
 
