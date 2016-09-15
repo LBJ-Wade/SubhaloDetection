@@ -3,6 +3,7 @@ sys.path.insert(0, os.environ['SUBHALO_MAIN_PATH']+'/SubhaloDetection')
 from subhalo import *
 import numpy as np
 import glob
+from parallel_map import *
 
 dir = os.environ['SUBHALO_MAIN_PATH'] + \
       '/SubhaloDetection/Data/Observable_Profile_HW_Extended_' \
@@ -11,7 +12,9 @@ dir = os.environ['SUBHALO_MAIN_PATH'] + \
 ext_lim = 0.31
 
 files = glob.glob(dir)
-for f in files:
+
+
+def Extended_Lim(f):
     print f
     load = np.loadtxt(f)
     new_f = f[:-4] + 'Extension_Lim_{:.2f}.dat'.format(ext_lim)
@@ -37,3 +40,13 @@ for f in files:
             else:
                 sv_file[j] = line
         np.savetxt(new_f, sv_file, fmt='%.3e')
+    return
+
+processes = 5
+runs = int(float(len(files)) / processes + 0.5)
+j = 0
+for i in range(runs):
+    parmap(Extended_Lim, files[j:np.min([j+processes, len(files)])], processes=processes)
+    j += processes
+
+
