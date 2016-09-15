@@ -22,6 +22,7 @@ def Extended_Lim(f):
     if os.path.isfile(new_f):
         pass
     else:
+        rm_ind = []
         for j, line in enumerate(load):
             print j + 1, '/', len(load)
             halo = HW_Fit(line[0], gam=line[2], rb=line[1])
@@ -35,10 +36,12 @@ def Extended_Lim(f):
                 dtab = np.append(dtab, dist)
                 jtab = np.append(jtab, jratio)
                 fit = np.polyfit(np.log10(dtab), np.log10(jtab), 1)
-                dmax = 10 ** (- fit[1] / fit[0]) * 0.68 ** (1. / fit[0])
-                sv_file[j] = [line[0], line[1], line[2], dmax]
+                if np.abs(fit[0]) > 10 ** -7.:
+                    dmax = 10 ** (- fit[1] / fit[0]) * 0.68 ** (1. / fit[0])
+                    sv_file[j] = [line[0], line[1], line[2], dmax]
             else:
                 sv_file[j] = line
+        sv_file = sv_file[~np.all(sv_file == 0, axis=1)]
         np.savetxt(new_f, sv_file, fmt='%.3e')
     return
 
