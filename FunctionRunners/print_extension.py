@@ -28,7 +28,7 @@ for f in files:
                 dtab = np.logspace(np.log10(dist) - 1, np.log10(.8 * dist), 3)
                 jtab = np.zeros_like(dtab)
                 for i, d in enumerate(dtab):
-                    jtab = 10. ** (halo.J(d, 0.31) - halo.J_pointlike(d))
+                    jtab[i] = 10. ** (halo.J(d, 0.31) - halo.J_pointlike(d))
                 dtab = np.append(dtab, dist)
                 jtab = np.append(jtab, jratio)
                 fit = np.polyfit(np.log10(dtab), np.log10(jtab), 1)
