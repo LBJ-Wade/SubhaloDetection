@@ -23,30 +23,16 @@ for f in files:
             print j + 1, '/', len(load)
             halo = HW_Fit(line[0], gam=line[2], rb=line[1])
             dist = line[3]
-            ext = halo.Spatial_Extension(dist)
-            if ext < 0.31:
-                test_dist = np.log10(dist) - 2.
-                ext_test = halo.Spatial_Extension(10. ** test_dist)
-                if ext_test == 2.0:
-                    min_dist = np.log10(dist) - 1.5
-                    max_dist = np.log10(dist * 0.8)
-                elif ext_test == 0.1:
-                    min_dist = np.log10(dist) - 4.
-                    max_dist = np.log10(dist) - 2.
-                else:
-                    min_dist = np.log10(dist) - 2.2
-                    max_dist = np.log10(dist) - 0.5
-                dist_tab = np.logspace(min_dist, max_dist, 7)
-                se_tab = np.zeros_like(dist_tab)
-                for i,d in enumerate(dist_tab):
-                    se_tab[i] = halo.Spatial_Extension(d)
-                dist_tab = dist_tab[(se_tab > 0.1) & (se_tab < 2.)]
-                se_tab = se_tab[(se_tab > 0.1) & (se_tab < 2.)]
-                if ext > 0.1:
-                    dist_tab = np.append(dist_tab, dist)
-                    se_tab = np.append(se_tab, ext)
-                fit = np.polyfit(np.log10(dist_tab), np.log10(se_tab), 1)
-                dmax = 10. ** (- fit[1] / fit[0]) * ext_lim ** (1. / fit[0])
+            jratio = 10. ** (halo.J(dist, 0.31) - halo.J_pointlike(dist))
+            if jratio > 0.68:
+                dtab = np.logspace(np.log10(dist) - 1, np.log10(.8 * dist), 3)
+                jtab = np.zeros_like(dtab)
+                for i, d in enumerate(dtab):
+                    jtab = 10. ** (halo.J(d, 0.31) - halo.J_pointlike(d))
+                dtab = np.append(dtab, dist)
+                jtab = np.append(jtab, jratio)
+                fit = np.polyfit(np.log10(dtab), np.log10(jtab), 1)
+                dmax = 10 ** (- fit[1] / fit[0]) * 0.68 ** (1. / fit[0])
                 sv_file[j] = [line[0], line[1], line[2], dmax]
             else:
                 sv_file[j] = line
