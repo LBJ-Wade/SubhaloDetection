@@ -22,7 +22,6 @@ from Joint_Sim_Comparison import *
 import time
 
 
-
 try:
     MAIN_PATH = os.environ['SUBHALO_MAIN_PATH']
 except KeyError:
@@ -202,7 +201,7 @@ class Model(object):
         jf = 10. ** self.subhalo.J_pointlike(1.)
         return np.sqrt(pre_factor * n_gamma * jf / threshold)
 
-    def D_max_extend(self):
+    def D_max_extend(self, fixed_thresh=False, flux=10**-10):
         """
         Calculates the maximum distance a spatially extended subhalo can be to still be observable
         :return: distance in kpc
@@ -210,22 +209,19 @@ class Model(object):
         max_dist = self.d_max_point()
         dist_tab = np.logspace(-1., np.log10(max_dist), 15)
         flux_diff_tab = np.zeros(dist_tab.size)
-        for i, d in enumerate(dist_tab):
-            flux_diff_tab[i] = np.abs(self.Total_Flux(d) - self.min_Flux(d))
-        #interp = interpola(full_dist_tab, dist_tab, flux_diff_tab)
-        cent = np.argmin(flux_diff_tab)
-        try:
-            full_dist_tab = np.logspace(np.log10(dist_tab[0]), np.log10(dist_tab[cent + 2]), 60)
-            interp = interpola(full_dist_tab, dist_tab[:cent + 2], flux_diff_tab[:cent + 2])
-        except:
-            full_dist_tab = np.logspace(np.log10(dist_tab[0]), np.log10(dist_tab[-1]), 60)
-            interp = interp1d(dist_tab, flux_diff_tab, kind='linear', fill_value=10**5,
-                              bounds_error=False)(full_dist_tab)
-        d_max = full_dist_tab[np.argmin(interp)]
-        #def flux_diff_lten(x):
-        #    return np.abs(self.Total_Flux(10. ** x) - self.min_Flux(10. ** x))
-        #d_max = fminbound(flux_diff_lten, -4., 2., xtol=10**-4.)
-        #return 10 ** d_max
+        if not fixed_thresh:
+            for i, d in enumerate(dist_tab):
+                flux_diff_tab[i] = np.abs(self.Total_Flux(d) - self.min_Flux(d))
+            cent = np.argmin(flux_diff_tab)
+            try:
+                full_dist_tab = np.logspace(np.log10(dist_tab[0]), np.log10(dist_tab[cent + 2]), 60)
+                interp = interpola(full_dist_tab, dist_tab[:cent + 2], flux_diff_tab[:cent + 2])
+            except:
+                full_dist_tab = np.logspace(np.log10(dist_tab[0]), np.log10(dist_tab[-1]), 60)
+                interp = interp1d(dist_tab, flux_diff_tab, kind='linear', fill_value=10**5,
+                                  bounds_error=False)(full_dist_tab)
+            d_max = full_dist_tab[np.argmin(interp)]
+            return d_max
         return d_max
 
     def Determine_Gamma(self):
@@ -289,7 +285,7 @@ class Observable(object):
         self.profile_name = Profile_list[self.profile]
         self.m200 = m200
         self.gam = gam
-        self.stiff_rb =stiff_rb
+        self.stiff_rb = stiff_rb
         self.arxiv_num = arxiv_num
 
         if self.truncate:
@@ -315,7 +311,7 @@ class Observable(object):
         self.arxiv_num = arxiv_num
         self.folder = MAIN_PATH + "/SubhaloDetection/Data/"
         info_str = "Observable_Profile_" + self.profile_name + self.tr_tag +\
-            ptag + "_mx_" + str(mx) + "_annih_prod_" +\
+            ptag + "_mx_{:.1f}".format(mx) + "_annih_prod_" +\
             annih_prod + self.extra_tag + '_Mlow_{:.3e}'.format(mltag) + "/"
         
         self.folder += info_str
@@ -350,12 +346,12 @@ class Observable(object):
 
         if plike:
             file_name = 'Dmax_POINTLIKE_' + str(Profile_list[self.profile]) + self.tr_tag +\
-                        '_mx_' + str(self.mx) + '_cross_sec_{:.3e}'.format(self.cross_sec) +\
+                        '_mx_{:.1f}'.format(self.mx) + '_cross_sec_{:.3e}'.format(self.cross_sec) +\
                         '_annih_prod_' + self.annih_prod + self.extra_tag + '.dat'
             mass_list = np.logspace(self.m_low, self.m_high, (self.m_high - self.m_low) * 6)
         else:
             file_name = 'Dmax_Extended_' + str(Profile_list[self.profile]) + self.tr_tag + \
-                        '_mx_' + str(self.mx) + '_cross_sec_{:.3e}'.format(self.cross_sec) + \
+                        '_mx_{:.1f}'.format(self.mx) + '_cross_sec_{:.3e}'.format(self.cross_sec) + \
                         '_annih_prod_' + self.annih_prod + self.extra_tag + '.dat'
             mass_list = np.logspace(self.m_low, self.m_high, 1)
         print 'Cross Section: ', self.cross_sec, '\n'
@@ -494,13 +490,14 @@ class Observable(object):
         return
 
 
-    def N_obs(self, bmin, plike=True):
+    def N_obs(self, bmin, plike=True, ext_lim=False):
         """
         For pre tabled d_max functions, calculates the number of observable subhalos
 
         :param bmin: These analyses cut out the galactic plane, b_min (in degrees) specifies location
         of the cut
         """
+
 
         def prob_c(c, m):
             cm = Concentration_parameter(m, arxiv_num=self.arxiv_num)
@@ -510,12 +507,17 @@ class Observable(object):
                     (np.sqrt(2. * np.pi) * sigma_c * c))
         if plike:
             file_name = 'Dmax_POINTLIKE_' + str(Profile_list[self.profile]) + self.tr_tag + \
-                        '_mx_' + str(self.mx) + '_cross_sec_{:.3e}'.format(self.cross_sec) + \
+                        '_mx_{:.1f}'.format(self.mx) + '_cross_sec_{:.3e}'.format(self.cross_sec) + \
                         '_annih_prod_' + self.annih_prod + self.extra_tag + '.dat'
         else:
-            file_name = 'Dmax_Extended_' + str(Profile_list[self.profile]) + self.tr_tag + \
-                        '_mx_' + str(self.mx) + '_cross_sec_{:.3e}'.format(self.cross_sec) + \
-                        '_annih_prod_' + self.annih_prod + self.extra_tag + '.dat'
+            if ext_lim:
+                file_name = 'Dmax_Extended_' + str(Profile_list[self.profile]) + self.tr_tag + \
+                            '_mx_{:.1f}'.format(self.mx) + '_cross_sec_{:.3e}'.format(self.cross_sec) + \
+                            '_annih_prod_' + self.annih_prod + self.extra_tag + 'Extension_Lim_0.31.dat'
+            else:
+                file_name = 'Dmax_Extended_' + str(Profile_list[self.profile]) + self.tr_tag + \
+                            '_mx_{:.1f}'.format(self.mx) + '_cross_sec_{:.3e}'.format(self.cross_sec) + \
+                            '_annih_prod_' + self.annih_prod + self.extra_tag + '.dat'
 
         if self.profile == 0:
             integrand_table = np.loadtxt(self.folder + file_name)
@@ -573,13 +575,12 @@ class Observable(object):
                     dmax_table_pre = np.zeros(len(rbfocus))
                     for j,rb in enumerate(rbfocus):
                         listofint2 = listofint[listofint[:, 1] == rb]
+                        #print m, rb, listofint2
                         gam_int = interpola(gam_full, listofint2[:, -2], listofint2[:, -1])
                         gam_full = gam_full[gam_int > 0.]
                         gam_int = gam_int[gam_int > 0.]
-                        #dmax_table_pre[j] = np.trapz(gam_int * self.hw_prob_gamma(gam_full), gam_full) *\
-                        #                    self.hw_prob_rb(rb, m)
                         dmax_table_pre[j] = np.trapz(gam_int * self.hw_prob_gamma(gam_full), gam_full)
-                    #print np.column_stack((rbfocus, dmax_table_pre))
+                    #print m, dmax_table_pre
                     rb_pre_int = 10. ** interpola(np.log10(rb_list), np.log10(rbfocus), np.log10(dmax_table_pre))
                     #print np.column_stack((rb_list, rb_pre_int))
                     #rb_pre_int = interp1d(rbfocus, dmax_table_pre, kind='linear',
@@ -587,9 +588,21 @@ class Observable(object):
                     rb_list = rb_list[rb_pre_int > 0.]
                     rb_pre_int = rb_pre_int[rb_pre_int > 0.]
                     dmax_table[i] = np.trapz(rb_pre_int * self.hw_prob_rb(rb_list, m), rb_list)
+                #print mass_list
+                #print dmax_table
+                #exit()
                 integrd = (628. * mass_list ** (-1.9) * (dmax_table ** 3.) / 3.0)
+                # TODO: Integrate this capability in a cleaner way
+
+                #Standard Analysis
                 mass_full = np.logspace(np.log10(np.min(mass_list)), np.log10(np.max(mass_list)), 200)
                 integrand_interp = 10. ** interpola(np.log10(mass_full), np.log10(mass_list), np.log10(integrd))
+
+                # Make-shift PowerLaw Extrapolations
+                #mass_full = np.logspace(-5., np.log10(np.max(mass_list)), 1000)
+                #fit = np.polyfit(np.log10(mass_list), np.log10(integrd), 1)
+                # print 'Fit: ', fit
+                #integrand_interp = 10. ** np.polyval(fit, np.log10(mass_full))
                 integr = np.trapz(integrand_interp, mass_full)
 
             print self.cross_sec, (4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr)

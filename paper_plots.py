@@ -82,7 +82,7 @@ def profile_comparison(plot_hw=True):
         if i % 2 == 1:
             ax[i % 2, ii].set_xlabel('Radius [kpc]', fontsize=16)
             if i == 1:
-                ax[i % 2, ii].set_xticklabels(['', r'$10^{-2}$', r'$10^{-1}$', '1', ''])
+                ax[i % 2, ii].set_xticklabels(['', r'$10^{-2}$', r'$10^{-1}$', '1', r'$10$'])
             else:
                 ax[i % 2, ii].set_xticklabels(['', '', r'$10^{-1}$', '1', r'$10$'])
         if ii == 0:
@@ -302,18 +302,146 @@ def Jfactor_plots(m_sub=10.**7., dist=1.):
     return
 
 
+def fractional_extension(mx=100., cs=2.2*10**-26., annih='BB'):
+
+    thresh_tab = np.logspace(-10., -9., 5)
+    mass_tab = np.logspace(5., 7., 5)
+    gam_tab = np.logspace(-1, np.log10(1.45), 5)
+
+    thres_p = np.zeros_like(thresh_tab)
+    thres_p1 = np.zeros_like(thresh_tab)
+    thres_p3 = np.zeros_like(thresh_tab)
+
+    count = 0
+
+    for i, th in enumerate(thresh_tab):
+        print 'Threshold: {:.2e}'.format(th)
+        m_p = np.zeros_like(mass_tab)
+        m_p1 = np.zeros_like(mass_tab)
+        m_p3 = np.zeros_like(mass_tab)
+        for o,mass in enumerate(mass_tab):
+            print '     Mass: {:.2e}'.format(mass)
+            rb_med = np.log10(10. ** (-4.24) * mass ** 0.459)
+            rb_low = rb_med - 1.
+            rb_high = rb_med + 1.
+            rb_list = np.logspace(rb_low, rb_high, 6)
+            rb_p = np.zeros_like(rb_list)
+            rb_p1 = np.zeros_like(rb_list)
+            rb_p3 = np.zeros_like(rb_list)
+            for z, rb in enumerate(rb_list):
+                print '         Rb: {:.2e}'.format(rb)
+                gam_p = np.zeros_like(gam_tab)
+                gam_p1 = np.zeros_like(gam_tab)
+                gam_p3 = np.zeros_like(gam_tab)
+                for k, gam in enumerate(gam_tab):
+                    print '             Gamma: {:.2f}'.format(gam)
+                    prof = HW_Fit(mass, gam=gam, rb=rb)
+                    mod = Model(mx, cs, annih, mass, profile=2., m200=True, gam=gam, rb=rb)
+
+                    gam_p[k] = mod.d_max_point(th)
+                    dis_tab = np.logspace(-1., np.log10(gam_p[k]), 7)
+                    sig68 = np.zeros_like(dis_tab)
+                    for j, d in enumerate(dis_tab):
+                        try:
+                            sig68[j] = prof.Spatial_Extension(d, thresh_calc=False)
+                        except ValueError:
+                            pass
+                    #print sig68
+                    dis_tab = dis_tab[(sig68 < 85.) & (sig68 > 0.01)]
+                    sig68 = sig68[(sig68 < 85.) & (sig68 > 0.01)]
+                    extension = interp1d(np.log10(dis_tab), np.log10(sig68), kind='linear',
+                                         fill_value='extrapolate', bounds_error=False)
+                    gam_p1[k] = np.power(10, fminbound(lambda x: np.abs(10. ** extension(x) - 0.1), -3.,
+                                                       np.log10(gam_p[k])))
+                    gam_p3[k] = np.power(10, fminbound(lambda x: np.abs(10. ** extension(x) - 0.3), -3.,
+                                                       np.log10(gam_p[k])))
+
+                    count += 1
+                gamma_full = np.linspace(.01, 1.45, 100)
+                gamma_interp_p = 10. ** interpola(np.log10(gamma_full), np.log10(gam_tab), np.log10(gam_p)) * \
+                                  hw_prob_gamma(gamma_full)
+                gamma_interp_p1 = 10. ** interpola(np.log10(gamma_full), np.log10(gam_tab), np.log10(gam_p1)) * \
+                                  hw_prob_gamma(gamma_full)
+                gamma_interp_p3 = 10. ** interpola(np.log10(gamma_full), np.log10(gam_tab), np.log10(gam_p3)) * \
+                                  hw_prob_gamma(gamma_full)
+
+                rb_p[z] = np.trapz(gamma_interp_p, gamma_full)
+                rb_p1[z] = np.trapz(gamma_interp_p1, gamma_full)
+                rb_p3[z] = np.trapz(gamma_interp_p3, gamma_full)
+
+            rb_full = np.logspace(rb_low, rb_high, 100)
+            rb_interp_p = 10. ** interp1d(np.log10(rb_list), np.log10(rb_p), kind='linear',
+                                           bounds_error=False, fill_value='extrapolate')(np.log10(rb_full))
+            rb_interp_p1 = 10. ** interp1d(np.log10(rb_list), np.log10(rb_p1), kind='linear',
+                                              bounds_error=False, fill_value='extrapolate')(np.log10(rb_full))
+            rb_interp_p3 = 10. ** interp1d(np.log10(rb_list), np.log10(rb_p3), kind='linear',
+                                              bounds_error=False, fill_value='extrapolate')(np.log10(rb_full))
+            m_p[o] = np.trapz(rb_interp_p * hw_prob_rb(rb_full, mass), rb_full)
+            m_p1[o] = np.trapz(rb_interp_p1 * hw_prob_rb(rb_full, mass), rb_full)
+            m_p3[o] = np.trapz(rb_interp_p3 * hw_prob_rb(rb_full, mass), rb_full)
+
+        m_all = np.logspace(5, 7, 100)
+        m_interp_p = 10. ** interp1d(np.log10(mass_tab), np.log10(m_p), kind='linear',
+                                      bounds_error=False, fill_value='extrapolate')(np.log10(m_all))
+        m_interp_p1 = 10. ** interp1d(np.log10(mass_tab), np.log10(m_p1), kind='linear',
+                                       bounds_error=False, fill_value='extrapolate')(np.log10(m_all))
+        m_interp_p3 = 10. ** interp1d(np.log10(mass_tab), np.log10(m_p3), kind='linear',
+                                       bounds_error=False, fill_value='extrapolate')(np.log10(m_all))
+
+        thres_p[i] = np.trapz(m_interp_p ** 3. * m_all ** (-1.9), m_all)
+        thres_p1[i] = np.trapz(m_interp_p1 ** 3. * m_all ** (-1.9), m_all)
+        thres_p3[i] = np.trapz(m_interp_p3 ** 3. * m_all ** (-1.9), m_all)
+
+    thresh_full = np.logspace(-10., -9., 40)
+    plt_ext1 = 10. * interpola(np.log10(thresh_full), np.log10(thresh_tab), np.log10(thres_p1 / thres_p))
+    plt_ext3 = 10. * interpola(np.log10(thresh_full), np.log10(thresh_tab), np.log10(thres_p3 / thres_p))
+
+    fig = plt.figure(figsize=(8., 6.))
+    ax = plt.gca()
+    ax.set_xscale("log")
+    ax.set_yscale('log')
+
+    pl.xlim([10 ** -10., 10. ** -9.])
+    pl.ylim([0., .5])
+    plt.plot(thresh_full, plt_ext1, lw=1, color='Purple')
+    plt.plot(thresh_full, plt_ext3, lw=1, color='goldenrod')
+    pl.xlabel(r'Min Flux [$cm^{{-2}}s^{{-1}}$]', fontsize=20)
+    pl.ylabel(r'Fraction with $\sigma_{{68}} > $', fontsize=20)
+    folder = MAIN_PATH + "/SubhaloDetection/Data/"
+    fig_name = folder + '../Plots/' + 'Fractional_w_SpatialExtension.pdf'
+    fig.set_tight_layout(True)
+    pl.savefig(fig_name)
+    return
+
+
+def hw_prob_rb(rb, mass):
+    rb_norm = 10. ** (-4.24) * mass ** 0.459
+    sigma_c = 0.47
+    return (np.exp(- (np.log(rb / rb_norm) / (np.sqrt(2.0) * sigma_c)) ** 2.0) /
+            (np.sqrt(2. * np.pi) * sigma_c * rb))
+
+
+def hw_prob_gamma(gam):
+    # norm inserted b/c integration truncated on region [0, 1.45]
+    sigma = 0.426
+    k = 0.1
+    mu = 0.85
+    y = -1. / k * np.log(1. - k * (gam - mu) / sigma)
+    norm = quad(lambda x: np.exp(- -1. / k * np.log(1. - k * (x - mu) / sigma) ** 2. / 2.)
+                          / (np.sqrt(2. * np.pi) * (sigma - k * (x - mu))), 0., 1.45)[0]
+    return np.exp(- y ** 2. / 2.) / (np.sqrt(2. * np.pi) * (sigma - k * (gam - mu))) / norm
+
 def sigma_68(mx=100., cs=2.2*10**-26., annih='BB'):
-    #hw7 = HW_Fit(10**7, gam=0.85, rb=None)
     hw7 = HW_Fit(10**7, gam=0.85)
     model_hw7 = Model(mx, cs, annih, 10**7, profile=2, m200=True, rb=hw7.rb)
 
-    hw6 = HW_Fit(10**7, gam=0.85)
+    hw6 = HW_Fit(10**6, gam=0.85)
     model_hw6 = Model(mx, cs, annih, 10**6, profile=2, m200=True, rb=hw6.rb)
 
     hw5 = HW_Fit(10**5, gam=0.85)
     model_hw5 = Model(mx, cs, annih, 10**5, profile=2, m200=True, rb=hw5.rb)
 
-    d_list = np.logspace(-1., 1., 15)
+    d_list = np.logspace(-1., 1., 10)
     sig68_7 = np.zeros(d_list.size * 2).reshape((d_list.size, 2))
     sig68_6 = np.zeros(d_list.size * 2).reshape((d_list.size, 2))
     sig68_5 = np.zeros(d_list.size * 2).reshape((d_list.size, 2))
@@ -321,13 +449,13 @@ def sigma_68(mx=100., cs=2.2*10**-26., annih='BB'):
     for i, d in enumerate(d_list):
         print i+1, '/', len(d_list)
         val = hw7.Spatial_Extension(d)
-        if 0.05 < val < 2.0:
+        if 0.1 < val < 2.0:
             sig68_7[i] = [d, val]
         val = hw6.Spatial_Extension(d)
-        if 0.05 < val < 2.0:
+        if 0.1 < val < 2.0:
             sig68_6[i] = [d, val]
         val = hw5.Spatial_Extension(d)
-        if 0.05 < val < 2.0:
+        if 0.1 < val < 2.0:
             sig68_5[i] = [d, val]
 
     print 'Obtaining Dmax Extended'
@@ -340,9 +468,16 @@ def sigma_68(mx=100., cs=2.2*10**-26., annih='BB'):
     sig68_7 = sig68_7[sig68_7[:, 1] > 0.]
     sig68_6 = sig68_6[sig68_6[:, 1] > 0.]
     sig68_5 = sig68_5[sig68_5[:, 1] > 0.]
-    s7_plot = interpola(d_list_full, sig68_7[:, 0], sig68_7[:, 1])
-    s6_plot = interpola(d_list_full, sig68_6[:, 0], sig68_6[:, 1])
-    s5_plot = interpola(d_list_full, sig68_5[:, 0], sig68_5[:, 1])
+    s7_plot = np.polyfit(np.log10(sig68_7[:, 0]), np.log10(sig68_7[:, 1]), 1)
+    s6_plot = np.polyfit(np.log10(sig68_6[:, 0]), np.log10(sig68_6[:, 1]), 1)
+    s5_plot = np.polyfit(np.log10(sig68_5[:, 0]), np.log10(sig68_5[:, 1]), 1)
+    s7_p = 10. ** np.polyval(s7_plot, np.log10(d_list_full))
+    s6_p = 10. ** np.polyval(s6_plot, np.log10(d_list_full))
+    s5_p = 10. ** np.polyval(s5_plot, np.log10(d_list_full))
+
+    dots7 = 10 ** np.polyval(s7_plot, np.log10(dmax_7))
+    dots6 = 10 ** np.polyval(s6_plot, np.log10(dmax_6))
+    dots5 = 10 ** np.polyval(s5_plot, np.log10(dmax_5))
 
     fig = plt.figure(figsize=(8., 6.))
     ax = plt.gca()
@@ -352,14 +487,14 @@ def sigma_68(mx=100., cs=2.2*10**-26., annih='BB'):
     xmin = sig68_5[0, 0]
     pl.xlim([xmin, 10. ** 1.])
     pl.ylim([0.1, 1.9])
-    pl.xlabel(r'Distance (kpc)', fontsize=20)
+    pl.xlabel(r'Distance   [kpc]', fontsize=20)
     pl.ylabel(r'$\sigma_{{68}}$   [$\deg$]', fontsize=20)
-    pl.plot(sig68_7[:, 0], sig68_7[:, 1], lw=2, color='k')
-    pl.plot(sig68_6[:, 0], sig68_6[:, 1], lw=2, color='blueviolet')
-    pl.plot(sig68_5[:, 0], sig68_5[:, 1], lw=2, color='blue')
-    pl.axvline(x=dmax_7, ls='--', lw=2, color='k', alpha=0.5)
-    pl.axvline(x=dmax_6, ls='--', lw=2, color='blueviolet', alpha=0.5)
-    pl.axvline(x=dmax_5, ls='--', lw=2, color='blue', alpha=0.5)
+    pl.plot(d_list_full, s7_p, lw=2, color='k')
+    pl.plot(d_list_full, s6_p, lw=2, color='blueviolet')
+    pl.plot(d_list_full, s5_p, lw=2, color='blue')
+    pl.plot(dmax_7, dots7, 'o', ms=16, mfc='k', mec='k')
+    pl.plot(dmax_6, dots6, 'o', ms=16, mfc='blueviolet', mec='blueviolet')
+    pl.plot(dmax_5, dots5, 'o', ms=16, mfc='blue', mec='blue')
 
     pl.text(xmin * 1.2, 10**-.4, r'$10^7 M_\odot$', color='k', fontsize=14)
     pl.text(xmin * 1.2, 10 ** -.5, r'$10^6 M_\odot$', color='blueviolet', fontsize=14)
@@ -370,6 +505,81 @@ def sigma_68(mx=100., cs=2.2*10**-26., annih='BB'):
     fig.set_tight_layout(True)
     pl.savefig(fig_name)
     return
+
+
+def dmax_extend(cs=2.2*10**-26., annih='BB'):
+    hwlist = []
+    modellist = []
+    hwlist2 = []
+    modellist2 = []
+    hwlist3 = []
+    modellist3 = []
+    m_full = np.logspace(5., 7., 100)
+    masslist = np.logspace(5., 7., 6)
+    for i, m in enumerate(masslist):
+        hwlist.append(HW_Fit(m))
+        modellist.append(Model(100, cs, annih, m, profile=2,
+                               m200=False, rb=hwlist[i].rb))
+        hwlist2.append(HW_Fit(m))
+        modellist2.append(Model(10, cs, annih, m, profile=2,
+                               m200=False, rb=hwlist2[i].rb))
+        hwlist3.append(HW_Fit(m))
+        modellist3.append(Model(1000, cs, annih, m, profile=2,
+                               m200=False, rb=hwlist3[i].rb))
+
+    dmax_ex_tab = np.zeros(masslist.size * 2).reshape((masslist.size, 2))
+    dmax_p_tab = np.zeros(masslist.size * 2).reshape((masslist.size, 2))
+    dmax_ex_tab2 = np.zeros(masslist.size * 2).reshape((masslist.size, 2))
+    dmax_p_tab2 = np.zeros(masslist.size * 2).reshape((masslist.size, 2))
+    dmax_ex_tab3 = np.zeros(masslist.size * 2).reshape((masslist.size, 2))
+    dmax_p_tab3 = np.zeros(masslist.size * 2).reshape((masslist.size, 2))
+    for i in range(masslist.size):
+        print i + 1, '/', len(masslist)
+        dmax_ex_tab[i] = [masslist[i], modellist[i].D_max_extend()]
+        dmax_p_tab[i] = [masslist[i], modellist[i].d_max_point()]
+        dmax_ex_tab2[i] = [masslist[i], modellist2[i].D_max_extend()]
+        dmax_p_tab2[i] = [masslist[i], modellist2[i].d_max_point()]
+        dmax_ex_tab3[i] = [masslist[i], modellist3[i].D_max_extend()]
+        dmax_p_tab3[i] = [masslist[i], modellist3[i].d_max_point()]
+
+    ex_plot = np.polyfit(np.log10(dmax_ex_tab[:, 0]), np.log10(dmax_ex_tab[:, 1]), 1)
+    p_plot = np.polyfit(np.log10(dmax_p_tab[:, 0]), np.log10(dmax_p_tab[:, 1]), 1)
+    ex_plot2 = np.polyfit(np.log10(dmax_ex_tab2[:, 0]), np.log10(dmax_ex_tab2[:, 1]), 1)
+    p_plot2 = np.polyfit(np.log10(dmax_p_tab2[:, 0]), np.log10(dmax_p_tab2[:, 1]), 1)
+    ex_plot3 = np.polyfit(np.log10(dmax_ex_tab3[:, 0]), np.log10(dmax_ex_tab3[:, 1]), 1)
+    p_plot3 = np.polyfit(np.log10(dmax_p_tab3[:, 0]), np.log10(dmax_p_tab3[:, 1]), 1)
+
+    ex_int = 10. ** np.polyval(ex_plot, np.log10(m_full))
+    p_int = 10. ** np.polyval(p_plot, np.log10(m_full))
+    ex_int2 = 10. ** np.polyval(ex_plot2, np.log10(m_full))
+    p_int2 = 10. ** np.polyval(p_plot2, np.log10(m_full))
+    ex_int3 = 10. ** np.polyval(ex_plot3, np.log10(m_full))
+    p_int3 = 10. ** np.polyval(p_plot3, np.log10(m_full))
+
+    fig = plt.figure(figsize=(8., 6.))
+    ax = plt.gca()
+    ax.set_xscale("log")
+    ax.set_yscale('log')
+    ymin = np.min([ex_int[0], ex_int2[0], ex_int3[0]])
+    ymax = np.max([p_int[-1], p_int2[-1], p_int3[-1]])
+    pl.xlim([10 ** 5., 10. ** 7.])
+    pl.ylim([ymin, ymax])
+    pl.xlabel(r'Mass  [$M_\odot$]', fontsize=20)
+    pl.ylabel(r'$D_{\rm max}$   [kpc]', fontsize=20)
+    pl.plot(m_full, ex_int, '--', lw=2, color='red', dashes=(10,20))
+    pl.plot(m_full, p_int, lw=2, color='red')
+    pl.plot(m_full, ex_int2, '--', lw=2, color='goldenrod', dashes=(10, 20))
+    pl.plot(m_full, p_int2, lw=2, color='goldenrod')
+    pl.plot(m_full, ex_int3, '--', lw=2, color='maroon', dashes=(10, 20))
+    pl.plot(m_full, p_int3, lw=2, color='maroon')
+    pl.text(1.5 * 10**5., ymax * .8, r'$\chi \chi$' + r'$\rightarrow$' + r'$b\bar{b}$', color='k', fontsize=14)
+
+    folder = MAIN_PATH + "/SubhaloDetection/Plots/"
+    fig_name = folder + 'Dmax_Ext_vs_Plike.pdf'
+    fig.set_tight_layout(True)
+    pl.savefig(fig_name)
+    return
+
 
 def limit_comparison(plike=True, bmin=20., annih_prod='BB', nobs=True):
     if plike:
@@ -437,6 +647,74 @@ def limit_comparison(plike=True, bmin=20., annih_prod='BB', nobs=True):
     figname = dir + 'Limit_Comparison_' + ptag +'annih_prod_' + \
               annih_prod + '_bmin_{:.0f}'.format(bmin) + ntag + '.pdf'
 
+    pl.xlabel(r'$m_\chi$   [GeV]', fontsize=20)
+    pl.ylabel(r'$\left< \sigma v \right>$   [$cm^3 s^{{-1}}$]', fontsize=20)
+    fig.set_tight_layout(True)
+    pl.savefig(figname)
+    return
+
+
+def limit_comparison_extended(bmin=20., annih_prod='BB', nobs=False):
+    ptag = 'Extended'
+    if nobs:
+        ntag = ''
+    else:
+        ntag = '_Nobs_False_'
+    dir = MAIN_PATH + '/SubhaloDetection/Data/'
+
+    # hw_low = np.loadtxt(dir + 'Limits_' + ptag + '_HW_Truncate_False_alpha_0.16_annih_prod_' +
+    #                      annih_prod + '_arxiv_num_13131729_bmin_{:.1f}'.format(bmin) +
+    #                     '_Mlow_-5.000__Nobs_True_.dat')
+    # hw_high = np.loadtxt(dir + 'Limits_' + ptag + '_HW_Truncate_False_alpha_0.16_annih_prod_' +
+    #                      annih_prod + '_arxiv_num_13131729_bmin_{:.1f}'.format(bmin) +
+    #                      '_Mlow_5.000__Nobs_True_.dat')
+    # hw_low_null = np.loadtxt(dir + 'Limits_' + ptag + '_HW_Truncate_False_alpha_0.16_annih_prod_' +
+    #                     annih_prod + '_arxiv_num_13131729_bmin_{:.1f}'.format(bmin) +
+    #                     '_Mlow_-5.000__Nobs_False_.dat')
+    hw_high_null = np.loadtxt(dir + 'Limits_' + ptag + '_HW_Truncate_False_alpha_0.16_annih_prod_' +
+                         annih_prod + '_arxiv_num_13131729_bmin_{:.1f}'.format(bmin) +
+                         '_Mlow_5.000__Nobs_False_.dat')
+    hw_high_restrict = np.loadtxt(dir + 'Limits_' + ptag + '_HW_Truncate_False_alpha_0.16_annih_prod_' +
+                              annih_prod + '_arxiv_num_13131729_bmin_{:.1f}'.format(bmin) +
+                              '_Mlow_5.000_Ext_Lim_0.31_Nobs_False_.dat')
+    hw_p = np.loadtxt(dir + 'Limits_Pointlike_HW_Truncate_False_alpha_0.16_annih_prod_' +
+                              annih_prod + '_arxiv_num_13131729_bmin_{:.1f}'.format(bmin) +
+                              '_Mlow_5.000__Nobs_False_.dat')
+
+    # list = [hw_low, hw_high, hw_low_null, hw_high_null]
+    list = [hw_high_null, hw_high_restrict]
+    color_list = ['green', 'purple', 'black']
+
+    mass_list = np.logspace(1., 3., 100)
+
+    fig = plt.figure(figsize=(8., 6.))
+    ax = plt.gca()
+    ax.set_xscale("log")
+    ax.set_yscale('log')
+    pl.xlim([10 ** 1., 10. ** 3.])
+    pl.ylim([10 ** -27., 10. ** -23.])
+    for i, lim in enumerate(list):
+        pts = interpola(mass_list, lim[:, 0], lim[:, 1])
+        plt.plot(mass_list, pts, lw=2, color=color_list[i], alpha=1)
+    hp = interpola(mass_list, hw_p[:, 0], hw_p[:, 1])
+    plt.plot(mass_list, hp, '--', lw=2, color='k', alpha=1, dashes=(15, 15))
+
+    # lowm2 = interpola(mass_list, hw_low_null[:, 0], hw_low_null[:, 1])
+    # highm2 = interpola(mass_list, hw_high_null[:, 0], hw_high_null[:, 1])
+    # ax.fill_between(mass_list, lowm2, highm2, where=highm2 >= lowm2,
+    #                 facecolor='black', edgecolor='None', interpolate=True, alpha=0.3)
+    # lowm = interpola(mass_list, hw_low[:, 0], hw_low[:, 1])
+    # highm = interpola(mass_list, hw_high[:, 0], hw_high[:, 1])
+    # ax.fill_between(mass_list, lowm, highm, where=highm >= lowm,
+    #                 facecolor='blueviolet', edgecolor='None', interpolate=True, alpha=0.3)
+    ltop = 10 ** -23.4
+    ldwn = 10 ** -.3
+    plt.text(15, ltop, r'$\chi \chi$ ' + r'$\rightarrow$' + r' $b \bar{{b}}$', color='k', fontsize=16)
+    plt.text(15, ltop * ldwn, r'Extended', color='k', fontsize=12)
+    plt.axhline(y=2.2 * 10 **-26., xmin=0, xmax=1, lw=1, ls='--', color='k', alpha=1)
+    figname = dir + 'Limit_Comparison_' + ptag +'annih_prod_' + \
+              annih_prod + '_bmin_{:.0f}'.format(bmin) + ntag + '.pdf'
+    plt.text(15, ltop * ldwn ** 2., r'$M_{{min}} = 10^{{5}} M_\odot$', color='k', fontsize=16)
     pl.xlabel(r'$m_\chi$   [GeV]', fontsize=20)
     pl.ylabel(r'$\left< \sigma v \right>$   [$cm^3 s^{{-1}}$]', fontsize=20)
     fig.set_tight_layout(True)

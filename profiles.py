@@ -185,12 +185,19 @@ class Subhalo(object):
                     return 2.
                 if 10. ** (self.J(dist, .1) - self.J_pointlike(dist)) > 0.68:
                     return 0.1
-            theta_tab = np.logspace(-1., np.log10(2), 10)
-            full_tab = np.logspace(-1., np.log10(2), 100)
+            theta_tab = np.logspace(-3., np.log10(50.), 20)
+
             ang68 = np.zeros(theta_tab.size)
             for i, theta in enumerate(theta_tab):
-                ang68[i] = self.AngRad68(theta, dist)
-            extension = full_tab[np.argmin(interp1d(theta_tab, ang68, kind='cubic')(full_tab))]
+                ang68[i] = 10. ** self.J(dist, theta) / 10. ** self.J_pointlike(dist) - 0.68
+            #print ang68
+            theta_tab = theta_tab[(ang68 < 0.32) & (ang68 > -0.66)]
+            ang68 = ang68[(ang68 < 0.32) & (ang68 > -0.66)]
+            full_tab = np.logspace(np.log10(theta_tab[0]), np.log10(theta_tab[-1]), 100)
+            #print np.column_stack((theta_tab, ang68))
+            interp = np.log10(np.abs(interpola(np.log10(full_tab), np.log10(theta_tab), ang68)))
+            extension = full_tab[np.argmin(interp)]
+            #print extension
         return extension
 
     def sig_68(self, dist):
