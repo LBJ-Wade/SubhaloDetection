@@ -55,7 +55,7 @@ class Subhalo(object):
                 return 2. * np.pi * kpctocm * np.sin(th) * \
                        self.density(np.sqrt(dist ** 2. + x ** 2. - 2.0 * dist * x * np.cos(th))) ** 2.0
 
-            theta_list = np.logspace(-5., np.log10(theta), 50)
+            theta_list = np.logspace(-6., np.log10(theta), 60)
             theta_list = np.insert(theta_list, 0, np.array([0.]))
             jfac_list = np.zeros(theta_list.size)
             for i, th in enumerate(theta_list):
@@ -186,13 +186,14 @@ class Subhalo(object):
                 if 10. ** (self.J(dist, .1) - self.J_pointlike(dist)) > 0.68:
                     return 0.1
 
-            theta_tab = np.logspace(-3., np.log10(50.), 20)
+            theta_tab = np.logspace(np.log10(180. / np.pi * np.arctan(self.max_radius / dist)) - 4,
+                                    np.log10(180. / np.pi * np.arctan(self.max_radius / dist)), 20)
             ang68 = np.zeros(theta_tab.size)
             for i, theta in enumerate(theta_tab):
                 ang68[i] = 10. ** self.J(dist, theta) / 10. ** self.J_pointlike(dist) - 0.68
-            #print ang68
-            theta_tab = theta_tab[(ang68 < 0.32) & (ang68 > -0.66)]
-            ang68 = ang68[(ang68 < 0.32) & (ang68 > -0.66)]
+            print ang68
+            theta_tab = theta_tab[(ang68 < 0.31) & (ang68 > -0.66)]
+            ang68 = ang68[(ang68 < 0.31) & (ang68 > -0.66)]
             full_tab = np.logspace(np.log10(theta_tab[0]), np.log10(theta_tab[-1]), 100)
             #print np.column_stack((theta_tab, ang68))
             interp = np.log10(np.abs(interpola(np.log10(full_tab), np.log10(theta_tab), ang68)))

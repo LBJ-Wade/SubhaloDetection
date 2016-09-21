@@ -343,10 +343,11 @@ def fractional_extension(mx=100., cs=2.2*10**-26., annih='BB'):
                     sig68 = np.zeros_like(dis_tab)
                     for j, d in enumerate(dis_tab):
                         try:
+                            print 'Distance: ', d
                             sig68[j] = prof.Spatial_Extension(d, thresh_calc=False)
                         except:
                             pass
-                    #print sig68
+                    print sig68
                     dis_tab = dis_tab[(sig68 < 85.) & (sig68 > 0.01)]
                     sig68 = sig68[(sig68 < 85.) & (sig68 > 0.01)]
                     extension = interp1d(np.log10(dis_tab), np.log10(sig68), kind='linear',
