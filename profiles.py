@@ -185,8 +185,8 @@ class Subhalo(object):
                     return 2.
                 if 10. ** (self.J(dist, .1) - self.J_pointlike(dist)) > 0.68:
                     return 0.1
-            theta_tab = np.logspace(-3., np.log10(50.), 20)
 
+            theta_tab = np.logspace(-3., np.log10(50.), 20)
             ang68 = np.zeros(theta_tab.size)
             for i, theta in enumerate(theta_tab):
                 ang68[i] = 10. ** self.J(dist, theta) / 10. ** self.J_pointlike(dist) - 0.68

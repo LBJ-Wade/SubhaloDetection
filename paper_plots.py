@@ -305,8 +305,8 @@ def Jfactor_plots(m_sub=10.**7., dist=1.):
 def fractional_extension(mx=100., cs=2.2*10**-26., annih='BB'):
 
     thresh_tab = np.logspace(-10., -9., 5)
-    mass_tab = np.logspace(5., 7., 5)
-    gam_tab = np.logspace(-1, np.log10(1.45), 5)
+    mass_tab = np.logspace(5., 7., 7)
+    gam_tab = np.linspace(0., 1.45, 7)
 
     thres_p = np.zeros_like(thresh_tab)
     thres_p1 = np.zeros_like(thresh_tab)
@@ -344,7 +344,7 @@ def fractional_extension(mx=100., cs=2.2*10**-26., annih='BB'):
                     for j, d in enumerate(dis_tab):
                         try:
                             sig68[j] = prof.Spatial_Extension(d, thresh_calc=False)
-                        except ValueError:
+                        except:
                             pass
                     #print sig68
                     dis_tab = dis_tab[(sig68 < 85.) & (sig68 > 0.01)]
