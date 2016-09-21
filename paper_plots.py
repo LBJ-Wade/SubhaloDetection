@@ -306,7 +306,7 @@ def fractional_extension(mx=100., cs=2.2*10**-26., annih='BB'):
 
     thresh_tab = np.logspace(-10., -9., 5)
     mass_tab = np.logspace(5., 7., 7)
-    gam_tab = np.linspace(0., 1.4, 7)
+    gam_tab = np.linspace(.1, 1.3, 7)
 
     thres_p = np.zeros_like(thresh_tab)
     thres_p1 = np.zeros_like(thresh_tab)
@@ -344,7 +344,7 @@ def fractional_extension(mx=100., cs=2.2*10**-26., annih='BB'):
                     for j, d in enumerate(dis_tab):
                         try:
                             print 'Distance: ', d
-                            if 180. / np.pi * np.arctan(prof.max_radius / d) < 0.01:
+                            if 10. ** (prof.J(d, 0.01) / prof.J_pointlike(d)) < 0.68:
                                 raise ValueError
                             sig68[j] = prof.Spatial_Extension(d, thresh_calc=False)
                         except:
@@ -361,6 +361,10 @@ def fractional_extension(mx=100., cs=2.2*10**-26., annih='BB'):
 
                     count += 1
                 gamma_full = np.linspace(.01, 1.45, 100)
+                print 'Gamma Tabs'
+                print gam_p
+                print gam_p1
+                print gam_p3
                 gamma_interp_p = 10. ** interpola(np.log10(gamma_full), np.log10(gam_tab), np.log10(gam_p)) * \
                                   hw_prob_gamma(gamma_full)
                 gamma_interp_p1 = 10. ** interpola(np.log10(gamma_full), np.log10(gam_tab), np.log10(gam_p1)) * \
