@@ -68,6 +68,7 @@ class Subhalo(object):
                 except Warning:
                     dist_tab = np.logspace(-5., np.log10(self.los_max(th, dist) - dist * np.cos(th)), 100)
                     dist_tab = np.concatenate((dist * np.cos(th) - dist_tab, dist * np.cos(th) + dist_tab))
+                    dist_tab = dist_tab[dist_tab > 0.]
                     tab_d = 2. * np.pi * kpctocm * np.sin(th) * self.density(dist_tab) ** 2.0
                     hold = np.trapz(tab_d, dist_tab)
 
@@ -191,9 +192,9 @@ class Subhalo(object):
             ang68 = np.zeros(theta_tab.size)
             for i, theta in enumerate(theta_tab):
                 ang68[i] = 10. ** self.J(dist, theta) / 10. ** self.J_pointlike(dist) - 0.68
-            print ang68
-            theta_tab = theta_tab[(ang68 < 0.31) & (ang68 > -0.66)]
-            ang68 = ang68[(ang68 < 0.31) & (ang68 > -0.66)]
+            print np.column_stack((theta_tab, ang68))
+            theta_tab = theta_tab[(ang68 < 0.30) & (ang68 > -0.66)]
+            ang68 = ang68[(ang68 < 0.30) & (ang68 > -0.66)]
             full_tab = np.logspace(np.log10(theta_tab[0]), np.log10(theta_tab[-1]), 100)
             #print np.column_stack((theta_tab, ang68))
             interp = np.log10(np.abs(interpola(np.log10(full_tab), np.log10(theta_tab), ang68)))

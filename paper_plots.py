@@ -306,7 +306,7 @@ def fractional_extension(mx=100., cs=2.2*10**-26., annih='BB'):
 
     thresh_tab = np.logspace(-10., -9., 5)
     mass_tab = np.logspace(5., 7., 7)
-    gam_tab = np.linspace(0., 1.45, 7)
+    gam_tab = np.linspace(0., 1.4, 7)
 
     thres_p = np.zeros_like(thresh_tab)
     thres_p1 = np.zeros_like(thresh_tab)
@@ -380,7 +380,10 @@ def fractional_extension(mx=100., cs=2.2*10**-26., annih='BB'):
             m_p[o] = np.trapz(rb_interp_p * hw_prob_rb(rb_full, mass), rb_full)
             m_p1[o] = np.trapz(rb_interp_p1 * hw_prob_rb(rb_full, mass), rb_full)
             m_p3[o] = np.trapz(rb_interp_p3 * hw_prob_rb(rb_full, mass), rb_full)
-
+        print 'Mass Tabs: '
+        print m_p
+        print m_p1
+        print m_p3
         m_all = np.logspace(5, 7, 100)
         m_interp_p = 10. ** interp1d(np.log10(mass_tab), np.log10(m_p), kind='linear',
                                       bounds_error=False, fill_value='extrapolate')(np.log10(m_all))
@@ -393,6 +396,10 @@ def fractional_extension(mx=100., cs=2.2*10**-26., annih='BB'):
         thres_p1[i] = np.trapz(m_interp_p1 ** 3. * m_all ** (-1.9), m_all)
         thres_p3[i] = np.trapz(m_interp_p3 ** 3. * m_all ** (-1.9), m_all)
 
+    print 'Threshold Tabs: '
+    print thres_p
+    print thres_p1
+    print thres_p3
     thresh_full = np.logspace(-10., -9., 40)
     plt_ext1 = 10. * interpola(np.log10(thresh_full), np.log10(thresh_tab), np.log10(thres_p1 / thres_p))
     plt_ext3 = 10. * interpola(np.log10(thresh_full), np.log10(thresh_tab), np.log10(thres_p3 / thres_p))
@@ -835,21 +842,6 @@ def limit_comparison_all(plike=True, bmin=20., nobs=True):
     pl.savefig(figname)
     return
 
-
-def hw_prob_rb(rb, mass):
-    rb_norm = 10. ** (-4.24) * mass ** 0.459
-    sigma_c = 0.47
-    return (np.exp(- (np.log(rb / rb_norm) / (np.sqrt(2.0) * sigma_c)) ** 2.0) /
-            (np.sqrt(2. * np.pi) * sigma_c * rb))
-
-
-def hw_prob_gamma(gam):
-    sigma = 0.426
-    norm = 0.9
-    k = 0.1
-    mu = 0.85
-    y = -1. / k * np.log(1. - k * (gam - mu) / sigma)
-    return np.exp(- y ** 2. / 2.) / (np.sqrt(2. * np.pi) * (sigma - k * (gam - mu))) / norm
 
 
 def obtain_number_density():
