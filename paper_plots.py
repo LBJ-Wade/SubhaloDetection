@@ -322,8 +322,8 @@ def fractional_extension(mx=100., cs=2.2*10**-26., annih='BB'):
         for o,mass in enumerate(mass_tab):
             print '     Mass: {:.2e}'.format(mass)
             rb_med = np.log10(10. ** (-4.24) * mass ** 0.459)
-            rb_low = rb_med - 1.
-            rb_high = rb_med + 1.
+            rb_low = rb_med - .5
+            rb_high = rb_med + .5
             rb_list = np.logspace(rb_low, rb_high, 6)
             rb_p = np.zeros_like(rb_list)
             rb_p1 = np.zeros_like(rb_list)
@@ -344,6 +344,8 @@ def fractional_extension(mx=100., cs=2.2*10**-26., annih='BB'):
                     for j, d in enumerate(dis_tab):
                         try:
                             print 'Distance: ', d
+                            if 180. / np.pi * np.arctan(prof.max_radius / d) < 0.01:
+                                raise ValueError
                             sig68[j] = prof.Spatial_Extension(d, thresh_calc=False)
                         except:
                             pass
