@@ -302,125 +302,151 @@ def Jfactor_plots(m_sub=10.**7., dist=1.):
     return
 
 
-def fractional_extension(mx=100., cs=2.2*10**-26., annih='BB'):
+def fractional_extension(mx=100., cs=2.2*10**-26., annih='BB', calc=False):
 
     thresh_tab = np.logspace(-10., -9., 5)
-    mass_tab = np.logspace(5., 7., 7)
+    mass_tab = np.logspace(5., 7., 5)
     gam_tab = np.linspace(.1, 1.3, 7)
 
-    thres_p = np.zeros_like(thresh_tab)
-    thres_p1 = np.zeros_like(thresh_tab)
-    thres_p3 = np.zeros_like(thresh_tab)
+    thres_p = np.zeros(5)
+    thres_p1 = np.zeros(5)
+    thres_p3 = np.zeros(5)
 
     count = 0
 
-    for i, th in enumerate(thresh_tab):
-        print 'Threshold: {:.2e}'.format(th)
-        m_p = np.zeros_like(mass_tab)
-        m_p1 = np.zeros_like(mass_tab)
-        m_p3 = np.zeros_like(mass_tab)
-        for o,mass in enumerate(mass_tab):
-            print '     Mass: {:.2e}'.format(mass)
-            rb_med = np.log10(10. ** (-4.24) * mass ** 0.459)
-            rb_low = rb_med - .5
-            rb_high = rb_med + .5
-            rb_list = np.logspace(rb_low, rb_high, 6)
-            rb_p = np.zeros_like(rb_list)
-            rb_p1 = np.zeros_like(rb_list)
-            rb_p3 = np.zeros_like(rb_list)
-            for z, rb in enumerate(rb_list):
-                print '         Rb: {:.2e}'.format(rb)
-                gam_p = np.zeros_like(gam_tab)
-                gam_p1 = np.zeros_like(gam_tab)
-                gam_p3 = np.zeros_like(gam_tab)
-                for k, gam in enumerate(gam_tab):
-                    print '             Gamma: {:.2f}'.format(gam)
-                    prof = HW_Fit(mass, gam=gam, rb=rb)
-                    mod = Model(mx, cs, annih, mass, profile=2., m200=True, gam=gam, rb=rb)
+    if calc:
+        for i, th in enumerate(thresh_tab):
+            print 'Threshold: {:.2e}'.format(th)
+            m_p = np.zeros_like(mass_tab)
+            m_p1 = np.zeros_like(mass_tab)
+            m_p3 = np.zeros_like(mass_tab)
+            for o,mass in enumerate(mass_tab):
+                print '     Mass: {:.2e}'.format(mass)
+                rb_med = np.log10(10. ** (-4.24) * mass ** 0.459)
+                rb_low = rb_med - .5
+                rb_high = rb_med + .5
+                rb_list = np.logspace(rb_low, rb_high, 6)
+                rb_p = np.zeros_like(rb_list)
+                rb_p1 = np.zeros_like(rb_list)
+                rb_p3 = np.zeros_like(rb_list)
+                for z, rb in enumerate(rb_list):
+                    print '         Rb: {:.2e}'.format(rb)
+                    gam_p = np.zeros_like(gam_tab)
+                    gam_p1 = np.zeros_like(gam_tab)
+                    gam_p3 = np.zeros_like(gam_tab)
+                    for k, gam in enumerate(gam_tab):
+                        print '             Gamma: {:.2f}'.format(gam)
+                        prof = HW_Fit(mass, gam=gam, rb=rb)
+                        mod = Model(mx, cs, annih, mass, profile=2., m200=True, gam=gam, rb=rb)
 
-                    gam_p[k] = mod.d_max_point(th)
-                    dis_tab = np.logspace(-1., np.log10(gam_p[k]), 7)
-                    sig68 = np.zeros_like(dis_tab)
-                    for j, d in enumerate(dis_tab):
-                        try:
-                            print 'Distance: ', d
-                            if 10. ** (prof.J(d, 0.01) / prof.J_pointlike(d)) < 0.68:
-                                raise ValueError
-                            sig68[j] = prof.Spatial_Extension(d, thresh_calc=False)
-                        except:
-                            pass
-                    print sig68
-                    dis_tab = dis_tab[(sig68 < 85.) & (sig68 > 0.01)]
-                    sig68 = sig68[(sig68 < 85.) & (sig68 > 0.01)]
-                    extension = interp1d(np.log10(dis_tab), np.log10(sig68), kind='linear',
-                                         fill_value='extrapolate', bounds_error=False)
-                    gam_p1[k] = np.power(10, fminbound(lambda x: np.abs(10. ** extension(x) - 0.1), -3.,
-                                                       np.log10(gam_p[k])))
-                    gam_p3[k] = np.power(10, fminbound(lambda x: np.abs(10. ** extension(x) - 0.3), -3.,
-                                                       np.log10(gam_p[k])))
+                        gam_p[k] = mod.d_max_point(th)
+                        dis_tab = np.logspace(-1., np.log10(gam_p[k]), 7)
+                        sig68 = np.zeros_like(dis_tab)
+                        for j, d in enumerate(dis_tab):
+                            try:
+                                print 'Distance: ', d
+                                if 10. ** (prof.J(d, 0.01) / prof.J_pointlike(d)) < 0.68:
+                                    raise ValueError
+                                sig68[j] = prof.Spatial_Extension(d, thresh_calc=False)
+                            except:
+                                pass
+                        print sig68
+                        dis_tab = dis_tab[(sig68 < 85.) & (sig68 > 0.01)]
+                        sig68 = sig68[(sig68 < 85.) & (sig68 > 0.01)]
+                        extension = interp1d(np.log10(dis_tab), np.log10(sig68), kind='linear',
+                                             fill_value='extrapolate', bounds_error=False)
+                        gam_p1[k] = np.power(10, fminbound(lambda x: np.abs(10. ** extension(x) - 0.1), -3.,
+                                                           np.log10(gam_p[k])))
+                        gam_p3[k] = np.power(10, fminbound(lambda x: np.abs(10. ** extension(x) - 0.3), -3.,
+                                                           np.log10(gam_p[k])))
 
-                    count += 1
-                gamma_full = np.linspace(.01, 1.45, 100)
-                print 'Gamma Tabs'
-                print gam_p
-                print gam_p1
-                print gam_p3
-                gamma_interp_p = 10. ** interpola(np.log10(gamma_full), np.log10(gam_tab), np.log10(gam_p)) * \
-                                  hw_prob_gamma(gamma_full)
-                gamma_interp_p1 = 10. ** interpola(np.log10(gamma_full), np.log10(gam_tab), np.log10(gam_p1)) * \
-                                  hw_prob_gamma(gamma_full)
-                gamma_interp_p3 = 10. ** interpola(np.log10(gamma_full), np.log10(gam_tab), np.log10(gam_p3)) * \
-                                  hw_prob_gamma(gamma_full)
+                        count += 1
+                    gamma_full = np.linspace(.01, 1.45, 100)
+                    print 'Gamma Tabs'
+                    print gam_p
+                    print gam_p1
+                    print gam_p3
+                    gamma_interp_p = 10. ** interpola(np.log10(gamma_full), np.log10(gam_tab), np.log10(gam_p)) * \
+                                      hw_prob_gamma(gamma_full)
+                    gamma_interp_p1 = 10. ** interpola(np.log10(gamma_full), np.log10(gam_tab), np.log10(gam_p1)) * \
+                                      hw_prob_gamma(gamma_full)
+                    gamma_interp_p3 = 10. ** interpola(np.log10(gamma_full), np.log10(gam_tab), np.log10(gam_p3)) * \
+                                      hw_prob_gamma(gamma_full)
 
-                rb_p[z] = np.trapz(gamma_interp_p, gamma_full)
-                rb_p1[z] = np.trapz(gamma_interp_p1, gamma_full)
-                rb_p3[z] = np.trapz(gamma_interp_p3, gamma_full)
+                    rb_p[z] = np.trapz(gamma_interp_p, gamma_full)
+                    rb_p1[z] = np.trapz(gamma_interp_p1, gamma_full)
+                    rb_p3[z] = np.trapz(gamma_interp_p3, gamma_full)
 
-            rb_full = np.logspace(rb_low, rb_high, 100)
-            rb_interp_p = 10. ** interp1d(np.log10(rb_list), np.log10(rb_p), kind='linear',
-                                           bounds_error=False, fill_value='extrapolate')(np.log10(rb_full))
-            rb_interp_p1 = 10. ** interp1d(np.log10(rb_list), np.log10(rb_p1), kind='linear',
-                                              bounds_error=False, fill_value='extrapolate')(np.log10(rb_full))
-            rb_interp_p3 = 10. ** interp1d(np.log10(rb_list), np.log10(rb_p3), kind='linear',
-                                              bounds_error=False, fill_value='extrapolate')(np.log10(rb_full))
-            m_p[o] = np.trapz(rb_interp_p * hw_prob_rb(rb_full, mass), rb_full)
-            m_p1[o] = np.trapz(rb_interp_p1 * hw_prob_rb(rb_full, mass), rb_full)
-            m_p3[o] = np.trapz(rb_interp_p3 * hw_prob_rb(rb_full, mass), rb_full)
-        print 'Mass Tabs: '
-        print m_p
-        print m_p1
-        print m_p3
-        m_all = np.logspace(5, 7, 100)
-        m_interp_p = 10. ** interp1d(np.log10(mass_tab), np.log10(m_p), kind='linear',
-                                      bounds_error=False, fill_value='extrapolate')(np.log10(m_all))
-        m_interp_p1 = 10. ** interp1d(np.log10(mass_tab), np.log10(m_p1), kind='linear',
-                                       bounds_error=False, fill_value='extrapolate')(np.log10(m_all))
-        m_interp_p3 = 10. ** interp1d(np.log10(mass_tab), np.log10(m_p3), kind='linear',
-                                       bounds_error=False, fill_value='extrapolate')(np.log10(m_all))
+                rb_full = np.logspace(rb_low, rb_high, 100)
+                rb_interp_p = 10. ** interp1d(np.log10(rb_list), np.log10(rb_p), kind='linear',
+                                               bounds_error=False, fill_value='extrapolate')(np.log10(rb_full))
+                rb_interp_p1 = 10. ** interp1d(np.log10(rb_list), np.log10(rb_p1), kind='linear',
+                                                  bounds_error=False, fill_value='extrapolate')(np.log10(rb_full))
+                rb_interp_p3 = 10. ** interp1d(np.log10(rb_list), np.log10(rb_p3), kind='linear',
+                                                  bounds_error=False, fill_value='extrapolate')(np.log10(rb_full))
+                m_p[o] = np.trapz(rb_interp_p * hw_prob_rb(rb_full, mass), rb_full)
+                m_p1[o] = np.trapz(rb_interp_p1 * hw_prob_rb(rb_full, mass), rb_full)
+                m_p3[o] = np.trapz(rb_interp_p3 * hw_prob_rb(rb_full, mass), rb_full)
+            print 'Mass Tabs: '
+            print m_p
+            print m_p1
+            print m_p3
+            m_all = np.logspace(5, 7, 100)
+            m_interp_p = 10. ** interp1d(np.log10(mass_tab), np.log10(m_p), kind='linear',
+                                          bounds_error=False, fill_value='extrapolate')(np.log10(m_all))
+            m_interp_p1 = 10. ** interp1d(np.log10(mass_tab), np.log10(m_p1), kind='linear',
+                                           bounds_error=False, fill_value='extrapolate')(np.log10(m_all))
+            m_interp_p3 = 10. ** interp1d(np.log10(mass_tab), np.log10(m_p3), kind='linear',
+                                           bounds_error=False, fill_value='extrapolate')(np.log10(m_all))
 
-        thres_p[i] = np.trapz(m_interp_p ** 3. * m_all ** (-1.9), m_all)
-        thres_p1[i] = np.trapz(m_interp_p1 ** 3. * m_all ** (-1.9), m_all)
-        thres_p3[i] = np.trapz(m_interp_p3 ** 3. * m_all ** (-1.9), m_all)
+            thres_p[i] = np.trapz(m_interp_p ** 3. * m_all ** (-1.9), m_all)
+            thres_p1[i] = np.trapz(m_interp_p1 ** 3. * m_all ** (-1.9), m_all)
+            thres_p3[i] = np.trapz(m_interp_p3 ** 3. * m_all ** (-1.9), m_all)
+    else:
+        file = np.loadtxt(MAIN_PATH + '/SubhaloDetection/Data/Fractional_Ext.dat')
+        thresh_tab = np.unique(file[:, 0])
+        for i in range(thresh_tab.size):
+            print 'Mass Tabs: '
+            m_p = file[file[:, 1] == 0.0][i][2:]
+            m_p1 = file[file[:, 1] == 0.1][i][2:]
+            m_p3 = file[file[:, 1] == 0.3][i][2:]
+            print m_p
+            print m_p1
+            print m_p3
+            m_all = np.logspace(5, 7, 100)
+            m_interp_p = 10. ** interp1d(np.log10(mass_tab), np.log10(m_p), kind='linear',
+                                         bounds_error=False, fill_value='extrapolate')(np.log10(m_all))
+            m_interp_p1 = 10. ** interp1d(np.log10(mass_tab), np.log10(m_p1), kind='linear',
+                                          bounds_error=False, fill_value='extrapolate')(np.log10(m_all))
+            m_interp_p3 = 10. ** interp1d(np.log10(mass_tab), np.log10(m_p3), kind='linear',
+                                          bounds_error=False, fill_value='extrapolate')(np.log10(m_all))
+
+            thres_p[i] = np.trapz(m_interp_p ** 3. * m_all ** (-1.9), m_all)
+            thres_p1[i] = np.trapz(m_interp_p1 ** 3. * m_all ** (-1.9), m_all)
+            thres_p3[i] = np.trapz(m_interp_p3 ** 3. * m_all ** (-1.9), m_all)
 
     print 'Threshold Tabs: '
     print thres_p
     print thres_p1
     print thres_p3
     thresh_full = np.logspace(-10., -9., 40)
-    plt_ext1 = 10. * interpola(np.log10(thresh_full), np.log10(thresh_tab), np.log10(thres_p1 / thres_p))
-    plt_ext3 = 10. * interpola(np.log10(thresh_full), np.log10(thresh_tab), np.log10(thres_p3 / thres_p))
-
+    plt_ext1 = 10. ** interpola(np.log10(thresh_full), np.log10(thresh_tab), np.log10(thres_p1 / thres_p))
+    plt_ext3 = 10. ** interpola(np.log10(thresh_full), np.log10(thresh_tab), np.log10(thres_p3 / thres_p))
     fig = plt.figure(figsize=(8., 6.))
     ax = plt.gca()
     ax.set_xscale("log")
     ax.set_yscale('log')
 
     pl.xlim([10 ** -10., 10. ** -9.])
-    pl.ylim([0., .5])
-    plt.plot(thresh_full, plt_ext1, lw=1, color='Purple')
-    plt.plot(thresh_full, plt_ext3, lw=1, color='goldenrod')
-    pl.xlabel(r'Min Flux [$cm^{{-2}}s^{{-1}}$]', fontsize=20)
-    pl.ylabel(r'Fraction with $\sigma_{{68}} > $', fontsize=20)
+    pl.ylim([10**-2., .5])
+    plt.plot(thresh_full, plt_ext1, lw=2, color='Purple')
+    plt.plot(thresh_full, plt_ext3, lw=2, color='goldenrod')
+    pl.xlabel(r'$\Phi_{{min}}$ [$cm^{{-2}}s^{{-1}}$]', fontsize=20)
+    pl.ylabel(r'$N_{{obs}}(\sigma_{{68}} > \sigma_{{min}}) / N_{{obs}}$', fontsize=20)
+    pl.text(9.*10**-10., 1.4*10**-2, r'$\sigma_{{min}} = 0.1^{{\circ}}$', fontsize=14, color='purple',
+            verticalalignment='bottom', horizontalalignment='right')
+    pl.text(9. * 10 ** -10., 1.1*10**-2, r'$\sigma_{{min}} = 0.3^{{\circ}}$', fontsize=14, color='goldenrod',
+            verticalalignment='bottom', horizontalalignment='right')
     folder = MAIN_PATH + "/SubhaloDetection/Data/"
     fig_name = folder + '../Plots/' + 'Fractional_w_SpatialExtension.pdf'
     fig.set_tight_layout(True)

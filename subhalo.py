@@ -201,15 +201,16 @@ class Model(object):
         jf = 10. ** self.subhalo.J_pointlike(1.)
         return np.sqrt(pre_factor * n_gamma * jf / threshold)
 
-    def D_max_extend(self, fixed_thresh=False, flux=10**-10):
+    def D_max_extend(self, fixed_thresh=True, flux=10**-9):
         """
         Calculates the maximum distance a spatially extended subhalo can be to still be observable
         :return: distance in kpc
         """
-        max_dist = self.d_max_point()
-        dist_tab = np.logspace(-1., np.log10(max_dist), 15)
-        flux_diff_tab = np.zeros(dist_tab.size)
+
         if not fixed_thresh:
+            max_dist = self.d_max_point()
+            dist_tab = np.logspace(-1., np.log10(max_dist), 15)
+            flux_diff_tab = np.zeros(dist_tab.size)
             for i, d in enumerate(dist_tab):
                 flux_diff_tab[i] = np.abs(self.Total_Flux(d) - self.min_Flux(d))
             cent = np.argmin(flux_diff_tab)
@@ -222,7 +223,11 @@ class Model(object):
                                   bounds_error=False)(full_dist_tab)
             d_max = full_dist_tab[np.argmin(interp)]
             return d_max
-        return d_max
+        else:
+            max_dist = self.d_max_point(threshold=flux)
+            se = fminbound(lambda x: np.abs(10 ** self.subhalo.J(10. ** x, 0.31) -
+                                            0.68 * 10 ** self.subhalo.J_pointlike(10 ** x)), -3., np.log10(max_dist))
+            return 10. ** se
 
     def Determine_Gamma(self):
         """
