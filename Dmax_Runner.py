@@ -11,8 +11,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--dmax', default=True)
 parser.add_argument('--nobs', default=True)
 parser.add_argument('--tag', default='_')
-parser.add_argument('--mass', default=15, type=float)
-parser.add_argument('--pointlike', default=False)
+parser.add_argument('--mass', default=50, type=float)
+parser.add_argument('--pointlike', default=True)
 parser.add_argument('--cross_sec_low', default=-27., type=float)  # In log10
 parser.add_argument('--cross_sec_high', default=-23., type=float)  # In log10
 parser.add_argument('--annih_prod', default='BB')
@@ -27,10 +27,10 @@ parser.add_argument('--arxiv_num', default=13131729, type=int) # [10070438, 1313
 parser.add_argument('--b_min', default=20., type=float)
 parser.add_argument('--m_num', default=20, type=int)
 parser.add_argument('--c_num', default=20, type=int)
-parser.add_argument('--n_runs', type=int, default=30)
-parser.add_argument('--thresh', default=7.*10.**-10., type=float)
+parser.add_argument('--n_runs', type=int, default=15)
+parser.add_argument('--thresh', default=7.*10.**-10., type=float) #Typical Value 7 * 10 ** 10
 parser.add_argument('--M200', default=True)
-parser.add_argument('--gamma', default=0.85, type=float)
+parser.add_argument('--gamma', default=0.74, type=float)
 parser.add_argument('--stiff_rb', default=False)
 parser.add_argument('--path', default=os.environ['SUBHALO_MAIN_PATH'] + '/SubhaloDetection/')
 

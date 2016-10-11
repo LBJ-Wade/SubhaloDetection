@@ -321,3 +321,12 @@ def do_kdtree(combined_x_y_arrays,points):
     return indexes
 
 
+def sci_note(num):
+    br = num.find('e')
+    first = num[:br]
+    if num[br + 2] == '0':
+        last = num[-1]
+    else:
+        last = num[br + 2:]
+    return first, last
+

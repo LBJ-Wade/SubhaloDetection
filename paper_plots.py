@@ -31,7 +31,7 @@ def profile_comparison(plot_hw=True):
     minrad = -3.
     mass_list = [10. ** 4., 10 ** 5., 10 ** 6., 10 ** 7.]
     rb_list = np.logspace(-4, np.log10(1.), 20)
-    gamma_list = np.linspace(0.2, 0.85 + 0.351 / 0.861 - 0.1, 20)
+    gamma_list = np.linspace(0.2, 1.45, 20)
     fig = plt.figure()
     f, ax = plt.subplots(2, 2, sharex='col', sharey='row')
 
@@ -58,43 +58,46 @@ def profile_comparison(plot_hw=True):
 
 
         r1_e_tr = np.logspace(minrad, np.log10(e_tr.max_radius), 100)
-        r2_e_tr = np.logspace(np.log10(e_tr.max_radius), np.log10(e_tr.virial_radius), 100)
         r_n_ntr = np.logspace(minrad, np.log10(n_ntr.max_radius), 100)
-        r2_n_ntr = np.logspace(np.log10(n_ntr.max_radius), np.log10(n_ntr.virial_radius), 20)
 
         den_e_tr1 = e_tr.density(r1_e_tr) * GeVtoSolarM * kpctocm ** 3.
-        den_e_tr2 = e_tr.density(r2_e_tr) * GeVtoSolarM * kpctocm ** 3.
         den_n_ntr = n_ntr.density(r_n_ntr) * GeVtoSolarM * kpctocm ** 3.
-        den_n_ntr2 = n_ntr.density(r2_n_ntr) * GeVtoSolarM * kpctocm ** 3.
-
 
         ax[i%2, ii].set_xscale("log")
         ax[i%2, ii].set_yscale('log')
-        ax[i%2, ii].set_xlim([10 ** minrad, 2. * 10. ** 1.])
+        ax[i%2, ii].set_xlim([10 ** minrad, 20.])
         ax[i%2, ii].plot(r1_e_tr, den_e_tr1, lw=2, color='Black')
-        ax[i%2, ii].plot(r2_e_tr, den_e_tr2, '--', lw=2, ms=1, color='Black')
+        #ax[i%2, ii].plot(r2_e_tr, den_e_tr2, '--', lw=2, ms=1, color='Black')
         ax[i%2, ii].plot(r_n_ntr, den_n_ntr, lw=2, color='Magenta')
-        ax[i%2, ii].plot(r2_n_ntr, den_n_ntr2, '--', ms=1, lw=2, color='Magenta')
+        #ax[i%2, ii].plot(r2_n_ntr, den_n_ntr2, '--', ms=1, lw=2, color='Magenta')
         ax[i%2, ii].plot(r_hw, hw_marg, lw=2, color='Blue')
-        ax[i%2, ii].text(2 * 10**-2, 10**10, r'Subhalo Mass: {:.1e} $M_\odot$'.format(m_sub), fontsize=10)
-        ax[i%2, ii].set_yticklabels(['', '', '', r'$10^4$', '', r'$10^6$', '', r'$10^8$', '', r'$10^{10}$', ''])
+        ax[i % 2, ii].axvline(x=r1_e_tr[-1], ymin=0,
+                              ymax=(np.log10(den_e_tr1[-1]) - np.log10(2 * 10 ** 4.)) /
+                                   (11. - np.log10(2. * 10 ** 4.)),
+                              linewidth=2, color='Black')
+        m1, m2 = sci_note('{:.1e}'.format(m_sub))
+
+        ax[i % 2, ii].text(9, 10**10, r'Subhalo Mass: ${} \times 10^{} M_\odot$'.format(m1, m2),
+                           fontsize=12, ha='right')
+        ax[i%2, ii].set_yticklabels(['', r'$10^4$', '', r'$10^6$', '', r'$10^8$', '', r'$10^{10}$', ''])
 
         if i % 2 == 1:
             ax[i % 2, ii].set_xlabel('Radius [kpc]', fontsize=16)
             if i == 1:
-                ax[i % 2, ii].set_xticklabels(['', r'$10^{-2}$', r'$10^{-1}$', '1', r'$10$'])
+                ax[i % 2, ii].set_xticklabels(['', '', r'$10^{-2}$', r'$10^{-1}$', '1', r'$10$'])
             else:
-                ax[i % 2, ii].set_xticklabels(['', '', r'$10^{-1}$', '1', r'$10$'])
+                pass
+                ax[i % 2, ii].set_xticklabels(['', '', r'$10^{-2}$', r'$10^{-1}$', '1', r'$10$'])
         if ii == 0:
-            ax[i%2, ii].set_ylabel(r'$\rho [M_\odot / kpc^3$]', fontsize=16)
+            ax[i%2, ii].set_ylabel(r'$\rho$ ' + r'[$M_\odot$ / kpc^3]', fontsize=16)
             if i == 0:
-                ax[i%2, ii].text(.5, 10**8.5, 'Bertoni et al.', fontsize=10, color='k')
-                ax[i%2, ii].text(.5, 10 ** 7.8, 'Schoonenberg et al.', fontsize=10, color='Magenta')
-                ax[i%2, ii].text(.5, 10 ** 7., 'This Work', fontsize=10, color='blue')
-        ax[i%2, ii].set_ylim([10. ** 3., 10. ** 11.])
-    pl.suptitle('Profile Comparison', fontsize=18)
+                ax[i%2, ii].text(.4, 10**8.5, 'Bertoni et al.', fontsize=10, color='k')
+                ax[i%2, ii].text(.4, 10 ** 7.8, 'Schoonenberg et al.', fontsize=10, color='Magenta')
+                ax[i%2, ii].text(.4, 10 ** 7., 'This Work', fontsize=10, color='blue')
+        ax[i%2, ii].set_ylim([2. * 10. ** 4., 10. ** 11.])
+    #pl.suptitle('Profile Comparison', fontsize=20)
     folder = MAIN_PATH + "/SubhaloDetection/Data/"
-    fig_name = folder + '../Plots/' + 'Multi_plot_Density_Comparison_msubhalo_{:.2e}'.format(m_sub) + \
+    fig_name = folder + '../Plots/' + 'Multi_plot_Density_Comparison_msubhalo_' + \
         '_BLH_Bertone_HW.pdf'
     plt.subplots_adjust(wspace=0.0, hspace=0.)
     fig.set_tight_layout(True)
@@ -105,15 +108,20 @@ def profile_comparison(plot_hw=True):
 def subhalo_comparison():
     rb_list = np.logspace(-3, np.log10(1.), 20)
     gamma_list = np.linspace(0.2, 0.85 + 0.351 / 0.861 - 0.1, 20)
-    #via_lac = np.loadtxt(MAIN_PATH + '/SubhaloDetection/Data/Misc_Items/ViaLacteaII_Useable_Subhalos.dat')
+    via_lac = np.loadtxt(MAIN_PATH + '/SubhaloDetection/Data/Misc_Items/ViaLacteaII_Useable_Subhalos.dat')
     elvis = np.loadtxt(MAIN_PATH + '/SubhaloDetection/Data/Misc_Items/ELVIS_Useable_Subhalos.dat')
-    vl_num = [19557, 19643]
-    elv_num = [20580, 8384]
+    vl_num = [5266, 5216]
+    elv_num = [3444, 20801]
     sub_list = []
     for i in vl_num:
-        sub_list.append(via_lactea[i])
+        sub_list.append(via_lac[i])
+        print 'Via Lactea:'
+        print via_lac[i]
     for i in elv_num:
         sub_list.append(elvis[i])
+        print 'ELVIS:'
+        print elvis[i]
+
 
     minrad = -2.
 
@@ -175,7 +183,8 @@ def subhalo_comparison():
         ax[i%2, ii].plot(r_hw, m_inr_h, lw=2, color='Blue')
         #ax[i % 2, ii].plot(r_hw, m_inr_h2, lw=1, color='Blue')
         #ax[i % 2, ii].plot(r_hw, hw_marg, lw=1, color='Blue')
-        ax[i%2, ii].text(9., 2*10**4, r'Subhalo Mass: {:.1e} $M_\odot$'.format(m_sub),
+        m1, m2 = sci_note('{:.1e}'.format(m_sub))
+        ax[i%2, ii].text(7., 2*10**4, r'Subhalo Mass: ${} \times 10^{} M_\odot$'.format(m1,m2),
                          fontsize=10, ha='right',va='bottom')
         ax[i%2, ii].set_yticklabels(['', r'$10^4$', r'$10^5$', r'$10^6$', r'$10^7$', '', ''])
         ax[i%2, ii].plot(rmax, m_at_rmax, '*', ms=10, mec='Red', mfc='Red')
@@ -193,9 +202,9 @@ def subhalo_comparison():
                 ax[i%2, ii].text(2 * 10**-2., 10**7.3, 'Schoonenberg et al.', fontsize=10, color='Magenta')
                 ax[i%2, ii].text(2 * 10**-2., 10**7., 'This Work', fontsize=10, color='blue')
         ax[i%2, ii].set_ylim([10. ** 4., 10. ** 8.])
-    pl.suptitle('Profile Comparison', fontsize=18)
+    #pl.suptitle('Profile Comparison', fontsize=20)
     folder = MAIN_PATH + "/SubhaloDetection/Data/"
-    fig_name = folder + '../Plots/' + 'Sim_Comparison_msubhalo_BLH_Bertone_HW.pdf'
+    fig_name = folder + '../Plots/PaperPlots/' + 'Sim_Comparison_msubhalo_BLH_Bertone_HW.pdf'
     plt.subplots_adjust(wspace=0.0, hspace=0.)
     fig.set_tight_layout(True)
     pl.savefig(fig_name)
@@ -302,7 +311,7 @@ def Jfactor_plots(m_sub=10.**7., dist=1.):
     return
 
 
-def fractional_extension(mx=100., cs=2.2*10**-26., annih='BB', calc=False):
+def fractional_extension(mx=10., cs=2.2*10**-26., annih='BB', calc=False):
 
     thresh_tab = np.logspace(-10., -9., 5)
     mass_tab = np.logspace(5., 7., 5)
@@ -311,6 +320,9 @@ def fractional_extension(mx=100., cs=2.2*10**-26., annih='BB', calc=False):
     thres_p = np.zeros(5)
     thres_p1 = np.zeros(5)
     thres_p3 = np.zeros(5)
+    thres_pp = np.zeros(5)
+    thres_pp1 = np.zeros(5)
+    thres_pp3 = np.zeros(5)
 
     count = 0
 
@@ -322,7 +334,7 @@ def fractional_extension(mx=100., cs=2.2*10**-26., annih='BB', calc=False):
             m_p3 = np.zeros_like(mass_tab)
             for o,mass in enumerate(mass_tab):
                 print '     Mass: {:.2e}'.format(mass)
-                rb_med = np.log10(10. ** (-4.24) * mass ** 0.459)
+                rb_med = np.log10(10. ** (-4.151) * mass ** 0.448)
                 rb_low = rb_med - .5
                 rb_high = rb_med + .5
                 rb_list = np.logspace(rb_low, rb_high, 6)
@@ -406,13 +418,13 @@ def fractional_extension(mx=100., cs=2.2*10**-26., annih='BB', calc=False):
         file = np.loadtxt(MAIN_PATH + '/SubhaloDetection/Data/Fractional_Ext.dat')
         thresh_tab = np.unique(file[:, 0])
         for i in range(thresh_tab.size):
-            print 'Mass Tabs: '
+            print 'Mass Tabs 100 GeV: '
             m_p = file[file[:, 1] == 0.0][i][2:]
             m_p1 = file[file[:, 1] == 0.1][i][2:]
             m_p3 = file[file[:, 1] == 0.3][i][2:]
-            print m_p
-            print m_p1
-            print m_p3
+            # print m_p
+            # print m_p1
+            # print m_p3
             m_all = np.logspace(5, 7, 100)
             m_interp_p = 10. ** interp1d(np.log10(mass_tab), np.log10(m_p), kind='linear',
                                          bounds_error=False, fill_value='extrapolate')(np.log10(m_all))
@@ -425,13 +437,38 @@ def fractional_extension(mx=100., cs=2.2*10**-26., annih='BB', calc=False):
             thres_p1[i] = np.trapz(m_interp_p1 ** 3. * m_all ** (-1.9), m_all)
             thres_p3[i] = np.trapz(m_interp_p3 ** 3. * m_all ** (-1.9), m_all)
 
-    print 'Threshold Tabs: '
-    print thres_p
-    print thres_p1
-    print thres_p3
+        file2 = np.loadtxt(MAIN_PATH + '/SubhaloDetection/Data/Fractional_Ext_10GeV.dat')
+        #thresh_tab = np.unique(file[:, 0])
+        for i in range(thresh_tab.size):
+            print 'Mass Tabs 10 GeV: '
+            m_pp = file2[file2[:, 1] == 0.0][i][2:]
+            m_pp1 = file2[file2[:, 1] == 0.1][i][2:]
+            m_pp3 = file2[file2[:, 1] == 0.3][i][2:]
+            # print m_pp
+            # print m_pp1
+            # print m_pp3
+            #m_all = np.logspace(5, 7, 100)
+            m_interp_pp = 10. ** interp1d(np.log10(mass_tab), np.log10(m_pp), kind='linear',
+                                         bounds_error=False, fill_value='extrapolate')(np.log10(m_all))
+            m_interp_pp1 = 10. ** interp1d(np.log10(mass_tab), np.log10(m_pp1), kind='linear',
+                                          bounds_error=False, fill_value='extrapolate')(np.log10(m_all))
+            m_interp_pp3 = 10. ** interp1d(np.log10(mass_tab), np.log10(m_pp3), kind='linear',
+                                          bounds_error=False, fill_value='extrapolate')(np.log10(m_all))
+
+            thres_pp[i] = np.trapz(m_interp_pp ** 3. * m_all ** (-1.9), m_all)
+            thres_pp1[i] = np.trapz(m_interp_pp1 ** 3. * m_all ** (-1.9), m_all)
+            thres_pp3[i] = np.trapz(m_interp_pp3 ** 3. * m_all ** (-1.9), m_all)
+
+    #print 'Threshold Tabs: '
+    #print thres_p
+    #print thres_p1
+    #print thres_p3
+    print 'Mass Comparison: ', np.column_stack((thres_p3 / thres_p, thres_pp3 / thres_pp))
     thresh_full = np.logspace(-10., -9., 40)
     plt_ext1 = 10. ** interpola(np.log10(thresh_full), np.log10(thresh_tab), np.log10(thres_p1 / thres_p))
     plt_ext3 = 10. ** interpola(np.log10(thresh_full), np.log10(thresh_tab), np.log10(thres_p3 / thres_p))
+    plt_ext3_10 = 10. ** interpola(np.log10(thresh_full), np.log10(thresh_tab), np.log10(thres_pp3 / thres_pp))
+    plt_ext1_10 = 10. ** interpola(np.log10(thresh_full), np.log10(thresh_tab), np.log10(thres_pp1 / thres_pp))
     fig = plt.figure(figsize=(8., 6.))
     ax = plt.gca()
     ax.set_xscale("log")
@@ -441,12 +478,23 @@ def fractional_extension(mx=100., cs=2.2*10**-26., annih='BB', calc=False):
     pl.ylim([10**-2., .5])
     plt.plot(thresh_full, plt_ext1, lw=2, color='Purple')
     plt.plot(thresh_full, plt_ext3, lw=2, color='goldenrod')
+    plt.plot(thresh_full, plt_ext3_10, '--', lw=2, color='goldenrod')
+    plt.plot(thresh_full, plt_ext1_10, '--', lw=2, color='purple')
     pl.xlabel(r'$\Phi_{{min}}$ [$cm^{{-2}}s^{{-1}}$]', fontsize=20)
     pl.ylabel(r'$N_{{obs}}(\sigma_{{68}} > \sigma_{{min}}) / N_{{obs}}$', fontsize=20)
     pl.text(9.*10**-10., 1.4*10**-2, r'$\sigma_{{min}} = 0.1^{{\circ}}$', fontsize=14, color='purple',
             verticalalignment='bottom', horizontalalignment='right')
     pl.text(9. * 10 ** -10., 1.1*10**-2, r'$\sigma_{{min}} = 0.3^{{\circ}}$', fontsize=14, color='goldenrod',
             verticalalignment='bottom', horizontalalignment='right')
+
+    pl.text(3. * 10 ** -10., 5.5 * 10 ** -2, r'100 GeV', fontsize=14, color='k',
+            verticalalignment='bottom', horizontalalignment='right', rotation = 20)
+    pl.text(3. * 10 ** -10., 1.3 * 10 ** -2, r'10 GeV', fontsize=14, color='k',
+            verticalalignment='bottom', horizontalalignment='right', rotation=22)
+    pl.text(1.4 * 10 ** -10., .15, r'100 GeV', fontsize=14, color='k',
+            verticalalignment='bottom', horizontalalignment='right', rotation=16)
+    pl.text(1.4 * 10 ** -10., .0515, r'10 GeV', fontsize=14, color='k',
+            verticalalignment='bottom', horizontalalignment='right', rotation=18)
     folder = MAIN_PATH + "/SubhaloDetection/Data/"
     fig_name = folder + '../Plots/' + 'Fractional_w_SpatialExtension.pdf'
     fig.set_tight_layout(True)
@@ -455,30 +503,30 @@ def fractional_extension(mx=100., cs=2.2*10**-26., annih='BB', calc=False):
 
 
 def hw_prob_rb(rb, mass):
-    rb_norm = 10. ** (-4.24) * mass ** 0.459
-    sigma_c = 0.47
+    rb_norm = 10. ** (-3.945) * mass ** 0.421
+    sigma_c = 0.496
     return (np.exp(- (np.log(rb / rb_norm) / (np.sqrt(2.0) * sigma_c)) ** 2.0) /
             (np.sqrt(2. * np.pi) * sigma_c * rb))
 
 
 def hw_prob_gamma(gam):
     # norm inserted b/c integration truncated on region [0, 1.45]
-    sigma = 0.426
+    sigma = 0.42
     k = 0.1
-    mu = 0.85
+    mu = 0.74
     y = -1. / k * np.log(1. - k * (gam - mu) / sigma)
     norm = quad(lambda x: np.exp(- -1. / k * np.log(1. - k * (x - mu) / sigma) ** 2. / 2.)
                           / (np.sqrt(2. * np.pi) * (sigma - k * (x - mu))), 0., 1.45)[0]
     return np.exp(- y ** 2. / 2.) / (np.sqrt(2. * np.pi) * (sigma - k * (gam - mu))) / norm
 
 def sigma_68(mx=100., cs=2.2*10**-26., annih='BB'):
-    hw7 = HW_Fit(10**7, gam=0.85)
+    hw7 = HW_Fit(10**7, gam=0.74)
     model_hw7 = Model(mx, cs, annih, 10**7, profile=2, m200=True, rb=hw7.rb)
 
-    hw6 = HW_Fit(10**6, gam=0.85)
+    hw6 = HW_Fit(10**6, gam=0.74)
     model_hw6 = Model(mx, cs, annih, 10**6, profile=2, m200=True, rb=hw6.rb)
 
-    hw5 = HW_Fit(10**5, gam=0.85)
+    hw5 = HW_Fit(10**5, gam=0.74)
     model_hw5 = Model(mx, cs, annih, 10**5, profile=2, m200=True, rb=hw5.rb)
 
     d_list = np.logspace(-1., 1., 10)
@@ -688,7 +736,7 @@ def limit_comparison(plike=True, bmin=20., annih_prod='BB', nobs=True):
               annih_prod + '_bmin_{:.0f}'.format(bmin) + ntag + '.pdf'
 
     pl.xlabel(r'$m_\chi$   [GeV]', fontsize=20)
-    pl.ylabel(r'$\left< \sigma v \right>$   [$cm^3 s^{{-1}}$]', fontsize=20)
+    pl.ylabel(r'$\left< \sigma v \right>$   [$\textrm{cm}^3 \textrm{s}^{{-1}}$]', fontsize=20)
     fig.set_tight_layout(True)
     pl.savefig(figname)
     return
@@ -702,28 +750,13 @@ def limit_comparison_extended(bmin=20., annih_prod='BB', nobs=False):
         ntag = '_Nobs_False_'
     dir = MAIN_PATH + '/SubhaloDetection/Data/'
 
-    # hw_low = np.loadtxt(dir + 'Limits_' + ptag + '_HW_Truncate_False_alpha_0.16_annih_prod_' +
-    #                      annih_prod + '_arxiv_num_13131729_bmin_{:.1f}'.format(bmin) +
-    #                     '_Mlow_-5.000__Nobs_True_.dat')
-    # hw_high = np.loadtxt(dir + 'Limits_' + ptag + '_HW_Truncate_False_alpha_0.16_annih_prod_' +
-    #                      annih_prod + '_arxiv_num_13131729_bmin_{:.1f}'.format(bmin) +
-    #                      '_Mlow_5.000__Nobs_True_.dat')
-    # hw_low_null = np.loadtxt(dir + 'Limits_' + ptag + '_HW_Truncate_False_alpha_0.16_annih_prod_' +
-    #                     annih_prod + '_arxiv_num_13131729_bmin_{:.1f}'.format(bmin) +
-    #                     '_Mlow_-5.000__Nobs_False_.dat')
-    hw_high_null = np.loadtxt(dir + 'Limits_' + ptag + '_HW_Truncate_False_alpha_0.16_annih_prod_' +
-                         annih_prod + '_arxiv_num_13131729_bmin_{:.1f}'.format(bmin) +
-                         '_Mlow_5.000__Nobs_False_.dat')
-    hw_high_restrict = np.loadtxt(dir + 'Limits_' + ptag + '_HW_Truncate_False_alpha_0.16_annih_prod_' +
-                              annih_prod + '_arxiv_num_13131729_bmin_{:.1f}'.format(bmin) +
-                              '_Mlow_5.000_Ext_Lim_0.31_Nobs_False_.dat')
+    hw_high = np.loadtxt(dir + 'Limits_Extended_HW_Truncate_False_alpha_0.16_annih_prod_'
+                               'BB_arxiv_num_13131729_bmin_20.0_Mlow_5.000__Nobs_False_.dat')
     hw_p = np.loadtxt(dir + 'Limits_Pointlike_HW_Truncate_False_alpha_0.16_annih_prod_' +
                               annih_prod + '_arxiv_num_13131729_bmin_{:.1f}'.format(bmin) +
-                              '_Mlow_5.000__Nobs_False_.dat')
+                              '_Mlow_5.000__Nobs_True_.dat')
 
-    # list = [hw_low, hw_high, hw_low_null, hw_high_null]
-    list = [hw_high_null, hw_high_restrict]
-    color_list = ['green', 'purple', 'black']
+    color_list = ['green', 'black']
 
     mass_list = np.logspace(1., 3., 100)
 
@@ -733,30 +766,22 @@ def limit_comparison_extended(bmin=20., annih_prod='BB', nobs=False):
     ax.set_yscale('log')
     pl.xlim([10 ** 1., 10. ** 3.])
     pl.ylim([10 ** -27., 10. ** -23.])
-    for i, lim in enumerate(list):
-        pts = interpola(mass_list, lim[:, 0], lim[:, 1])
-        plt.plot(mass_list, pts, lw=2, color=color_list[i], alpha=1)
-    hp = interpola(mass_list, hw_p[:, 0], hw_p[:, 1])
-    plt.plot(mass_list, hp, '--', lw=2, color='k', alpha=1, dashes=(15, 15))
 
-    # lowm2 = interpola(mass_list, hw_low_null[:, 0], hw_low_null[:, 1])
-    # highm2 = interpola(mass_list, hw_high_null[:, 0], hw_high_null[:, 1])
-    # ax.fill_between(mass_list, lowm2, highm2, where=highm2 >= lowm2,
-    #                 facecolor='black', edgecolor='None', interpolate=True, alpha=0.3)
-    # lowm = interpola(mass_list, hw_low[:, 0], hw_low[:, 1])
-    # highm = interpola(mass_list, hw_high[:, 0], hw_high[:, 1])
-    # ax.fill_between(mass_list, lowm, highm, where=highm >= lowm,
-    #                 facecolor='blueviolet', edgecolor='None', interpolate=True, alpha=0.3)
+    pts = interpola(mass_list, hw_high[:, 0], hw_high[:, 1])
+    plt.plot(mass_list, pts, lw=2, color=color_list[0], alpha=1)
+    hp = interpola(mass_list, hw_p[:, 0], hw_p[:, 1])
+    plt.plot(mass_list, hp, '--', lw=2, color='k', alpha=1, dashes=(20, 15))
+
     ltop = 10 ** -23.4
     ldwn = 10 ** -.3
     plt.text(15, ltop, r'$\chi \chi$ ' + r'$\rightarrow$' + r' $b \bar{{b}}$', color='k', fontsize=16)
-    plt.text(15, ltop * ldwn, r'Extended', color='k', fontsize=12)
+    plt.text(15, ltop * ldwn ** 2., r'$\sigma_{{68}} > 0.31^\circ$', color='green', fontsize=16)
     plt.axhline(y=2.2 * 10 **-26., xmin=0, xmax=1, lw=1, ls='--', color='k', alpha=1)
     figname = dir + 'Limit_Comparison_' + ptag +'annih_prod_' + \
               annih_prod + '_bmin_{:.0f}'.format(bmin) + ntag + '.pdf'
-    plt.text(15, ltop * ldwn ** 2., r'$M_{{min}} = 10^{{5}} M_\odot$', color='k', fontsize=16)
+    plt.text(15, ltop * ldwn, r'$M_{{min}} = 10^{{5}} M_\odot$', color='k', fontsize=16)
     pl.xlabel(r'$m_\chi$   [GeV]', fontsize=20)
-    pl.ylabel(r'$\left< \sigma v \right>$   [$cm^3 s^{{-1}}$]', fontsize=20)
+    pl.ylabel(r'$\left< \sigma v \right>$   [$\textrm{cm}^3 \textrm{s}^{{-1}}$]', fontsize=20)
     fig.set_tight_layout(True)
     pl.savefig(figname)
     return
@@ -867,7 +892,7 @@ def limit_comparison_all(plike=True, bmin=20., nobs=True):
     ax[0].set_xlabel(r'$m_\chi$   [GeV]', fontsize=20)
     ax[1].set_xlabel(r'$m_\chi$   [GeV]', fontsize=20)
     ax[1].yaxis.tick_right()
-    ax[0].set_ylabel(r'$\left< \sigma v \right>$   [$cm^3 s^{{-1}}$]', fontsize=20)
+    ax[0].set_ylabel(r'$\left< \sigma v \right>$   [$\textrm{cm}^3 \textrm{s}^{{-1}}$]', fontsize=20)
     #ax[1].set_ylabel(r'$\left< \sigma v \right>$   [$cm^3 s^{{-1}}$]', fontsize=20)
     f.tight_layout(rect=(0, .0, 1, 1))
     plt.subplots_adjust(wspace=0.1, hspace=0.)
@@ -955,9 +980,9 @@ def obtain_number_density():
     parms, cov = curve_fit(lin_fit, np.log10(d_ein), np.log10(fit_ein))
     plot_ein = lin_fit(np.log10(mass_bins), parms[0], parms[1])
     plt.plot(mass_bins, 10. ** plot_ein, color='red', lw=2)
-    plt.text(2 * 10 ** 8., 10. ** -4.5, 'Fit Range: [{:.1e}, {:.1e}] $M_\odot$'.format(min_mass, max_mass),
+    plt.text(2 * 10 ** 8., 10. ** -4.5, 'Fit Range: [$10^{8}, 10^{10}$]' + ' $M_\odot$',
              fontsize=14, color='r')
-    plt.text(7. * 10 ** 6., 10. ** -7., 'ELVIS Subhalos: \n  $r \leq 300$ kpc'.format(min_mass, max_mass),
+    plt.text(7. * 10 ** 6., 10. ** -7., 'ELVIS Subhalos: \n  $r \leq 300$ kpc',
              fontsize=14, color='k')
 
     plt.text(2 * 10 ** 8., 10. ** -5., r'$\frac{{d N}}{{d M}} \propto M^{{{:.1f}}}$'.format(parms[0]), fontsize=14,
@@ -989,20 +1014,22 @@ def obtain_number_density():
 
     parms, cov = curve_fit(einasto_fit, d_ein, fit_ein, bounds=([30., 0.2, 0.], [300., .7, .1]), sigma=fit_ein)
     lden = einasto_fit(8.5, parms[0], parms[1], parms[2])
+    #print parms
     print 'Local: ', lden
     hist_norm = 0.9 * lden / (n_halos * (min_mass ** (-0.9) - max_mass ** (-0.9)))
+    #hist_norm = 1. * lden / (n_halos * (min_mass ** (-1.) - max_mass ** (-1.)))
     plot_ein = einasto_fit(dist_bins, parms[0], parms[1], parms[2])
     plt.plot(dist_bins, plot_ein, color='red', lw=2)
-    plt.text(12., 10. ** -2.3, 'Fit Range: [{:.1e}, {:.1e}] $M_\odot$'.format(min_mass, max_mass),
+    plt.text(12., 10. ** -2.3, 'Fit Range: [$10^{8}, 10^{10}$]' + ' $M_\odot$',
              fontsize=14, color='k')
 
-    plt.text(100., 10. ** -2.4, 'Einasto Parameters:', fontsize=14, color='b')
-    plt.text(100., 10. ** -2.7, r'$\alpha = {:.2f}$'.format(parms[1]), fontsize=14, color='b')
-    plt.text(100., 10. ** -3., r'$r_s = {:.2f}$'.format(parms[0]), fontsize=14, color='b')
+    plt.text(100., 10. ** -2.4, 'Einasto Parameters:', fontsize=14, color='r')
+    plt.text(100., 10. ** -2.7, r'$\alpha = {:.2f}$'.format(parms[1]), fontsize=14, color='r')
+    plt.text(100., 10. ** -3., r'$r_s = {:.2f}$'.format(parms[0]), fontsize=14, color='r')
     plt.text(12., 10. ** -4.5, r'$\frac{{d N}}{{dM dV}} = \frac{{{:.0f}}}{{kpc^{{3}}}} $'.format(hist_norm) +
              r'$\left(\frac{M}{M_\odot}\right)^{-1.9}$', fontsize=14, color='k')
 
-    fname = 'NumberDensity_Histogram_ELVIS.pdf'
+    fname = 'NumberDensity_Histogram_ELVIS_AlternateExponent.pdf'
     pl.savefig(dir + '../../../Plots/' + fname)
 
     return
@@ -1089,7 +1116,6 @@ def scatter_fits():
         gcd_tab_plt = np.logspace(1., np.log10(300.), 100)
         gam_fit_plt = 10. ** np.polyval(gam_mean_fit, np.log10(gcd_tab_plt))
 
-
         ax[j, 0].set_xscale("log")
         ax[j, 0].set_yscale('log')
         ax[j, 0].set_xlim([10., 300.])
@@ -1133,8 +1159,8 @@ def scatter_fits():
         ymax = np.max(rb_plt[:, 1])
         ax[j, 1].set_ylim([ymin, ymax])
         if j == len(m_list) - 1:
-            ax[j, 1].set_xlabel('GC Distance (kpc)', fontsize=16)
-        ax[j, 1].set_ylabel(r'$R_b$   [kpc]', fontsize=16)
+            ax[j, 1].set_xlabel('GC Distance (kpc)', fontsize=20)
+        ax[j, 1].set_ylabel(r'$R_b$   [kpc]', fontsize=20)
         ax[j, 1].plot(rb_plt[:, 0], rb_plt[:, 1], 'ro', alpha=0.3)
         ax[j, 1].plot(fit_tabs_rb[:, 0], fit_tabs_rb[:, 1], 'kx', ms=6, mew=3)
         ax[j, 1].plot(gcd_tab_plt, rb_fit_plt, 'k', ms=2)
@@ -1150,11 +1176,141 @@ def scatter_fits():
             ax[j, 1].axvline(x=fit_tabs_rb[x, 0], ymin=yerr_l, ymax=yerr_h,
                         linewidth=2, color='Black')
         legtop = .8 * (ymax - ymin)
+        legdown = .1 * (ymax - ymin)
         ax[j, 1].text(12., legtop, r'$R_b(R_\oplus)$ = {:.3f}'.format(10. ** np.polyval(rb_mean_fit, np.log10(8.5))),
                  fontsize=16, ha='left', va='center', color='Black')
+        #ax[j, 1].text(12., legtop - legdown, r'$R_b(R_\oplus)$ = {:.3f}'.format(10. ** np.polyval(rb_mean_fit, np.log10(8.5))),
+        #              fontsize=16, ha='left', va='center', color='Black')
 
     f.tight_layout(rect=(0, .0, 1, 1))
     plt.subplots_adjust(wspace=0.15, hspace=0.)
     figname = MAIN_PATH + '/SubhaloDetection/Plots/PaperPlots/Scatter_Multiplot.pdf'
     pl.savefig(figname)
+
+
+
+def uncertainty():
+    max_mass = 1 * 10. ** 10.
+    min_mass = 1 * 10. ** 8.
+    gcd_range = np.array([0., 300.])
+    n_halos = 24. + 24. + 3.
+    dir = MAIN_PATH + '/SubhaloDetection/Data/Misc_Items/ELVIS_Halo_Catalogs/'
+    file_hi = np.loadtxt(dir + 'Hi_Res_Subhalos.dat')
+    file_iso = np.loadtxt(dir + 'Iso_Subhalos.dat')
+    file_pair = np.loadtxt(dir + 'Paired_Subhalos.dat')
+    ind_of_int = []
+    gcd1 = file_hi[0, 1:4]
+    gcd2 = file_iso[0, 1:4]
+    for i, sub in enumerate(file_hi):
+        if i != 0:
+            dist1 = np.sqrt(((gcd1 - sub[1:4]) ** 2.).sum()) * 1000.
+            sub[1] = dist1
+            if dist1 < 300.:
+                ind_of_int.append(i)
+    file_hi = file_hi[ind_of_int]
+    ind_of_int = []
+    for i, sub in enumerate(file_iso):
+        if i != 0:
+            dist1 = np.sqrt(((gcd2 - sub[1:4]) ** 2.).sum()) * 1000.
+            sub[1] = dist1
+            if dist1 < 300.:
+                ind_of_int.append(i)
+    file_iso = file_iso[ind_of_int]
+
+    gcd3 = file_pair[0, 1:4]
+    gcd3_2 = file_pair[1, 1:4]
+    ind_of_int = []
+    for i, sub in enumerate(file_pair):
+        if i != 0 and i != 1:
+            dist1 = np.sqrt(((gcd3 - sub[1:4]) ** 2.).sum()) * 1000.
+            dist2 = np.sqrt(((gcd3_2 - sub[1:4]) ** 2.).sum()) * 1000.
+            sub[1] = np.min([dist1, dist2])
+            if sub[1] < 300.:
+                ind_of_int.append(i)
+    file_pair = file_pair[ind_of_int]
+    subhalos = np.vstack((file_iso[:, :10], file_hi[:, :10], file_pair[:, :10]))
+    subhalos = subhalos[subhalos[:, 1] != 0.]
+    print 'Num Subhalos: ', len(subhalos)
+    fig = plt.figure(figsize=(8., 6.))
+    mass_bins = np.logspace(np.log10(4. * 10.**6.), 10.,
+                            (10. - np.log10(3. * 10.**6.)) * 15)
+    print 'Making Subhalo Mass Number Density Histogram...'
+
+    plt.hist(subhalos[:, 9], bins=mass_bins, log=True, normed=False,
+             color='k', weights=1. / subhalos[:, 9], histtype='step', lw=2)
+
+    pl.gca().set_xscale("log")
+    pl.xlim([1. * 10.**8., 10.**10.])
+    pl.ylim([10**-10, 10**-3])
+    plt.xlabel(r'Mass   [$M_\odot$]', fontsize=18)
+    plt.ylabel(r'$\frac{dN}{dM}$', fontsize=22, rotation='horizontal')
+
+    beta_tab = np.array([89., 237., 628., 1660., 4378.])
+    alpha_tab = np.array([-1.8, -1.85, -1.9, -1.95, -2.])
+    color_tab = ['red','orange','yellow','green','blue']
+
+    for i in range(beta_tab.size):
+        mass_list = np.logspace(8, 10, 100)
+        #plt_info = beta_tab[i] * mass_list ** alpha_tab[i] * 4 * np.pi * \
+        #           quad(lambda x: x ** 2. * 3.8718 * 10 ** -5. *
+        #                          np.exp(- 2. / 0.2 * ((x / 113.46) ** 0.2 - 1.)), 0., 300.)[0]
+        plt_info = beta_tab[i] * mass_list ** alpha_tab[i] * 4 * np.pi * 200. ** 3. / 3.
+        print plt_info
+        plt.plot(mass_list, plt_info, color=color_tab[i])
+
+    fname = 'Uncertainty_Subhalo_Mass_Density.pdf'
+    pl.savefig(dir + '../../../Plots/' + fname)
+    return
+
+
+def limit_comparison_varydNdM(bmin=20., annih_prod='BB', nobs=False):
+    ptag = 'Pointlike'
+    if nobs:
+        ntag = ''
+    else:
+        ntag = '_Nobs_False_'
+    dir = MAIN_PATH + '/SubhaloDetection/Data/'
+
+    hw_3 = np.loadtxt(dir + 'Limits_' + ptag + '_HW_Truncate_False_alpha_0.16_annih_prod_' +
+                         annih_prod + '_arxiv_num_13131729_bmin_{:.1f}'.format(bmin) +
+                         '_Mlow_5.000__Nobs_True_.dat')
+    hw_1 = np.loadtxt(dir + 'Limits_' + ptag + '_HW_Truncate_False_alpha_0.16_annih_prod_' +
+                      annih_prod + '_arxiv_num_13131729_bmin_{:.1f}'.format(bmin) +
+                      '_Mlow_5.000_Alter_Mdep_m18_Nobs_True_.dat')
+
+    hw_5 = np.loadtxt(dir + 'Limits_' + ptag + '_HW_Truncate_False_alpha_0.16_annih_prod_' +
+                      annih_prod + '_arxiv_num_13131729_bmin_{:.1f}'.format(bmin) +
+                      '_Mlow_5.000_Alter_Mdep_m2_Nobs_True_.dat')
+
+
+    mass_list = np.logspace(1., 3., 100)
+
+    fig = plt.figure(figsize=(8., 6.))
+    ax = plt.gca()
+    ax.set_xscale("log")
+    ax.set_yscale('log')
+    pl.xlim([10 ** 1., 10. ** 3.])
+    pl.ylim([10 ** -27., 10. ** -23.])
+
+    pts3 = interpola(mass_list, hw_3[:,0], hw_3[:, 1])
+    plt.plot(mass_list, pts3, lw=1, color='k', alpha=1)
+
+    pts1 = interpola(mass_list, hw_1[:, 0], hw_1[:, 1])
+    pts5 = interpola(mass_list, hw_5[:, 0], hw_5[:, 1])
+    plt.fill_between(mass_list, pts1, pts5, where=pts5 <= pts1, facecolor='blue',
+                    edgecolor='None', interpolate=True, alpha=0.3)
+
+    ltop = 10 ** -23.4
+    ldwn = 10 ** -.3
+    plt.text(15, ltop, r'$\chi \chi$ ' + r'$\rightarrow$' + r' $b \bar{{b}}$', color='k', fontsize=16)
+    plt.axhline(y=2.2 * 10 **-26., xmin=0, xmax=1, lw=1, ls='--', color='k', alpha=1)
+    figname = dir + '../Plots/' + 'Uncertainty_Limit_Comparison_' + ptag +'annih_prod_' + \
+              annih_prod + '_bmin_{:.0f}'.format(bmin) + ntag + '.pdf'
+    plt.text(15, ltop * ldwn ** 2., r'$M_{{min}} = 10^{{5}} M_\odot$', color='k', fontsize=16)
+    pl.xlabel(r'$m_\chi$   [GeV]', fontsize=20)
+    pl.ylabel(r'$\left< \sigma v \right>$   [$\textrm{cm}^3 \textrm{s}^{{-1}}$]', fontsize=20)
+    fig.set_tight_layout(True)
+    pl.savefig(figname)
+    return
+
 

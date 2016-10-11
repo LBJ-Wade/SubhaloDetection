@@ -642,17 +642,17 @@ def find_r1_r2(mass, vmax, rmax):
 
 class HW_Fit(Subhalo):
 
-    def __init__(self, halo_mass, gam=0.85, rb=None, M200=True, gcd=8.5,
+    def __init__(self, halo_mass, gam=0.74, rb=None, M200=True, gcd=8.5,
                  stiff_rb=False, stiff_rbM=10.**5.):
         self.halo_mass = halo_mass
         self.gam = gam
         self.halo_name = 'HW'
         m = self.halo_mass
         if stiff_rb and self.halo_mass < stiff_rbM:
-            self.rb = 10. ** (-4.240) * stiff_rbM ** 0.459
+            self.rb = 10. ** (-3.945) * stiff_rbM ** 0.421
         else:
             if rb is None:
-                self.rb = 10. ** (-4.240) * m ** 0.459
+                self.rb = 10. ** (-3.945) * m ** 0.421
             else:
                 self.rb = rb
 

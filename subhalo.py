@@ -37,7 +37,7 @@ class Model(object):
     def __init__(self, mx, cross_sec, annih_prod, halo_mass, alpha=.16,
                  concentration_param=None, z=0., truncate=False,
                  arxiv_num=13131729, profile=0, pointlike=False,
-                 m200=False, gam=0.85, stiff_rb=False, rb=None):
+                 m200=False, gam=0.74, stiff_rb=False, rb=None):
 
         self.mx = mx
         self.c_sec = cross_sec
@@ -275,7 +275,7 @@ class Observable(object):
                  m_high=np.log10(1.0 * 10 ** 7.), c_low=np.log10(2.),
                  c_high=2.1, alpha=0.16, profile=0, truncate=False, 
                  arxiv_num=10070438, point_like=True, m200=False,
-                 gam=0.85, stiff_rb=False, mltag=None):
+                 gam=0.74, stiff_rb=False, mltag=None):
 
         point_like = str2bool(point_like)
         stiff_rb = str2bool(stiff_rb)
@@ -325,7 +325,7 @@ class Observable(object):
         default_dict = {'profile': 'Einasto', 'truncate': False, 'mx': 100., 'alpha': 0.16,
                         'annih_prod': 'BB', 'arxiv_num': 10070438, 'c_low': np.log10(20.),
                         'c_high': 2.1, 'c_num': 15, 'm_low': np.log10(3.24 * 10 ** 4.),
-                        'm_high': np.log10(1.0 * 10 ** 7), 'm_num': 30, 'gamma': 0.85,
+                        'm_high': np.log10(1.0 * 10 ** 7), 'm_num': 30, 'gamma': 0.74,
                         'stiff_rb': False}
 
         self.param_list = default_dict
@@ -429,13 +429,15 @@ class Observable(object):
                         np.savetxt(self.folder + file_name, tab, fmt='%.3e')
             else:
                 if self.point_like:
-                    rb_med = np.log10(10. ** (-4.24) * m ** 0.459)
-                    rb_low = rb_med - 1.
-                    rb_high = rb_med + 1.
+                    #rb_med = np.log10(10. ** (-4.151) * m ** 0.448) # -- OLD
+                    rb_med = np.log10(10. ** (-3.945) * m ** 0.421)
+                    rb_low = rb_med - .75
+                    rb_high = rb_med + .75
                     rb_list = np.logspace(rb_low, rb_high, 20)
                     gamma_list = np.linspace(0., 1.45, 20)
                 else:
-                    rb_med = np.log10(10. ** (-4.24) * m ** 0.459)
+                    #  rb_med = np.log10(10. ** (-4.151) * m ** 0.448)  -- OLD
+                    rb_med = np.log10(10. ** (-3.945) * m ** 0.421)
                     rb_low = rb_med - 1.
                     rb_high = rb_med + 1.
                     rb_list = np.logspace(rb_low, rb_high, 8)
@@ -447,6 +449,8 @@ class Observable(object):
                     for j, gam in enumerate(gamma_list):
                         print '         Gamma: ', gam
                         try:
+                            if self.point_like:
+                                raise ValueError
                             look_array = np.loadtxt(self.folder + file_name)
                             mlook = float('{:.3e}'.format(m))
                             rblook = float('{:.3e}'.format(rb))
@@ -466,19 +470,9 @@ class Observable(object):
                             if self.point_like:
                                 temp_arry[jcnt] = dm_model.d_max_point(threshold=threshold) * \
                                                   self.hw_prob_gamma(gam) * self.hw_prob_rb(rb, m)
-                                pre_marg = np.reshape(temp_arry, (rb_list.size, len(gamma_list)))
-                                dmax = RectBivariateSpline(rb_list, gamma_list,
-                                                           pre_marg).integral(np.min(rb_list),
-                                                                              np.max(rb_list), 0.,
-                                                                              np.max(gamma_list))
+
                                 jcnt += 1
-                                tab = np.array([m, dmax]).transpose()
-                                if os.path.isfile(self.folder + file_name):
-                                    load_info = np.loadtxt(self.folder + file_name)
-                                    add_to_table = np.vstack((load_info, tab))
-                                    np.savetxt(self.folder + file_name, add_to_table, fmt='%.3e')
-                                else:
-                                    np.savetxt(self.folder + file_name, tab, fmt='%.3e')
+
                             else:
                                 dmx = dm_model.D_max_extend()
                                 print '             dmax: ', dmx
@@ -492,6 +486,22 @@ class Observable(object):
                                     np.savetxt(self.folder + file_name, add_to_table, fmt='%.3e')
                                 else:
                                     np.savetxt(self.folder + file_name, tab, fmt='%.3e')
+
+                if self.point_like:
+
+                    pre_marg = np.reshape(temp_arry, (rb_list.size, len(gamma_list)))
+                    dmax = RectBivariateSpline(rb_list, gamma_list,
+                                               pre_marg).integral(np.min(rb_list),
+                                                                  np.max(rb_list), 0.,
+                                                                  np.max(gamma_list))
+                    tab = np.array([m, dmax]).transpose()
+                    if os.path.isfile(self.folder + file_name):
+                        load_info = np.loadtxt(self.folder + file_name)
+                        add_to_table = np.vstack((load_info, tab))
+                        np.savetxt(self.folder + file_name, add_to_table, fmt='%.3e')
+                    else:
+                        np.savetxt(self.folder + file_name, tab, fmt='%.3e')
+
         return
 
 
@@ -565,9 +575,13 @@ class Observable(object):
             if self.point_like:
                 integrand_table[:, 1] = (628. * (integrand_table[:, 0]) ** (-1.9) *
                                          (integrand_table[:, 1] ** 3.) / 3.0)
-                integrand_interp = interp1d(mass_list, integrand_table[:,1], kind='linear')
+
+                #integrand_table[:, 1] = (89. * (integrand_table[:, 0]) ** (-1.8) *
+                #                         (integrand_table[:, 1] ** 3.) / 3.0)
+
+                integrand_interp = interp1d(np.log10(mass_list), np.log10(integrand_table[:, 1]), kind='linear')
                 mass_full = np.logspace(np.log10(np.min(mass_list)), np.log10(np.max(mass_list)), 200)
-                integr = np.trapz(integrand_interp(mass_full), mass_full)
+                integr = np.trapz(10. ** integrand_interp(np.log10(mass_full)), mass_full)
                 #integrand = UnivariateSpline(mass_list, integrand_table[:, 1])
                 #integr = integrand.integral(np.min(mass_list), np.max(mass_list))
             else:
@@ -596,6 +610,7 @@ class Observable(object):
                 #print mass_list
                 #print dmax_table
                 #exit()
+
                 integrd = (628. * mass_list ** (-1.9) * (dmax_table ** 3.) / 3.0)
                 # TODO: Integrate this capability in a cleaner way
 
@@ -614,16 +629,28 @@ class Observable(object):
             return 4. * np.pi * (1. - np.sin(bmin * np.pi / 180.)) * integr
 
     def hw_prob_rb(self, rb, mass):
-        rb_norm = 10. ** (-4.24) * mass ** 0.459
-        sigma_c = 0.47
+        # Old parameterization
+        # rb_norm = 10. ** (-4.151) * mass ** 0.448
+        # sigma_c = 0.47
+
+        rb_norm = 10. ** (-3.945) * mass ** 0.421  # 150 kpc
+        # rb_norm = 10. ** (-4.022) * mass ** 0.433  # 100 kpc
+        sigma_c = 0.496
         return (np.exp(- (np.log(rb / rb_norm) / (np.sqrt(2.0) * sigma_c)) ** 2.0) /
                 (np.sqrt(2. * np.pi) * sigma_c * rb))
 
     def hw_prob_gamma(self, gam):
         # norm inserted b/c integration truncated on region [0, 1.45]
-        sigma = 0.426
+
+        # Old paramaterization
+        # sigma = 0.426
+        # k = 0.1
+        # mu = 0.86
+
+        sigma = 0.42
         k = 0.1
-        mu = 0.85
+        mu = 0.74
+        # mu = 0.71  -- 100 kpc
         y = -1. / k * np.log(1. - k * (gam - mu) / sigma)
         norm = quad(lambda x: np.exp(- -1. / k * np.log(1. - k * (x - mu) / sigma) ** 2. / 2.)
                               / (np.sqrt(2. * np.pi) * (sigma - k * (x - mu))), 0., 1.45)[0]

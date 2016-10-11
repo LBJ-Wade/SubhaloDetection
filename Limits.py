@@ -50,6 +50,7 @@ class DM_Limits(object):
 
     def poisson_limit(self):
         sources = np.loadtxt(self.folder + 'Misc_Items/WeightedSources_' + self.annih_prod + '.dat')
+        sources = sources[:, 0:2]
         if self.nobs:
             nobstag = '_Nobs_True_'
         else:
@@ -114,8 +115,10 @@ class DM_Limits(object):
                 print 'Invalid method call.'
                 raise ValueError
             cross_vs_n = np.loadtxt(f)
-            cs_list = np.logspace(np.log10(cross_vs_n[0, 0]), np.log10(cross_vs_n[-1, 0]), 200)
-            cross_n_interp = interp1d(np.log10(cross_vs_n[:, 0]), np.log10(cross_vs_n[:, 1]), kind='cubic')
+            print lim_val
+            cs_list = np.logspace(np.log10(cross_vs_n[0, 0]), np.log10(cross_vs_n[-1, 0]) + .5, 200)
+            cross_n_interp = interp1d(np.log10(cross_vs_n[:, 0]), np.log10(cross_vs_n[:, 1]),
+                                      kind='linear', bounds_error=False, fill_value='extrapolate')
             fd_min = np.abs(10. ** cross_n_interp(np.log10(cs_list)) - lim_val)
             print 'Cross Section Limit: ', cs_list[np.argmin(fd_min)]
 
