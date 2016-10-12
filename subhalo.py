@@ -201,7 +201,7 @@ class Model(object):
         jf = 10. ** self.subhalo.J_pointlike(1.)
         return np.sqrt(pre_factor * n_gamma * jf / threshold)
 
-    def D_max_extend(self, fixed_thresh=True, flux=10**-9):
+    def D_max_extend(self, fixed_thresh=True, flux=10**-9, sigma=0.31):
         """
         Calculates the maximum distance a spatially extended subhalo can be to still be observable
         :return: distance in kpc
@@ -225,7 +225,7 @@ class Model(object):
             return d_max
         else:
             max_dist = self.d_max_point(threshold=flux)
-            se = fminbound(lambda x: np.abs(10 ** self.subhalo.J(10. ** x, 0.31) -
+            se = fminbound(lambda x: np.abs(10 ** self.subhalo.J(10. ** x, sigma) -
                                             0.68 * 10 ** self.subhalo.J_pointlike(10 ** x)), -3., np.log10(max_dist))
             return 10. ** se
 
@@ -433,8 +433,8 @@ class Observable(object):
                     rb_med = np.log10(10. ** (-3.945) * m ** 0.421)
                     rb_low = rb_med - .75
                     rb_high = rb_med + .75
-                    rb_list = np.logspace(rb_low, rb_high, 20)
-                    gamma_list = np.linspace(0., 1.45, 20)
+                    rb_list = np.logspace(rb_low, rb_high, 15)
+                    gamma_list = np.linspace(0., 1.45, 15)
                 else:
                     #  rb_med = np.log10(10. ** (-4.151) * m ** 0.448)  -- OLD
                     rb_med = np.log10(10. ** (-3.945) * m ** 0.421)
@@ -574,9 +574,9 @@ class Observable(object):
             mass_list = np.unique(integrand_table[:, 0])
             if self.point_like:
                 integrand_table[:, 1] = (628. * (integrand_table[:, 0]) ** (-1.9) *
-                                         (integrand_table[:, 1] ** 3.) / 3.0)
+                                          (integrand_table[:, 1] ** 3.) / 3.0)
 
-                #integrand_table[:, 1] = (89. * (integrand_table[:, 0]) ** (-1.8) *
+                # integrand_table[:, 1] = (4378. * (integrand_table[:, 0]) ** (-2.0) *
                 #                         (integrand_table[:, 1] ** 3.) / 3.0)
 
                 integrand_interp = interp1d(np.log10(mass_list), np.log10(integrand_table[:, 1]), kind='linear')

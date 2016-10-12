@@ -352,25 +352,27 @@ def fractional_extension(mx=10., cs=2.2*10**-26., annih='BB', calc=False):
                         mod = Model(mx, cs, annih, mass, profile=2., m200=True, gam=gam, rb=rb)
 
                         gam_p[k] = mod.d_max_point(th)
-                        dis_tab = np.logspace(-1., np.log10(gam_p[k]), 7)
-                        sig68 = np.zeros_like(dis_tab)
-                        for j, d in enumerate(dis_tab):
-                            try:
-                                print 'Distance: ', d
-                                if 10. ** (prof.J(d, 0.01) / prof.J_pointlike(d)) > 0.68:
-                                    raise ValueError
-                                sig68[j] = prof.Spatial_Extension(d, thresh_calc=False)
-                            except:
-                                pass
-                        #print sig68
-                        dis_tab = dis_tab[(sig68 < 85.) & (sig68 > 0.01)]
-                        sig68 = sig68[(sig68 < 85.) & (sig68 > 0.01)]
-                        extension = interp1d(np.log10(dis_tab), np.log10(sig68), kind='linear',
-                                             fill_value='extrapolate', bounds_error=False)
-                        gam_p1[k] = np.power(10, fminbound(lambda x: np.abs(10. ** extension(x) - 0.1), -3.,
-                                                           np.log10(gam_p[k])))
-                        gam_p3[k] = np.power(10, fminbound(lambda x: np.abs(10. ** extension(x) - 0.3), -3.,
-                                                           np.log10(gam_p[k])))
+                        # dis_tab = np.logspace(-1., np.log10(gam_p[k]), 7)
+                        # sig68 = np.zeros_like(dis_tab)
+                        # for j, d in enumerate(dis_tab):
+                        #     try:
+                        #         print 'Distance: ', d
+                        #         if 10. ** (prof.J(d, 0.01) / prof.J_pointlike(d)) > 0.68:
+                        #             raise ValueError
+                        #         sig68[j] = prof.Spatial_Extension(d, thresh_calc=False)
+                        #     except:
+                        #         pass
+                        # #print sig68
+                        # dis_tab = dis_tab[(sig68 < 85.) & (sig68 > 0.01)]
+                        # sig68 = sig68[(sig68 < 85.) & (sig68 > 0.01)]
+                        # extension = interp1d(np.log10(dis_tab), np.log10(sig68), kind='linear',
+                        #                      fill_value='extrapolate', bounds_error=False)
+                        # gam_p1[k] = np.power(10, fminbound(lambda x: np.abs(10. ** extension(x) - 0.1), -3.,
+                        #                                    np.log10(gam_p[k])))
+                        # gam_p3[k] = np.power(10, fminbound(lambda x: np.abs(10. ** extension(x) - 0.3), -3.,
+                        #                                    np.log10(gam_p[k])))
+                        gam_p1[k] = mod.D_max_extend(flux=th, sigma=0.1)
+                        gam_p3[k] = mod.D_max_extend(flux=th, sigma=0.3)
 
                         count += 1
                     gamma_full = np.linspace(.01, 1.45, 100)
