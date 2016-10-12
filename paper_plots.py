@@ -334,7 +334,7 @@ def fractional_extension(mx=10., cs=2.2*10**-26., annih='BB', calc=False):
             m_p3 = np.zeros_like(mass_tab)
             for o,mass in enumerate(mass_tab):
                 print '     Mass: {:.2e}'.format(mass)
-                rb_med = np.log10(10. ** (-4.151) * mass ** 0.448)
+                rb_med = np.log10(10. ** (-3.945) * mass ** 0.421)
                 rb_low = rb_med - .5
                 rb_high = rb_med + .5
                 rb_list = np.logspace(rb_low, rb_high, 6)
@@ -342,12 +342,12 @@ def fractional_extension(mx=10., cs=2.2*10**-26., annih='BB', calc=False):
                 rb_p1 = np.zeros_like(rb_list)
                 rb_p3 = np.zeros_like(rb_list)
                 for z, rb in enumerate(rb_list):
-                    print '         Rb: {:.2e}'.format(rb)
+                    print 'Threshold: {:.2e}    Mass: {:.2e}     Rb: {:.2e}'.format(th,mass,rb)
                     gam_p = np.zeros_like(gam_tab)
                     gam_p1 = np.zeros_like(gam_tab)
                     gam_p3 = np.zeros_like(gam_tab)
                     for k, gam in enumerate(gam_tab):
-                        print '             Gamma: {:.2f}'.format(gam)
+                        print 'Threshold: {:.2e}    Mass: {:.2e}     Rb: {:.2e}    Gamma: {:.2f}'.format(th, mass, rb,gam)
                         prof = HW_Fit(mass, gam=gam, rb=rb)
                         mod = Model(mx, cs, annih, mass, profile=2., m200=True, gam=gam, rb=rb)
 
@@ -357,12 +357,12 @@ def fractional_extension(mx=10., cs=2.2*10**-26., annih='BB', calc=False):
                         for j, d in enumerate(dis_tab):
                             try:
                                 print 'Distance: ', d
-                                if 10. ** (prof.J(d, 0.01) / prof.J_pointlike(d)) < 0.68:
+                                if 10. ** (prof.J(d, 0.01) / prof.J_pointlike(d)) > 0.68:
                                     raise ValueError
                                 sig68[j] = prof.Spatial_Extension(d, thresh_calc=False)
                             except:
                                 pass
-                        print sig68
+                        #print sig68
                         dis_tab = dis_tab[(sig68 < 85.) & (sig68 > 0.01)]
                         sig68 = sig68[(sig68 < 85.) & (sig68 > 0.01)]
                         extension = interp1d(np.log10(dis_tab), np.log10(sig68), kind='linear',
@@ -584,9 +584,28 @@ def sigma_68(mx=100., cs=2.2*10**-26., annih='BB'):
     pl.plot(dmax_6, dots6, 'o', ms=16, mfc='blueviolet', mec='blueviolet')
     pl.plot(dmax_5, dots5, 'o', ms=16, mfc='blue', mec='blue')
 
-    pl.text(xmin * 1.2, 10**-.4, r'$10^7 M_\odot$', color='k', fontsize=14)
-    pl.text(xmin * 1.2, 10 ** -.5, r'$10^6 M_\odot$', color='blueviolet', fontsize=14)
-    pl.text(xmin * 1.2, 10 ** -.6, r'$10^5 M_\odot$', color='blue', fontsize=14)
+    pl.text(.35, 10**-.4, r'$10^7 M_\odot$', color='k', fontsize=14)
+    pl.text(.35, 10 ** -.5, r'$10^6 M_\odot$', color='blueviolet', fontsize=14)
+    pl.text(.35, 10 ** -.6, r'$10^5 M_\odot$', color='blue', fontsize=14)
+
+    ylab1 = [1.]
+    ylabti1 = ['1.0']
+    ylab2 = [.1, .2, .3, .4, .5, .6, .7, .8, .9]
+    ylabti2 = ['', '', '', '', '0.5', '', '', '', '']
+    ax.set_yticks(ylab1)
+    ax.set_yticklabels(ylabti1)
+    ax.set_yticks(ylab2, minor=True)
+    ax.set_yticklabels(ylabti2, minor=True)
+    plt.tick_params(which='minor', length=4, color='k')
+
+    xlab1 = [1., 10.]
+    xlabti1 = ['1.0', '10.0']
+    xlab2 = [.3,.4,.5,.6,.7,.8,.9, 2.,3.,4.,5.,6.,7.,8.,9.,]
+    xlabti2 = ['', '', '0.5', '', '', '', '','', '', '', '','', '', '', '']
+    ax.set_xticks(xlab1)
+    ax.set_xticklabels(xlabti1)
+    ax.set_xticks(xlab2, minor=True)
+    ax.set_xticklabels(xlabti2, minor=True)
 
     folder = MAIN_PATH + "/SubhaloDetection/Plots/"
     fig_name = folder + 'Sigma68.pdf'
@@ -621,14 +640,33 @@ def dmax_extend(cs=2.2*10**-26., annih='BB'):
     dmax_p_tab2 = np.zeros(masslist.size * 2).reshape((masslist.size, 2))
     dmax_ex_tab3 = np.zeros(masslist.size * 2).reshape((masslist.size, 2))
     dmax_p_tab3 = np.zeros(masslist.size * 2).reshape((masslist.size, 2))
-    for i in range(masslist.size):
-        print i + 1, '/', len(masslist)
-        dmax_ex_tab[i] = [masslist[i], modellist[i].D_max_extend()]
-        dmax_p_tab[i] = [masslist[i], modellist[i].d_max_point()]
-        dmax_ex_tab2[i] = [masslist[i], modellist2[i].D_max_extend()]
-        dmax_p_tab2[i] = [masslist[i], modellist2[i].d_max_point()]
-        dmax_ex_tab3[i] = [masslist[i], modellist3[i].D_max_extend()]
-        dmax_p_tab3[i] = [masslist[i], modellist3[i].d_max_point()]
+    # for i in range(masslist.size):
+    #     print i + 1, '/', len(masslist)
+    #     dmax_ex_tab[i] = [masslist[i], modellist[i].D_max_extend()]
+    #     dmax_p_tab[i] = [masslist[i], modellist[i].d_max_point()]
+    #     dmax_ex_tab2[i] = [masslist[i], modellist2[i].D_max_extend()]
+    #     dmax_p_tab2[i] = [masslist[i], modellist2[i].d_max_point()]
+    #     dmax_ex_tab3[i] = [masslist[i], modellist3[i].D_max_extend()]
+    #     dmax_p_tab3[i] = [masslist[i], modellist3[i].d_max_point()]
+
+    dmax_ex_tab = np.array([[1.00000000e+05, 5.78432934e-01], [2.51188643e+05, 8.12183406e-01],
+                            [6.30957344e+05, 1.14039188e+00], [1.58489319e+06, 1.60122327e+00],
+                            [3.98107171e+06, 2.24829549e+00], [1.00000000e+07, 3.15683745e+00]])
+    dmax_p_tab = np.array([[1.00000000e+05, 6.91368288e-01], [2.51188643e+05, 9.70754596e-01],
+                            [6.30957344e+05, 1.36304268e+00], [1.58489319e+06, 1.91385687e+00],
+                            [3.98107171e+06, 2.68725856e+00], [1.00000000e+07, 3.77319678e+00]])
+    dmax_ex_tab2 = np.array([[1.00000000e+05, 1.28564966e+00], [2.51188643e+05, 1.80518302e+00],
+                            [6.30957344e+05, 2.53466337e+00], [1.58489319e+06, 3.55895722e+00],
+                            [3.98107171e+06, 4.99714466e+00], [1.00000000e+07, 7.01650060e+00]])
+    dmax_p_tab2 = np.array([[1.00000000e+05, 1.53666008e+00], [2.51188643e+05, 2.15763416e+00],
+                            [6.30957344e+05, 3.02954780e+00], [1.58489319e+06,4.25380727e+00],
+                            [3.98107171e+06,5.97279776e+00], [1.00000000e+07, 8.38644319e+00]])
+    dmax_ex_tab3 = np.array([[1.00000000e+05, 1.05796427e-01], [2.51188643e+05, 1.48550072e-01],
+                            [6.30957344e+05, 2.08579389e-01], [1.58489319e+06, 2.92867013e-01],
+                            [3.98107171e+06,  4.11217399e-01], [1.00000000e+07, 5.77393099e-01]])
+    dmax_p_tab3 = np.array([[1.00000000e+05, 1.26452585e-01], [2.51188643e+05, 1.77552877e-01],
+                            [6.30957344e+05, 2.49303120e-01], [1.58489319e+06, 3.50048091e-01],
+                            [3.98107171e+06,  4.91504743e-01], [1.00000000e+07, 6.90124925e-01]])
 
     ex_plot = np.polyfit(np.log10(dmax_ex_tab[:, 0]), np.log10(dmax_ex_tab[:, 1]), 1)
     p_plot = np.polyfit(np.log10(dmax_p_tab[:, 0]), np.log10(dmax_p_tab[:, 1]), 1)
@@ -661,7 +699,15 @@ def dmax_extend(cs=2.2*10**-26., annih='BB'):
     pl.plot(m_full, ex_int3, '--', lw=2, color='maroon', dashes=(10, 20))
     pl.plot(m_full, p_int3, lw=2, color='maroon')
     pl.text(1.5 * 10**5., ymax * .8, r'$\chi \chi$' + r'$\rightarrow$' + r'$b\bar{b}$', color='k', fontsize=14)
-
+    ylab1 = [1.]
+    ylabti1 = ['1.0']
+    ylab2 = [.5, 5.]
+    ylabti2 = ['0.5','5.0']
+    ax.set_yticks(ylab1)
+    ax.set_yticklabels(ylabti1)
+    ax.set_yticks(ylab2, minor=True)
+    ax.set_yticklabels(ylabti2, minor=True)
+    plt.tick_params(which='minor', length=4, color='k')
     folder = MAIN_PATH + "/SubhaloDetection/Plots/"
     fig_name = folder + 'Dmax_Ext_vs_Plike.pdf'
     fig.set_tight_layout(True)
@@ -1017,7 +1063,7 @@ def obtain_number_density():
     #print parms
     print 'Local: ', lden
     hist_norm = 0.9 * lden / (n_halos * (min_mass ** (-0.9) - max_mass ** (-0.9)))
-    #hist_norm = 1. * lden / (n_halos * (min_mass ** (-1.) - max_mass ** (-1.)))
+    #hist_norm = .8 * lden / (n_halos * (min_mass ** (-.8) - max_mass ** (-.8)))
     plot_ein = einasto_fit(dist_bins, parms[0], parms[1], parms[2])
     plt.plot(dist_bins, plot_ein, color='red', lw=2)
     plt.text(12., 10. ** -2.3, 'Fit Range: [$10^{8}, 10^{10}$]' + ' $M_\odot$',
@@ -1276,11 +1322,11 @@ def limit_comparison_varydNdM(bmin=20., annih_prod='BB', nobs=False):
                          '_Mlow_5.000__Nobs_True_.dat')
     hw_1 = np.loadtxt(dir + 'Limits_' + ptag + '_HW_Truncate_False_alpha_0.16_annih_prod_' +
                       annih_prod + '_arxiv_num_13131729_bmin_{:.1f}'.format(bmin) +
-                      '_Mlow_5.000_Alter_Mdep_m18_Nobs_True_.dat')
+                      '_Mlow_5.000_m18_Nobs_True_.dat')
 
     hw_5 = np.loadtxt(dir + 'Limits_' + ptag + '_HW_Truncate_False_alpha_0.16_annih_prod_' +
                       annih_prod + '_arxiv_num_13131729_bmin_{:.1f}'.format(bmin) +
-                      '_Mlow_5.000_Alter_Mdep_m2_Nobs_True_.dat')
+                      '_Mlow_5.000_m20_Nobs_True_.dat')
 
 
     mass_list = np.logspace(1., 3., 100)
