@@ -70,7 +70,7 @@ class DM_Limits(object):
             extra_tag = '_Truncate_' + str(self.truncate) + '_Cparam_' + str(self.arxiv_num) + \
                         '_alpha_' + str(self.alpha)
         else:
-            extra_tag = '_Gamma_0.850_Stiff_rb_'+ str(self.stiff_rb)
+            extra_tag = '_Gamma_0.740_Stiff_rb_'+ str(self.stiff_rb)
 
         f_names = self.profile_name + '_mx_*' + '_annih_prod_' + self.annih_prod + '_bmin_' +\
                str(self.b_min) + plike_tag + extra_tag + '_Mlow_{:.3f}'.format(self.m_low) +\
@@ -115,11 +115,12 @@ class DM_Limits(object):
                 print 'Invalid method call.'
                 raise ValueError
             cross_vs_n = np.loadtxt(f)
-            print lim_val
+
             cs_list = np.logspace(np.log10(cross_vs_n[0, 0]), np.log10(cross_vs_n[-1, 0]) + .5, 200)
             cross_n_interp = interp1d(np.log10(cross_vs_n[:, 0]), np.log10(cross_vs_n[:, 1]),
                                       kind='linear', bounds_error=False, fill_value='extrapolate')
-            fd_min = np.abs(10. ** cross_n_interp(np.log10(cs_list)) - lim_val)
+
+            fd_min = np.abs(10. ** interpola(np.log10(cs_list), np.log10(cross_vs_n[:, 0]), np.log10(cross_vs_n[:, 1])) - lim_val)
             print 'Cross Section Limit: ', cs_list[np.argmin(fd_min)]
 
             limarr[i] = [mx, cs_list[np.argmin(fd_min)]]
